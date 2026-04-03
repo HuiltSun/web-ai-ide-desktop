@@ -125,12 +125,20 @@ ipcMain.handle('settings:getAll', () => {
     return {
       ai_providers: store.get('ai_providers'),
       selected_model: store.get('selected_model'),
+      fontSize: store.get('fontSize'),
+      tabSize: store.get('tabSize'),
     };
   } catch (error) {
     log.error('Failed to get all settings:', error);
     return {
-      ai_providers: undefined,
-      selected_model: undefined,
+      ai_providers: {
+        openai: { name: 'OpenAI', apiKey: '', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
+        anthropic: { name: 'Anthropic', apiKey: '', models: ['claude-3-5-sonnet', 'claude-3-opus'] },
+        qwen: { name: 'Qwen', apiKey: '', models: ['qwen-coder-plus', 'qwen3-coder'] },
+      },
+      selected_model: 'gpt-4o',
+      fontSize: 14,
+      tabSize: 2,
     };
   }
 });
