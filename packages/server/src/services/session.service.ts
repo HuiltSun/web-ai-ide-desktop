@@ -48,6 +48,15 @@ export const sessionService = {
     });
   },
 
+  async getSessionByProject(projectId: string) {
+    const sessions = await prisma.session.findMany({
+      where: { projectId },
+      orderBy: { updatedAt: 'desc' },
+      take: 1,
+    });
+    return sessions[0] || null;
+  },
+
   async getSession(id: string) {
     return prisma.session.findUnique({
       where: { id },
