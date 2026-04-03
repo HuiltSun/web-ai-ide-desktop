@@ -1,4 +1,7 @@
-FROM node:20-alpine AS base
+# Multi-stage build for reduced image size
+# Note: Base image vulnerabilities are inherited from Node.js official images
+# For production, consider using distroless images or specific version tags
+FROM node:20.18.0-alpine3.20 AS base
 WORKDIR /app
 RUN corepack enable
 
@@ -13,4 +16,4 @@ FROM base AS runner
 WORKDIR /app
 COPY --from=builder /app/packages/cli/dist ./dist
 EXPOSE 3000
-CMD ["echo", 'Run: docker-compose up -d']
+CMD ["sh", "-c", "echo 'Run: docker-compose up -d'"]

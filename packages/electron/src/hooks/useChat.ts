@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { wsService } from '../services/websocket';
 import { ChatMessage, ChatStreamEvent, ToolCall } from '../types';
 
@@ -7,9 +7,15 @@ export function useChat(sessionId: string | null) {
   const [streamingContent, setStreamingContent] = useState('');
   const [pendingToolCall, setPendingToolCall] = useState<ToolCall | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const streamingContentRef = useRef('');
 
   useEffect(() => {
     if (!sessionId) return;
+
+    streamingContentRef.current = '';
+    setMessages([]);
+    setStreamingContent('');
+    setPendingToolCall(null);
 
     wsService.connect(sessionId);
     setIsConnected(true);
@@ -18,25 +24,31 @@ export function useChat(sessionId: string | null) {
       switch (event.type) {
         case 'text':
           if (event.content) {
-            setStreamingContent((prev) => prev + event.content);
+            streamingContentRef.current += event.content;
+            setStreamingContent(streamingContentRef.current);
           }
           break;
         case 'tool_call':
           if (event.toolCall) {
             setPendingToolCall(event.toolCall);
+            streamingContentRef.current = '';
             setStreamingContent('');
           }
           break;
         case 'done':
-          setMessages((prev) => [
-            ...prev,
-            { role: 'assistant', content: streamingContent },
-          ]);
+          if (streamingContentRef.current) {
+            setMessages((prev) => [
+              ...prev,
+              { role: 'assistant', content: streamingContentRef.current },
+            ]);
+          }
+          streamingContentRef.current = '';
           setStreamingContent('');
           setPendingToolCall(null);
           break;
         case 'error':
           console.error('Chat error:', event.content);
+          streamingContentRef.current = '';
           setStreamingContent('');
           break;
       }
