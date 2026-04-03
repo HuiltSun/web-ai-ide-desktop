@@ -10,6 +10,7 @@ import type { Project, ProjectWithSession } from './types';
 import { api } from './services/api';
 
 const DEFAULT_USER_ID = 'default-user';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -43,7 +44,7 @@ function App() {
   };
 
   const handleLogin = async (email: string, password: string) => {
-    const response = await fetch('http://localhost:3001/api/auth/login', {
+    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -62,7 +63,7 @@ function App() {
   };
 
   const handleRegister = async (email: string, password: string, name?: string) => {
-    const response = await fetch('http://localhost:3001/api/auth/register', {
+    const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, name }),
@@ -73,7 +74,7 @@ function App() {
       throw new Error(data.error || 'Registration failed');
     }
 
-    const loginResponse = await fetch('http://localhost:3001/api/auth/login', {
+    const loginResponse = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
