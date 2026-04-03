@@ -2,6 +2,14 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { wsService } from '../services/websocket';
 import { ChatMessage, ChatStreamEvent, ToolCall } from '../types';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+async function fetchMessages(sessionId: string): Promise<ChatMessage[]> {
+  const response = await fetch(`${API_BASE}/chat/${sessionId}/messages`);
+  if (!response.ok) throw new Error('Failed to fetch messages');
+  return response.json();
+}
+
 export function useChat(sessionId: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState('');
@@ -16,6 +24,14 @@ export function useChat(sessionId: string | null) {
     setMessages([]);
     setStreamingContent('');
     setPendingToolCall(null);
+
+    fetchMessages(sessionId)
+      .then((history) => {
+        setMessages(history);
+      })
+      .catch((err) => {
+        console.error('Failed to load message history:', err);
+      });
 
     wsService.connect(sessionId);
     setIsConnected(true);
