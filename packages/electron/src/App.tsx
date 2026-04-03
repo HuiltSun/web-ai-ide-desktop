@@ -168,7 +168,7 @@ function App() {
             onSettingsClick={() => setSettingsOpen(true)}
             onRefreshClick={loadProjects}
             onLoginClick={() => setLoginOpen(true)}
-            userEmail={user?.email}
+            userEmail={user?.email || null}
             onLogout={handleLogout}
           />
         }
