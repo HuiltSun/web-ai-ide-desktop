@@ -46,7 +46,7 @@ model Session {
 
 model Message {
   id             String    @id @default(uuid())
-  uuid           String    @unique @default(uuid())
+  uuid           String    @unique
   parentUuid     String?
   sessionId      String
   session        Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)

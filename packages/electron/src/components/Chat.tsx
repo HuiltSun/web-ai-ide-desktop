@@ -1,7 +1,9 @@
+import { useRef, useEffect } from 'react';
 import { useChat } from '../hooks/useChat';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ToolCallCard } from './ToolCallCard';
+import { BotIcon, SparklesIcon } from './Icons';
 
 interface ChatProps {
   sessionId: string | null;
@@ -18,13 +20,39 @@ export function Chat({ sessionId }: ChatProps) {
     rejectTool,
   } = useChat(sessionId);
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, streamingContent]);
+
   return (
-    <div className="flex flex-col h-full bg-white border-l border-gray-200">
+    <div className="flex flex-col h-full bg-gradient-to-b from-slate-900/50 to-slate-800/30">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && !streamingContent && (
-          <div className="text-center text-gray-500 py-8">
-            <p className="text-lg mb-2">Welcome to AI Chat</p>
-            <p className="text-sm">Ask me anything about your code!</p>
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/20 flex items-center justify-center mb-4">
+              <BotIcon className="text-indigo-400" size={32} />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">AI Assistant</h3>
+            <p className="text-slate-400 text-sm max-w-md">
+              Ask me anything about your code, or let me help you build something amazing.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+              <span className="px-3 py-1 rounded-full bg-white/5 text-xs text-slate-400 border border-white/10">
+                Write code
+              </span>
+              <span className="px-3 py-1 rounded-full bg-white/5 text-xs text-slate-400 border border-white/10">
+                Debug errors
+              </span>
+              <span className="px-3 py-1 rounded-full bg-white/5 text-xs text-slate-400 border border-white/10">
+                Explain logic
+              </span>
+            </div>
           </div>
         )}
 
@@ -33,7 +61,18 @@ export function Chat({ sessionId }: ChatProps) {
         ))}
 
         {streamingContent && (
-          <ChatMessage message={{ role: 'assistant', content: streamingContent + '...' }} />
+          <div className="flex justify-start">
+            <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-gradient-to-br from-slate-800 to-slate-800/80 border border-slate-700/50 shadow-lg">
+              <div className="flex items-center gap-2 text-slate-400">
+                <SparklesIcon size={14} className="text-indigo-400 animate-pulse" />
+                <span className="text-xs">Thinking...</span>
+              </div>
+              <div className="mt-2 text-sm text-slate-300 whitespace-pre-wrap break-words">
+                {streamingContent}
+                <span className="inline-block w-2 h-4 ml-1 bg-indigo-400/50 animate-pulse rounded" />
+              </div>
+            </div>
+          </div>
         )}
 
         {pendingToolCall && (
@@ -43,13 +82,19 @@ export function Chat({ sessionId }: ChatProps) {
             onReject={() => rejectTool(pendingToolCall.id)}
           />
         )}
+
+        <div ref={messagesEndRef} />
       </div>
 
-      <ChatInput onSend={sendMessage} disabled={!isConnected} />
+      <div className="p-4 border-t border-white/5 bg-gradient-to-t from-black/20 to-transparent">
+        <ChatInput onSend={sendMessage} disabled={!isConnected} />
+      </div>
 
       {!isConnected && (
-        <div className="text-center text-xs text-gray-400 py-1 bg-gray-50">
-          Disconnected. Reconnecting...
+        <div className="absolute inset-x-0 bottom-20 flex items-center justify-center">
+          <div className="px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+            Disconnected. Reconnecting...
+          </div>
         </div>
       )}
     </div>
