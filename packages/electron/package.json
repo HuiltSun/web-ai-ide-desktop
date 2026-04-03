@@ -11,7 +11,8 @@
     "build:exe": "vite build && tsc -p tsconfig.electron.json && electron-builder --win"
   },
   "dependencies": {
-    "electron-log": "^5.1.0"
+    "electron-log": "^5.1.0",
+    "electron-store": "^8.2.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.0",

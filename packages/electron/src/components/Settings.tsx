@@ -31,25 +31,37 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const savedProviders = localStorage.getItem('ai_providers');
-    const savedModel = localStorage.getItem('selected_model');
-    if (savedProviders) {
-      try {
-        setProviders(JSON.parse(savedProviders));
-      } catch {
-        // ignore parse errors
+    const loadSettings = async () => {
+      if (window.electronAPI?.settings) {
+        try {
+          const data = await window.electronAPI.settings.getAll();
+          if (data.ai_providers) setProviders(data.ai_providers);
+          if (data.selected_model) setSelectedModel(data.selected_model);
+        } catch {}
+      } else {
+        const savedProviders = localStorage.getItem('ai_providers');
+        const savedModel = localStorage.getItem('selected_model');
+        if (savedProviders) {
+          try {
+            setProviders(JSON.parse(savedProviders));
+          } catch {}
+        }
+        if (savedModel) setSelectedModel(savedModel);
       }
-    }
-    if (savedModel) {
-      setSelectedModel(savedModel);
-    }
+    };
+    loadSettings();
   }, []);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    localStorage.setItem('ai_providers', JSON.stringify(providers));
-    localStorage.setItem('selected_model', selectedModel);
+    if (!window.electronAPI?.settings) {
+      localStorage.setItem('ai_providers', JSON.stringify(providers));
+      localStorage.setItem('selected_model', selectedModel);
+    } else {
+      window.electronAPI.settings.set('ai_providers', providers);
+      window.electronAPI.settings.set('selected_model', selectedModel);
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

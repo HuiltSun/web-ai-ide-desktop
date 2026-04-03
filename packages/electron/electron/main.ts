@@ -1,9 +1,32 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import log from 'electron-log';
+import Store from 'electron-store';
 
 log.initialize();
 log.info('Application starting...');
+
+interface AIProvider {
+  name: string;
+  apiKey: string;
+  models: string[];
+}
+
+interface StoreSchema {
+  ai_providers: Record<string, AIProvider>;
+  selected_model: string;
+}
+
+const store = new Store<StoreSchema>({
+  defaults: {
+    ai_providers: {
+      openai: { name: 'OpenAI', apiKey: '', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
+      anthropic: { name: 'Anthropic', apiKey: '', models: ['claude-3-5-sonnet', 'claude-3-opus'] },
+      qwen: { name: 'Qwen', apiKey: '', models: ['qwen-coder-plus', 'qwen3-coder'] },
+    },
+    selected_model: 'gpt-4o',
+  },
+});
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -69,6 +92,25 @@ ipcMain.handle('get-app-path', () => {
 
 ipcMain.handle('get-version', () => {
   return app.getVersion();
+});
+
+ipcMain.handle('settings:get', (_event, key: string) => {
+  log.info(`Getting setting: ${key}`);
+  return store.get(key);
+});
+
+ipcMain.handle('settings:set', (_event, key: string, value: unknown) => {
+  log.info(`Setting: ${key}`);
+  store.set(key, value);
+  return true;
+});
+
+ipcMain.handle('settings:getAll', () => {
+  log.info('Getting all settings');
+  return {
+    ai_providers: store.get('ai_providers'),
+    selected_model: store.get('selected_model'),
+  };
 });
 
 process.on('uncaughtException', (error) => {

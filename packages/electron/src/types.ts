@@ -25,3 +25,30 @@ export interface ChatStreamEvent {
   content?: string;
   toolCall?: ToolCall;
 }
+
+export interface AIProvider {
+  name: string;
+  apiKey: string;
+  models: string[];
+}
+
+export interface SettingsData {
+  ai_providers: Record<string, AIProvider>;
+  selected_model: string;
+}
+
+export interface ElectronAPI {
+  getAppPath: () => Promise<string>;
+  getVersion: () => Promise<string>;
+  settings: {
+    get: (key: string) => Promise<unknown>;
+    set: (key: string, value: unknown) => Promise<boolean>;
+    getAll: () => Promise<SettingsData>;
+  };
+}
+
+declare global {
+  interface Window {
+    electronAPI: ElectronAPI;
+  }
+}
