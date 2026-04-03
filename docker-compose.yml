@@ -1,0 +1,39 @@
+version: '3.8'
+services:
+  frontend:
+    build: ./packages/cli
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - webaiide
+
+  backend:
+    build: ./packages/server
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://webaiide:webaiide@db:5432/webaiide
+    depends_on:
+      - db
+    networks:
+      - webaiide
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: webaiide
+      POSTGRES_PASSWORD: webaiide
+      POSTGRES_DB: webaiide
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - webaiide
+
+networks:
+  webaiide:
+    driver: bridge
+
+volumes:
+  pgdata:

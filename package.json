@@ -1,0 +1,13 @@
+{
+  "name": "web-ai-ide",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "install:all": "npm install && cd packages/shared && npm install && cd ../core && npm install && cd ../server && npm install && cd ../cli && npm install"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
