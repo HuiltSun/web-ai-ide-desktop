@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   SettingsIcon,
   CloseIcon,
@@ -29,6 +29,21 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
   });
   const [selectedModel, setSelectedModel] = useState('gpt-4o');
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    const savedProviders = localStorage.getItem('ai_providers');
+    const savedModel = localStorage.getItem('selected_model');
+    if (savedProviders) {
+      try {
+        setProviders(JSON.parse(savedProviders));
+      } catch {
+        // ignore parse errors
+      }
+    }
+    if (savedModel) {
+      setSelectedModel(savedModel);
+    }
+  }, []);
 
   if (!isOpen) return null;
 
