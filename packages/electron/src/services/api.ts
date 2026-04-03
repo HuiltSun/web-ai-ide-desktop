@@ -5,7 +5,7 @@ export interface FileNode {
   children?: FileNode[];
 }
 
-const API_BASE = '/api';
+const API_BASE = 'http://localhost:3001/api';
 
 export const api = {
   async getProjectFiles(projectId: string): Promise<FileNode[]> {
@@ -50,5 +50,12 @@ export const api = {
     const response = await fetch(`${API_BASE}/projects`);
     if (!response.ok) throw new Error('Failed to fetch projects');
     return response.json();
+  },
+
+  async deleteProject(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/projects/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete project');
   },
 };

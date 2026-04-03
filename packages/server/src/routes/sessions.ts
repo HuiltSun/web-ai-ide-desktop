@@ -21,8 +21,19 @@ export async function sessionsRouter(fastify: FastifyInstance) {
     }
   );
 
+  fastify.get<{ Params: { id: string } }>(
+    '/:id/conversation',
+    async (request, reply) => {
+      const conversation = await sessionService.reconstructConversation(request.params.id);
+      if (!conversation) {
+        return reply.status(404).send({ error: 'Session not found' });
+      }
+      return conversation;
+    }
+  );
+
   fastify.post<{
-    Body: { projectId: string; model: string };
+    Body: { projectId: string; cwd?: string; gitBranch?: string; model?: string };
   }>('/', async (request, reply) => {
     const session = await sessionService.createSession(request.body);
     return reply.status(201).send(session);

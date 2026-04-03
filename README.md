@@ -1,8 +1,8 @@
 # Web AI IDE
 
-A browser-based AI-assisted coding environment similar to Claude Code, built with Electron for desktop deployment.
+A browser-based + Electron desktop AI-assisted coding environment similar to Claude Code.
 
-[中文](README.md) | English
+[中文](README_cn.md) | English
 
 ---
 
@@ -14,9 +14,10 @@ A browser-based AI-assisted coding environment similar to Claude Code, built wit
 - 🖥️ **Terminal** - Built-in web terminal
 - 🔧 **Tool System** - AI can invoke file read/write, shell commands and more
 - 🔄 **Multi-Model Support** - OpenAI GPT, Anthropic Claude, Qwen and more
-- 💾 **Session Management** - Save and restore conversation history
+- 💾 **Session Management** - Save and restore conversation history (PostgreSQL storage)
+- 🗄️ **Project Management** - Project persistence (PostgreSQL)
 - 🐳 **Docker Deployment** - Quick deployment to any environment
-- 💻 **Desktop App** - Available as Windows exe
+- 💻 **Desktop App** - Windows EXE native desktop application
 
 ---
 
@@ -25,12 +26,75 @@ A browser-based AI-assisted coding environment similar to Claude Code, built wit
 | Module | Technology |
 |--------|------------|
 | Frontend | React 18, TypeScript, Vite, TailwindCSS |
-| Code Editor | Monaco Editor |
 | Desktop | Electron 30 |
+| Code Editor | Monaco Editor |
 | Backend | Fastify 4, Node.js |
-| Database | PostgreSQL, Prisma ORM |
+| Database | PostgreSQL 16, Prisma ORM |
 | AI | OpenAI, Anthropic, Qwen |
+| Container | Docker, Docker Compose |
 | Packaging | Electron Builder |
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 20+
+- Docker & Docker Compose
+- PostgreSQL 16+ (if not using Docker)
+
+### Option 1: Desktop App (Recommended)
+
+1. Build EXE:
+```bash
+cd packages/electron
+npm install
+npm run build:exe
+```
+
+2. Start PostgreSQL:
+```bash
+docker run -d --name webaiide-postgres \
+  -e POSTGRES_USER=user \
+  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_DB=webaiide \
+  -p 5432:5432 postgres:16
+```
+
+3. Start backend server:
+```bash
+cd packages/server
+npm install
+npx prisma generate
+npx prisma db push
+npm run dev
+```
+
+4. Run desktop app:
+```
+packages/electron/release5/win-unpacked/Web AI IDE.exe
+```
+
+### Option 2: Docker Deployment
+
+```bash
+docker-compose up -d
+```
+
+### Option 3: Development Mode
+
+**Backend:**
+```bash
+cd packages/server
+npm run dev  # http://localhost:3001
+```
+
+**Desktop App:**
+```bash
+cd packages/electron
+npm run dev
+```
 
 ---
 
@@ -40,12 +104,11 @@ A browser-based AI-assisted coding environment similar to Claude Code, built wit
 web-ai-ide/
 ├── packages/
 │   ├── electron/           # Electron desktop app
-│   │   ├── electron/        # Main process (main.ts, preload.ts)
-│   │   ├── src/            # React frontend
-│   │   └── dist/           # Built files
+│   │   ├── electron/      # Main process (main.ts, preload.ts)
+│   │   ├── src/           # React frontend
+│   │   └── dist/          # Build output
 │   │
-│   ├── cli/                # Standalone React app (optional)
-│   │   └── src/
+│   ├── cli/               # Standalone React app (optional)
 │   │
 │   ├── core/               # AI core logic
 │   │   └── src/
@@ -56,66 +119,40 @@ web-ai-ide/
 │   ├── server/             # Fastify backend
 │   │   ├── src/
 │   │   │   ├── routes/     # API routes
-│   │   │   └── services/    # Business logic
+│   │   │   └── services/   # Business logic
 │   │   └── prisma/         # Database schema
 │   │
 │   └── shared/             # Shared type definitions
 │
 ├── docs/                   # Documentation
-├── docker-compose.yml      # Docker orchestration
+├── docker-compose.yml       # Docker orchestration
 └── package.json
 ```
 
 ---
 
-## Quick Start
+## Database
 
-### Desktop App (Windows)
+### PostgreSQL Configuration
 
-1. Download or build the exe:
-   ```bash
-   cd packages/electron
-   npm install
-   npm run build
-   ```
-
-2. Run the exe:
-   ```
-   packages/electron/release/win-unpacked/Web AI IDE.exe
-   ```
-
-### Development
-
-#### Frontend + Desktop
-
-```bash
-cd packages/electron
-npm install
-npm run dev
+Environment variable (`packages/server/.env`):
+```
+DATABASE_URL="postgresql://user:password@localhost:5432/webaiide?schema=public"
 ```
 
-#### Full Stack (Frontend + Backend)
+### Database Models
 
-**Backend:**
+- **User** - User accounts
+- **Project** - Projects (linked to user)
+- **Session** - Sessions (linked to project, supports cwd, gitBranch)
+- **Message** - Messages (supports uuid chain, tool calls)
+
+### Database Migration
+
 ```bash
 cd packages/server
-npm install
-npx prisma generate
-npx prisma migrate dev --name init
-npm run dev
-```
-
-**Frontend:**
-```bash
-cd packages/cli
-npm install
-npm run dev
-```
-
-### Docker Deployment
-
-```bash
-docker-compose up -d
+npx prisma generate    # Generate Prisma Client
+npx prisma db push    # Push schema to database
 ```
 
 ---
@@ -136,7 +173,6 @@ docker-compose up -d
 ### API Key Setup
 
 Configure API keys in the Settings panel, or via environment variables:
-
 ```env
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
@@ -147,74 +183,39 @@ DASHSCOPE_API_KEY=sk-...
 
 ## Build Desktop App
 
-### Build Windows EXE
-
 ```bash
 cd packages/electron
-npm run build
-```
-
-Output: `packages/electron/release/win-unpacked/Web AI IDE.exe`
-
-### Build Installer
-
-```bash
 npm run build:exe
 ```
 
-Output: `packages/electron/release/Web AI IDE Setup.exe`
+Output: `packages/electron/release5/win-unpacked/Web AI IDE.exe`
 
 ---
 
-## Development Guide
+## API Reference
 
-### Adding New AI Provider
+### REST Endpoints
 
-1. Create provider in `packages/core/src/ai/providers/`
-2. Implement `AIProvider` interface
-3. Register in `packages/core/src/ai/gateway.ts`
-4. Add model config in `packages/core/src/models/config.ts`
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/projects` | List all projects |
+| POST | `/api/projects` | Create new project |
+| DELETE | `/api/projects/:id` | Delete project |
+| GET | `/api/sessions/project/:projectId` | Get project's sessions |
+| GET | `/api/sessions/:id` | Get session details |
+| GET | `/api/sessions/:id/conversation` | Reconstruct full conversation |
+| POST | `/api/sessions` | Create new session |
+| DELETE | `/api/sessions/:id` | Delete session |
 
-### Adding New Tool
+### WebSocket Events
 
-1. Create tool in `packages/core/src/tools/`
-2. Implement `Tool` interface
-3. Register in `packages/core/src/tools/registry.ts`
-
----
-
-## Architecture
-
-### Frontend Architecture
-
-```
-┌─────────────────────────────────────────────┐
-│                  React App                  │
-├─────────────┬─────────────┬─────────────────┤
-│   Layout    │   Editor    │   FileExplorer  │
-├─────────────┴─────────────┴─────────────────┤
-│                  Chat                       │
-├─────────────────────────────────────────────┤
-│              Settings                        │
-└─────────────────────────────────────────────┘
-```
-
-### Backend Architecture
-
-```
-┌─────────────────────────────────────────────┐
-│              Fastify Server                 │
-├──────────┬──────────┬──────────┬───────────┤
-│ Projects │ Sessions │  Chat    │   Files   │
-│  Routes  │  Routes  │  Routes  │  Routes   │
-├──────────┴──────────┴──────────┴───────────┤
-│             Services Layer                  │
-├─────────────────────────────────────────────┤
-│              Prisma ORM                      │
-├─────────────────────────────────────────────┤
-│             PostgreSQL                       │
-└─────────────────────────────────────────────┘
-```
+| Event | Direction | Description |
+|-------|-----------|-------------|
+| `chat:message` | Client → Server | Send chat message |
+| `chat:stream` | Server → Client | AI streaming response |
+| `chat:tool_call` | Server → Client | Tool call request |
+| `chat:approve` | Client → Server | Approve operation |
+| `chat:reject` | Client → Server | Reject operation |
 
 ---
 
@@ -227,20 +228,14 @@ Output: `packages/electron/release/Web AI IDE Setup.exe`
 
 ---
 
-## Contributing
+## Reference Projects
 
-Issues and Pull Requests are welcome!
+- [Qwen Code](https://github.com/QwenLM/qwen-code) - Architecture reference
+- [Claude Code](https://claude.ai/code) - Feature inspiration
+- [VS Code Web](https://github.com/microsoft/vscode) - Monaco Editor integration
 
 ---
 
 ## License
 
 MIT License
-
----
-
-## Reference Projects
-
-- [Qwen Code](https://github.com/QwenLM/qwen-code) - Architecture reference
-- [Claude Code](https://claude.ai/code) - Feature inspiration
-- [VS Code Web](https://github.com/microsoft/vscode) - Monaco Editor integration
