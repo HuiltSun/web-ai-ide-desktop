@@ -12,6 +12,7 @@ async function ensureDefaultUser() {
         id: DEFAULT_USER_ID,
         email: 'default@webaiide.local',
         name: 'Default User',
+        password: 'default-user-placeholder',
       },
     });
   }

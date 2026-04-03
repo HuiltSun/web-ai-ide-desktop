@@ -50,7 +50,10 @@ export async function authRouter(fastify: FastifyInstance) {
   fastify.get('/me', {
     onRequest: [fastify.authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const user = await getUserById((request.user as { id: string }).id);
+    if (typeof request.user?.id !== 'string') {
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+    const user = await getUserById(request.user.id);
     if (!user) {
       return reply.code(404).send({ error: 'User not found' });
     }
