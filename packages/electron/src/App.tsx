@@ -60,6 +60,9 @@ function App() {
     localStorage.setItem('user', JSON.stringify(data.user));
     setToken(data.token);
     setUser(data.user);
+    setSelectedProjectId(null);
+    setSelectedSessionId(null);
+    await loadProjects();
   };
 
   const handleRegister = async (email: string, password: string, name?: string) => {
@@ -89,6 +92,9 @@ function App() {
     localStorage.setItem('user', JSON.stringify(data.user));
     setToken(data.token);
     setUser(data.user);
+    setSelectedProjectId(null);
+    setSelectedSessionId(null);
+    await loadProjects();
   };
 
   const handleLogout = () => {
@@ -98,11 +104,16 @@ function App() {
     setUser(null);
     setSelectedProjectId(null);
     setSelectedSessionId(null);
+    setProjects([]);
     setLoginOpen(false);
   };
 
   const handleCreateProject = async (name: string) => {
-    const userId = user?.id || DEFAULT_USER_ID;
+    if (!user) {
+      setLoginOpen(true);
+      return;
+    }
+    const userId = user.id;
     try {
       const projectPath = `./projects/${name.toLowerCase().replace(/\s+/g, '-')}`;
       const newProjectWithSession: ProjectWithSession = await api.createProject(name, projectPath, userId);
