@@ -15,28 +15,44 @@ export function useChat(sessionId: string | null) {
   const [streamingContent, setStreamingContent] = useState('');
   const [pendingToolCall, setPendingToolCall] = useState<ToolCall | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const streamingContentRef = useRef('');
+  const sessionIdRef = useRef(sessionId);
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
 
   useEffect(() => {
     if (!sessionId) return;
 
-    streamingContentRef.current = '';
+    let cancelled = false;
+    setIsLoading(true);
     setMessages([]);
+    streamingContentRef.current = '';
     setStreamingContent('');
     setPendingToolCall(null);
 
     fetchMessages(sessionId)
       .then((history) => {
-        setMessages(history);
+        if (!cancelled && sessionIdRef.current === sessionId) {
+          setMessages(history);
+          setIsLoading(false);
+        }
       })
       .catch((err) => {
-        console.error('Failed to load message history:', err);
+        if (!cancelled && sessionIdRef.current === sessionId) {
+          console.error('Failed to load message history:', err);
+          setIsLoading(false);
+        }
       });
 
     wsService.connect(sessionId);
     setIsConnected(true);
 
     const unsubscribe = wsService.onMessage((event: ChatStreamEvent) => {
+      if (sessionIdRef.current !== sessionId) return;
+
       switch (event.type) {
         case 'text':
           if (event.content) {
@@ -71,9 +87,11 @@ export function useChat(sessionId: string | null) {
     });
 
     return () => {
+      cancelled = true;
       unsubscribe();
       wsService.disconnect();
       setIsConnected(false);
+      setIsLoading(false);
     };
   }, [sessionId]);
 
@@ -96,6 +114,7 @@ export function useChat(sessionId: string | null) {
     streamingContent,
     pendingToolCall,
     isConnected,
+    isLoading,
     sendMessage,
     approveTool,
     rejectTool,
