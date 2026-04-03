@@ -33,8 +33,11 @@ export interface AIProvider {
 }
 
 export interface SettingsData {
-  ai_providers: Record<string, AIProvider>;
-  selected_model: string;
+  ai_providers?: Record<string, AIProvider>;
+  selected_model?: string;
+  fontSize?: number;
+  tabSize?: number;
+  [key: string]: unknown;
 }
 
 export interface ElectronAPI {

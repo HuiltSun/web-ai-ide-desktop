@@ -15,6 +15,8 @@ interface AIProvider {
 interface StoreSchema {
   ai_providers: Record<string, AIProvider>;
   selected_model: string;
+  fontSize: number;
+  tabSize: number;
 }
 
 const store = new Store<StoreSchema>({
@@ -25,6 +27,8 @@ const store = new Store<StoreSchema>({
       qwen: { name: 'Qwen', apiKey: '', models: ['qwen-coder-plus', 'qwen3-coder'] },
     },
     selected_model: 'gpt-4o',
+    fontSize: 14,
+    tabSize: 2,
   },
 });
 

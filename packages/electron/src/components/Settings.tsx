@@ -29,6 +29,8 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
   });
   const [selectedModel, setSelectedModel] = useState('gpt-4o');
   const [saved, setSaved] = useState(false);
+  const [fontSize, setFontSize] = useState(14);
+  const [tabSize, setTabSize] = useState(2);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -37,16 +39,22 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
           const data = await window.electronAPI.settings.getAll();
           if (data.ai_providers) setProviders(data.ai_providers);
           if (data.selected_model) setSelectedModel(data.selected_model);
+          if (data.fontSize) setFontSize(data.fontSize);
+          if (data.tabSize) setTabSize(data.tabSize);
         } catch {}
       } else {
         const savedProviders = localStorage.getItem('ai_providers');
         const savedModel = localStorage.getItem('selected_model');
+        const savedFontSize = localStorage.getItem('fontSize');
+        const savedTabSize = localStorage.getItem('tabSize');
         if (savedProviders) {
           try {
             setProviders(JSON.parse(savedProviders));
           } catch {}
         }
         if (savedModel) setSelectedModel(savedModel);
+        if (savedFontSize) setFontSize(Number(savedFontSize));
+        if (savedTabSize) setTabSize(Number(savedTabSize));
       }
     };
     loadSettings();
@@ -58,9 +66,13 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
     if (!window.electronAPI?.settings) {
       localStorage.setItem('ai_providers', JSON.stringify(providers));
       localStorage.setItem('selected_model', selectedModel);
+      localStorage.setItem('fontSize', String(fontSize));
+      localStorage.setItem('tabSize', String(tabSize));
     } else {
       window.electronAPI.settings.set('ai_providers', providers);
       window.electronAPI.settings.set('selected_model', selectedModel);
+      window.electronAPI.settings.set('fontSize', fontSize);
+      window.electronAPI.settings.set('tabSize', tabSize);
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -200,9 +212,14 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                       <label className="block text-sm font-medium text-slate-300 mb-2">
                         Font Size
                       </label>
-                      <select className="w-full px-4 py-2.5 bg-slate-700 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%239ca3af\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}>
+                      <select
+                        value={fontSize}
+                        onChange={(e) => setFontSize(Number(e.target.value))}
+                        className="w-full px-4 py-2.5 bg-slate-700 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer"
+                        style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%239ca3af\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
+                      >
                         <option value="12" className="bg-slate-700">12px</option>
-                        <option value="14" selected className="bg-slate-700">14px</option>
+                        <option value="14" className="bg-slate-700">14px</option>
                         <option value="16" className="bg-slate-700">16px</option>
                         <option value="18" className="bg-slate-700">18px</option>
                       </select>
@@ -211,8 +228,13 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                       <label className="block text-sm font-medium text-slate-300 mb-2">
                         Tab Size
                       </label>
-                      <select className="w-full px-4 py-2.5 bg-slate-700 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%239ca3af\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}>
-                        <option value="2" selected className="bg-slate-700">2 spaces</option>
+                      <select
+                        value={tabSize}
+                        onChange={(e) => setTabSize(Number(e.target.value))}
+                        className="w-full px-4 py-2.5 bg-slate-700 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer"
+                        style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%239ca3af\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
+                      >
+                        <option value="2" className="bg-slate-700">2 spaces</option>
                         <option value="4" className="bg-slate-700">4 spaces</option>
                       </select>
                     </div>
