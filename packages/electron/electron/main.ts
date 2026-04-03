@@ -95,22 +95,40 @@ ipcMain.handle('get-version', () => {
 });
 
 ipcMain.handle('settings:get', (_event, key: string) => {
-  log.info(`Getting setting: ${key}`);
-  return store.get(key);
+  try {
+    log.info(`Getting setting: ${key}`);
+    return store.get(key);
+  } catch (error) {
+    log.error(`Failed to get setting ${key}:`, error);
+    return undefined;
+  }
 });
 
 ipcMain.handle('settings:set', (_event, key: string, value: unknown) => {
-  log.info(`Setting: ${key}`);
-  store.set(key, value);
-  return true;
+  try {
+    log.info(`Setting: ${key}`);
+    store.set(key, value);
+    return true;
+  } catch (error) {
+    log.error(`Failed to set setting ${key}:`, error);
+    return false;
+  }
 });
 
 ipcMain.handle('settings:getAll', () => {
-  log.info('Getting all settings');
-  return {
-    ai_providers: store.get('ai_providers'),
-    selected_model: store.get('selected_model'),
-  };
+  try {
+    log.info('Getting all settings');
+    return {
+      ai_providers: store.get('ai_providers'),
+      selected_model: store.get('selected_model'),
+    };
+  } catch (error) {
+    log.error('Failed to get all settings:', error);
+    return {
+      ai_providers: undefined,
+      selected_model: undefined,
+    };
+  }
 });
 
 process.on('uncaughtException', (error) => {
