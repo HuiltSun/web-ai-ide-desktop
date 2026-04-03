@@ -6,6 +6,15 @@ export interface ToolCall {
   status: 'pending' | 'approved' | 'rejected' | 'completed';
 }
 
+export interface Project {
+  id: string;
+  name: string;
+  path: string;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;

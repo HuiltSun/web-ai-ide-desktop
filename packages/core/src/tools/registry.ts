@@ -6,7 +6,7 @@ export interface Tool {
   execute: (args: Record<string, unknown>) => Promise<string>;
 }
 
-class ToolRegistry {
+export class ToolRegistry {
   private tools: Map<string, Tool> = new Map();
 
   register(tool: Tool) {

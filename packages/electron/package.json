@@ -33,7 +33,7 @@
     "appId": "com.webaiide.app",
     "productName": "Web AI IDE",
     "directories": {
-      "output": "release"
+      "output": "release4"
     },
     "files": [
       "dist/**/*",

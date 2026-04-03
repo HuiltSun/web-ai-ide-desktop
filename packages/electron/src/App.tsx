@@ -2,22 +2,36 @@ import { useState } from 'react';
 import { Layout } from './components/Layout';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
+import type { Project } from './types';
 
 function App() {
-  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
-  const handleCreateProject = () => {
-    const newProjectId = `project-${Date.now()}`;
-    setSelectedProject(newProjectId);
+  const handleCreateProject = (name: string) => {
+    const newProject: Project = {
+      id: `project-${Date.now()}`,
+      name,
+      createdAt: new Date().toISOString(),
+    };
+    setProjects((prev) => [...prev, newProject]);
+    setSelectedProjectId(newProject.id);
   };
+
+  const handleSelectProject = (projectId: string | null) => {
+    setSelectedProjectId(projectId);
+  };
+
+  const selectedProject = projects.find((p) => p.id === selectedProjectId) || null;
 
   return (
     <Layout
-      header={<Header projectId={selectedProject} />}
+      header={<Header projectId={selectedProject?.name || null} />}
       sidebar={
         <Sidebar
-          selectedProject={selectedProject}
-          onSelectProject={setSelectedProject}
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+          onSelectProject={handleSelectProject}
           onCreateProject={handleCreateProject}
         />
       }
