@@ -2,9 +2,10 @@ import { BotIcon, SettingsIcon } from './Icons';
 
 interface HeaderProps {
   projectId: string | null;
+  onSettingsClick: () => void;
 }
 
-export function Header({ projectId }: HeaderProps) {
+export function Header({ projectId, onSettingsClick }: HeaderProps) {
   return (
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-3">
@@ -22,7 +23,10 @@ export function Header({ projectId }: HeaderProps) {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <button className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-200">
+        <button
+          onClick={onSettingsClick}
+          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-200"
+        >
           <SettingsIcon size={18} />
         </button>
       </div>
