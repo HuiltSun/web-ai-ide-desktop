@@ -5,7 +5,7 @@ import { Sidebar } from './components/Sidebar';
 import { Chat } from './components/Chat';
 import { Settings } from './components/Settings';
 import { SparklesIcon, CodeIcon, BotIcon } from './components/Icons';
-import type { Project } from './types';
+import type { Project, ProjectWithSession } from './types';
 import { api } from './services/api';
 
 const DEFAULT_USER_ID = 'default-user';
@@ -13,6 +13,7 @@ const DEFAULT_USER_ID = 'default-user';
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -34,16 +35,28 @@ function App() {
   const handleCreateProject = async (name: string) => {
     try {
       const projectPath = `./projects/${name.toLowerCase().replace(/\s+/g, '-')}`;
-      const newProject = await api.createProject(name, projectPath, DEFAULT_USER_ID);
-      setProjects((prev) => [newProject, ...prev]);
-      setSelectedProjectId(newProject.id);
+      const newProjectWithSession: ProjectWithSession = await api.createProject(name, projectPath, DEFAULT_USER_ID);
+      setProjects((prev) => [newProjectWithSession.project, ...prev]);
+      setSelectedProjectId(newProjectWithSession.project.id);
+      setSelectedSessionId(newProjectWithSession.session.id);
     } catch (error) {
       console.error('Failed to create project:', error);
     }
   };
 
-  const handleSelectProject = (projectId: string | null) => {
+  const handleSelectProject = async (projectId: string | null) => {
     setSelectedProjectId(projectId);
+    if (projectId) {
+      try {
+        const projectWithSession = await api.getProjectWithSession(projectId);
+        setSelectedSessionId(projectWithSession.session.id);
+      } catch (error) {
+        console.error('Failed to load project session:', error);
+        setSelectedSessionId(null);
+      }
+    } else {
+      setSelectedSessionId(null);
+    }
   };
 
   const handleDeleteProject = async (projectId: string) => {
@@ -52,6 +65,7 @@ function App() {
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
       if (selectedProjectId === projectId) {
         setSelectedProjectId(null);
+        setSelectedSessionId(null);
       }
     } catch (error) {
       console.error('Failed to delete project:', error);
@@ -90,8 +104,8 @@ function App() {
           />
         }
       >
-        {selectedProjectId ? (
-          <Chat sessionId={selectedProjectId} />
+        {selectedSessionId ? (
+          <Chat sessionId={selectedSessionId} />
         ) : (
           <div className="h-full flex flex-col items-center justify-center p-8">
             <div className="text-center max-w-lg">

@@ -34,13 +34,43 @@ export const projectService = {
 
   async createProject(data: { name: string; path: string; userId?: string }) {
     const user = await ensureDefaultUser();
-    return prisma.project.create({
+    const project = await prisma.project.create({
       data: {
         name: data.name,
         path: data.path,
         userId: data.userId || user.id,
       },
     });
+
+    await prisma.session.create({
+      data: {
+        projectId: project.id,
+        model: 'gpt-4o',
+      },
+    });
+
+    return project;
+  },
+
+  async getProjectWithSession(projectId: string) {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        sessions: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!project || project.sessions.length === 0) {
+      return null;
+    }
+
+    return {
+      project,
+      session: project.sessions[0],
+    };
   },
 
   async deleteProject(id: string) {

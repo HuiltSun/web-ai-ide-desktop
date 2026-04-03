@@ -1,9 +1,4 @@
-export interface FileNode {
-  name: string;
-  path: string;
-  isDirectory: boolean;
-  children?: FileNode[];
-}
+import type { Project, ProjectWithSession, FileNode } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -36,7 +31,7 @@ export const api = {
     if (!response.ok) throw new Error('Failed to delete file');
   },
 
-  async createProject(name: string, path: string, userId: string) {
+  async createProject(name: string, path: string, userId: string): Promise<ProjectWithSession> {
     const response = await fetch(`${API_BASE}/projects`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -46,9 +41,15 @@ export const api = {
     return response.json();
   },
 
-  async listProjects() {
+  async listProjects(): Promise<Project[]> {
     const response = await fetch(`${API_BASE}/projects`);
     if (!response.ok) throw new Error('Failed to fetch projects');
+    return response.json();
+  },
+
+  async getProjectWithSession(projectId: string): Promise<ProjectWithSession> {
+    const response = await fetch(`${API_BASE}/projects/${projectId}`);
+    if (!response.ok) throw new Error('Failed to fetch project');
     return response.json();
   },
 

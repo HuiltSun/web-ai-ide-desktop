@@ -10,19 +10,20 @@ export async function projectsRouter(fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>(
     '/:id',
     async (request, reply) => {
-      const project = await projectService.getProject(request.params.id);
-      if (!project) {
+      const projectWithSession = await projectService.getProjectWithSession(request.params.id);
+      if (!projectWithSession) {
         return reply.status(404).send({ error: 'Project not found' });
       }
-      return project;
+      return projectWithSession;
     }
   );
 
   fastify.post<{
-    Body: { name: string; path: string; userId: string };
+    Body: { name: string; path: string; userId?: string };
   }>('/', async (request, reply) => {
     const project = await projectService.createProject(request.body);
-    return reply.status(201).send(project);
+    const projectWithSession = await projectService.getProjectWithSession(project.id);
+    return reply.status(201).send(projectWithSession);
   });
 
   fastify.delete<{ Params: { id: string } }>(

@@ -39,24 +39,41 @@ export async function chatRouter(fastify: FastifyInstance) {
 
       let streamingContent = '';
       let activeSessionId = sessionId;
+      let sessionReady = false;
 
       try {
         const existingSession = await sessionService.getSession(sessionId);
         if (existingSession) {
           activeSessionId = existingSession.id;
+          sessionReady = true;
           fastify.log.info(`Using existing session: ${activeSessionId}`);
         } else {
           const newSession = await sessionService.createSession({
             projectId: sessionId,
           });
           activeSessionId = newSession.id;
+          sessionReady = true;
           fastify.log.info(`Created new session: ${activeSessionId} for project: ${sessionId}`);
         }
       } catch (err) {
         fastify.log.error('Failed to ensure session exists:', err);
+        socket.send(JSON.stringify({
+          type: 'error',
+          content: 'Failed to initialize session. Please try again.',
+        } as ChatStreamEvent));
+        socket.close();
+        return;
       }
 
       socket.on('message', async (message) => {
+        if (!sessionReady) {
+          socket.send(JSON.stringify({
+            type: 'error',
+            content: 'Session not ready.',
+          } as ChatStreamEvent));
+          return;
+        }
+
         try {
           const data: ChatMessage = JSON.parse(message.toString());
 

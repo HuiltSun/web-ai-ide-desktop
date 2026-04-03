@@ -15,6 +15,21 @@ export interface Project {
   updatedAt: string;
 }
 
+export interface Session {
+  id: string;
+  projectId: string;
+  cwd: string | null;
+  gitBranch: string | null;
+  model: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectWithSession {
+  project: Project;
+  session: Session;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
