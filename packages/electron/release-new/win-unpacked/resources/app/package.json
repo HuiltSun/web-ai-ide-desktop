@@ -1,0 +1,11 @@
+{
+  "name": "@web-ai-ide/electron",
+  "version": "1.0.0",
+  "description": "Web AI IDE Desktop Application",
+  "main": "dist-electron/main.js",
+  "author": "HuiltSun",
+  "license": "MIT",
+  "dependencies": {
+    "electron-log": "^5.1.0"
+  }
+}
