@@ -4,6 +4,7 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { Chat } from './components/Chat';
 import { Settings } from './components/Settings';
+import { LoginModal } from './components/LoginModal';
 import { SparklesIcon, CodeIcon, BotIcon } from './components/Icons';
 import type { Project, ProjectWithSession } from './types';
 import { api } from './services/api';
@@ -16,8 +17,17 @@ function App() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
+    const savedToken = localStorage.getItem('auth_token');
+    const savedUser = localStorage.getItem('user');
+    if (savedToken && savedUser) {
+      setToken(savedToken);
+      setUser(JSON.parse(savedUser));
+    }
     loadProjects();
   }, []);
 
@@ -32,10 +42,69 @@ function App() {
     }
   };
 
+  const handleLogin = async (email: string, password: string) => {
+    const response = await fetch('http://localhost:3001/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Login failed');
+    }
+
+    const data = await response.json();
+    localStorage.setItem('auth_token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    setToken(data.token);
+    setUser(data.user);
+  };
+
+  const handleRegister = async (email: string, password: string, name?: string) => {
+    const response = await fetch('http://localhost:3001/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Registration failed');
+    }
+
+    const loginResponse = await fetch('http://localhost:3001/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!loginResponse.ok) {
+      throw new Error('Registration successful but login failed');
+    }
+
+    const data = await loginResponse.json();
+    localStorage.setItem('auth_token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    setToken(data.token);
+    setUser(data.user);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    setToken(null);
+    setUser(null);
+    setSelectedProjectId(null);
+    setSelectedSessionId(null);
+    setLoginOpen(false);
+  };
+
   const handleCreateProject = async (name: string) => {
+    const userId = user?.id || DEFAULT_USER_ID;
     try {
       const projectPath = `./projects/${name.toLowerCase().replace(/\s+/g, '-')}`;
-      const newProjectWithSession: ProjectWithSession = await api.createProject(name, projectPath, DEFAULT_USER_ID);
+      const newProjectWithSession: ProjectWithSession = await api.createProject(name, projectPath, userId);
       setProjects((prev) => [newProjectWithSession.project, ...prev]);
       setSelectedProjectId(newProjectWithSession.project.id);
       setSelectedSessionId(newProjectWithSession.session.id);
@@ -93,7 +162,16 @@ function App() {
   return (
     <>
       <Layout
-        header={<Header projectId={selectedProject?.name || null} onSettingsClick={() => setSettingsOpen(true)} onRefreshClick={loadProjects} />}
+        header={
+          <Header
+            projectId={selectedProject?.name || null}
+            onSettingsClick={() => setSettingsOpen(true)}
+            onRefreshClick={loadProjects}
+            onLoginClick={() => setLoginOpen(true)}
+            userEmail={user?.email}
+            onLogout={handleLogout}
+          />
+        }
         sidebar={
           <Sidebar
             projects={projects}
@@ -121,7 +199,9 @@ function App() {
                 Welcome to Web AI IDE
               </h2>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Your intelligent coding companion. Select a project from the sidebar or create a new one to start building.
+                {user
+                  ? `Welcome back, ${user.email}. Select a project or create a new one.`
+                  : 'Your intelligent coding companion. Sign in to sync your projects across devices.'}
               </p>
               <div className="mt-8 flex items-center justify-center gap-6">
                 <div className="flex items-center gap-2 text-slate-500">
@@ -138,6 +218,12 @@ function App() {
         )}
       </Layout>
       <Settings isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <LoginModal
+        isOpen={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+      />
     </>
   );
 }
