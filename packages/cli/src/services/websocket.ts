@@ -13,7 +13,7 @@ class WebSocketService {
     }
 
     this.sessionId = sessionId;
-    this.ws = new WebSocket(`ws://localhost:3001/ws/chat/${sessionId}`);
+    this.ws = new WebSocket(`ws://localhost:3001/api/chat/${sessionId}/stream`);
 
     this.ws.onopen = () => {
       console.log('WebSocket connected');

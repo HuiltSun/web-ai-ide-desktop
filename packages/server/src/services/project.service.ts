@@ -7,12 +7,13 @@ const DEFAULT_USER_ID = 'default-user';
 async function ensureDefaultUser() {
   const user = await prisma.user.findUnique({ where: { id: DEFAULT_USER_ID } });
   if (!user) {
+    const defaultPassword = process.env.DEFAULT_USER_PASSWORD || crypto.randomUUID();
     return prisma.user.create({
       data: {
         id: DEFAULT_USER_ID,
         email: 'default@webaiide.local',
         name: 'Default User',
-        password: 'default-user-placeholder',
+        password: defaultPassword,
       },
     });
   }
