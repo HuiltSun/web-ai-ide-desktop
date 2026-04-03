@@ -33,13 +33,12 @@
     "appId": "com.webaiide.app",
     "productName": "Web AI IDE",
     "directories": {
-      "output": "release-new"
+      "output": "release"
     },
     "files": [
       "dist/**/*",
       "dist-electron/**/*"
     ],
-    "asar": false,
     "win": {
       "target": [
         {
