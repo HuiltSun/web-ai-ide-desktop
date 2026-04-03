@@ -2,6 +2,15 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { register, login, getUserById } from '../services/auth.service.js';
 import { z } from 'zod';
 
+interface JwtPayload {
+  id: string;
+  email: string;
+}
+
+interface AuthenticatedRequest extends FastifyRequest {
+  user: JwtPayload;
+}
+
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
@@ -48,12 +57,13 @@ export async function authRouter(fastify: FastifyInstance) {
   });
 
   fastify.get('/me', {
-    onRequest: [fastify.authenticate],
+    onRequest: [(fastify as any).authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    if (typeof request.user?.id !== 'string') {
+    const authRequest = request as unknown as AuthenticatedRequest;
+    if (typeof authRequest.user?.id !== 'string') {
       return reply.code(401).send({ error: 'Unauthorized' });
     }
-    const user = await getUserById(request.user.id);
+    const user = await getUserById(authRequest.user.id);
     if (!user) {
       return reply.code(404).send({ error: 'User not found' });
     }
