@@ -57,6 +57,7 @@
     },
     "electronDist": "node_modules/electron/dist",
     "electronVersion": "30.5.1",
-    "publish": null
+    "publish": null,
+    "forceCodeSigning": false
   }
 }
