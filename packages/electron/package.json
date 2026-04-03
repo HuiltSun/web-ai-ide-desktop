@@ -54,6 +54,9 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "electronDist": "node_modules/electron/dist",
+    "electronVersion": "30.5.1",
+    "publish": null
   }
 }

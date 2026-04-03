@@ -1,0 +1,21 @@
+directories:
+  output: release5
+  buildResources: build
+appId: com.webaiide.app
+productName: Web AI IDE
+files:
+  - filter:
+      - dist/**/*
+      - dist-electron/**/*
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+electronDist: node_modules/electron/dist
+electronVersion: 30.5.1
+publish: null

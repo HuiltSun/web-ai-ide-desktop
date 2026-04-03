@@ -1,0 +1,14 @@
+appId: com.webaiide.app
+productName: Web AI IDE
+directories:
+  output: release5
+  buildResources: build
+files:
+  - dist/**/*
+  - dist-electron/**/*
+win:
+  target:
+    - target: dir
+      arch:
+        - x64
+publish: null

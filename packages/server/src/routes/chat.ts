@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import crypto from 'crypto';
 import { sessionService } from '../services/session.service.js';
 
 interface ChatMessage {
@@ -32,24 +33,50 @@ export async function chatRouter(fastify: FastifyInstance) {
   fastify.get<{ Params: { sessionId: string } }>(
     '/:sessionId/stream',
     { websocket: true },
-    (socket, request) => {
+    async (socket, request) => {
       const sessionId = request.params.sessionId;
       fastify.log.info(`WebSocket connected for session: ${sessionId}`);
 
       let streamingContent = '';
+      let activeSessionId = sessionId;
+
+      try {
+        const existingSession = await sessionService.getSession(sessionId);
+        if (existingSession) {
+          activeSessionId = existingSession.id;
+          fastify.log.info(`Using existing session: ${activeSessionId}`);
+        } else {
+          const newSession = await sessionService.createSession({
+            projectId: sessionId,
+          });
+          activeSessionId = newSession.id;
+          fastify.log.info(`Created new session: ${activeSessionId} for project: ${sessionId}`);
+        }
+      } catch (err) {
+        fastify.log.error('Failed to ensure session exists:', err);
+      }
 
       socket.on('message', async (message) => {
         try {
           const data: ChatMessage = JSON.parse(message.toString());
 
           if (data.type === 'message' && data.content) {
-            await sessionService.addMessage({
-              sessionId,
-              uuid: crypto.randomUUID(),
-              type: 'user',
-              role: 'user',
-              content: data.content,
-            });
+            try {
+              await sessionService.addMessage({
+                sessionId: activeSessionId,
+                uuid: crypto.randomUUID(),
+                type: 'user',
+                role: 'user',
+                content: data.content,
+              });
+            } catch (dbError) {
+              fastify.log.error('Database error adding message:', dbError);
+              socket.send(JSON.stringify({
+                type: 'error',
+                content: 'Failed to save message.',
+              } as ChatStreamEvent));
+              return;
+            }
 
             socket.send(JSON.stringify({
               type: 'text',
@@ -81,7 +108,7 @@ export async function chatRouter(fastify: FastifyInstance) {
           fastify.log.error('Error processing message:', error);
           socket.send(JSON.stringify({
             type: 'error',
-            content: 'Failed to process message',
+            content: error instanceof Error ? error.message : 'Failed to process message',
           } as ChatStreamEvent));
         }
       });

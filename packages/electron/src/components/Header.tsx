@@ -1,11 +1,12 @@
-import { BotIcon, SettingsIcon } from './Icons';
+import { BotIcon, SettingsIcon, RefreshIcon } from './Icons';
 
 interface HeaderProps {
   projectId: string | null;
   onSettingsClick: () => void;
+  onRefreshClick?: () => void;
 }
 
-export function Header({ projectId, onSettingsClick }: HeaderProps) {
+export function Header({ projectId, onSettingsClick, onRefreshClick }: HeaderProps) {
   return (
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-3">
@@ -23,6 +24,15 @@ export function Header({ projectId, onSettingsClick }: HeaderProps) {
         </div>
       </div>
       <div className="flex items-center gap-2">
+        {onRefreshClick && (
+          <button
+            onClick={onRefreshClick}
+            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-200"
+            title="Refresh"
+          >
+            <RefreshIcon size={18} />
+          </button>
+        )}
         <button
           onClick={onSettingsClick}
           className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-200"

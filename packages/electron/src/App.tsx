@@ -79,7 +79,7 @@ function App() {
   return (
     <>
       <Layout
-        header={<Header projectId={selectedProject?.name || null} onSettingsClick={() => setSettingsOpen(true)} />}
+        header={<Header projectId={selectedProject?.name || null} onSettingsClick={() => setSettingsOpen(true)} onRefreshClick={loadProjects} />}
         sidebar={
           <Sidebar
             projects={projects}
