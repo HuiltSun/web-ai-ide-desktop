@@ -57,7 +57,7 @@ export async function authRouter(fastify: FastifyInstance) {
   });
 
   fastify.get('/me', {
-    onRequest: [(fastify as any).authenticate],
+    onRequest: [fastify.authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const authRequest = request as unknown as AuthenticatedRequest;
     if (typeof authRequest.user?.id !== 'string') {

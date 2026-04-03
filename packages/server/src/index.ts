@@ -8,6 +8,12 @@ import { chatRouter } from './routes/chat.js';
 import { filesRouter } from './routes/files.js';
 import { authRouter } from './routes/auth.js';
 
+declare module 'fastify' {
+  interface FastifyInstance {
+    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+  }
+}
+
 const server = Fastify({
   logger: true,
 });
