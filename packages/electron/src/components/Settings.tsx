@@ -200,20 +200,20 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                       <label className="block text-sm font-medium text-slate-300 mb-2">
                         Font Size
                       </label>
-                      <select className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 transition-all">
-                        <option value="12">12px</option>
-                        <option value="14" selected>14px</option>
-                        <option value="16">16px</option>
-                        <option value="18">18px</option>
+                      <select className="w-full px-4 py-2.5 bg-slate-700 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%239ca3af\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}>
+                        <option value="12" className="bg-slate-700">12px</option>
+                        <option value="14" selected className="bg-slate-700">14px</option>
+                        <option value="16" className="bg-slate-700">16px</option>
+                        <option value="18" className="bg-slate-700">18px</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-2">
                         Tab Size
                       </label>
-                      <select className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 transition-all">
-                        <option value="2" selected>2 spaces</option>
-                        <option value="4">4 spaces</option>
+                      <select className="w-full px-4 py-2.5 bg-slate-700 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%239ca3af\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}>
+                        <option value="2" selected className="bg-slate-700">2 spaces</option>
+                        <option value="4" className="bg-slate-700">4 spaces</option>
                       </select>
                     </div>
                     <div className="flex items-center justify-between py-2">
