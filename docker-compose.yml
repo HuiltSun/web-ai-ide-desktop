@@ -27,9 +27,11 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-webaiide}:${POSTGRES_PASSWORD:-webaiide}@db:5432/${POSTGRES_DB:-webaiide}
       REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     depends_on:
       - db
       - redis
+      - rabbitmq
     networks:
       - webaiide
 
@@ -38,9 +40,11 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-webaiide}:${POSTGRES_PASSWORD:-webaiide}@db:5432/${POSTGRES_DB:-webaiide}
       REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     depends_on:
       - db
       - redis
+      - rabbitmq
     networks:
       - webaiide
 
@@ -49,9 +53,29 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-webaiide}:${POSTGRES_PASSWORD:-webaiide}@db:5432/${POSTGRES_DB:-webaiide}
       REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     depends_on:
       - db
       - redis
+      - rabbitmq
+    networks:
+      - webaiide
+
+  worker-1:
+    build: ./packages/worker
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+    networks:
+      - webaiide
+
+  worker-2:
+    build: ./packages/worker
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
     networks:
       - webaiide
 
@@ -75,6 +99,16 @@ services:
     networks:
       - webaiide
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - webaiide
+
 networks:
   webaiide:
     driver: bridge
@@ -82,3 +116,4 @@ networks:
 volumes:
   pgdata:
   redis_data:
+  rabbitmq_data:

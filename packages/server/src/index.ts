@@ -8,6 +8,7 @@ import { chatRouter } from './routes/chat.js';
 import { filesRouter } from './routes/files.js';
 import { authRouter } from './routes/auth.js';
 import { RedisClient, redis } from './utils/redis.js';
+import { rabbitmq } from './utils/rabbitmq.js';
 import { appendFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
@@ -113,6 +114,7 @@ process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully...');
   await server.close();
   await RedisClient.close();
+  await rabbitmq.close();
   process.exit(0);
 });
 
@@ -120,6 +122,7 @@ process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully...');
   await server.close();
   await RedisClient.close();
+  await rabbitmq.close();
   process.exit(0);
 });
 
