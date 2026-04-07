@@ -72,7 +72,7 @@ $env:POSTGRES_PASSWORD="your_strong_password"
 ```bash
 cd packages/electron
 npm install
-npm run build
+$env:POSTGRES_USER="myuser"; $env:POSTGRES_PASSWORD="StrongPass123!"; .\debug.ps1
 ```
 
 2. 启动 PostgreSQL 数据库：
