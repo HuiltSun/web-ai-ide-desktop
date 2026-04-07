@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { wsService } from '../services/websocket';
+import { api } from '../services/api';
 import { ChatMessage, ChatStreamEvent, ToolCall } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-
 async function fetchMessages(sessionId: string): Promise<ChatMessage[]> {
-  const response = await fetch(`${API_BASE}/chat/${sessionId}/messages`);
+  const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/chat/${sessionId}/messages`, {
+    headers: api.getAuthHeaders(),
+  });
   if (!response.ok) throw new Error('Failed to fetch messages');
   return response.json();
 }
