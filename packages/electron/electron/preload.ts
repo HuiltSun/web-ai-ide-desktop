@@ -1,14 +1,24 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-interface AIProvider {
+interface AIModel {
+  id: string;
   name: string;
+}
+
+interface AIProvider {
+  id: string;
+  name: string;
+  apiEndpoint: string;
   apiKey: string;
-  models: string[];
+  models: AIModel[];
 }
 
 interface SettingsData {
-  ai_providers: Record<string, AIProvider>;
+  ai_providers: AIProvider[];
+  selected_provider: string;
   selected_model: string;
+  fontSize: number;
+  tabSize: number;
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {

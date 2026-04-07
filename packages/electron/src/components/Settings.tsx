@@ -7,6 +7,8 @@ import {
   DatabaseIcon,
   CodeIcon,
   CheckIcon,
+  PlusIcon,
+  TrashIcon,
 } from './Icons';
 
 interface SettingsProps {
@@ -14,20 +16,32 @@ interface SettingsProps {
   onClose: () => void;
 }
 
-interface AIProvider {
+interface AIModel {
+  id: string;
   name: string;
+}
+
+interface AIProvider {
+  id: string;
+  name: string;
+  apiEndpoint: string;
   apiKey: string;
-  models: string[];
+  models: AIModel[];
 }
 
 export function Settings({ isOpen, onClose }: SettingsProps) {
   const [activeTab, setActiveTab] = useState('ai');
-  const [providers, setProviders] = useState<Record<string, AIProvider>>({
-    openai: { name: 'OpenAI', apiKey: '', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
-    anthropic: { name: 'Anthropic', apiKey: '', models: ['claude-3-5-sonnet', 'claude-3-opus'] },
-    qwen: { name: 'Qwen', apiKey: '', models: ['qwen-coder-plus', 'qwen3-coder'] },
-  });
-  const [selectedModel, setSelectedModel] = useState('gpt-4o');
+  const [providers, setProviders] = useState<AIProvider[]>([
+    {
+      id: 'openai',
+      name: 'OpenAI',
+      apiEndpoint: 'https://api.openai.com/v1',
+      apiKey: '',
+      models: [{ id: 'gpt-4o', name: 'GPT-4o' }],
+    },
+  ]);
+  const [selectedProviderId, setSelectedProviderId] = useState('openai');
+  const [selectedModelId, setSelectedModelId] = useState('gpt-4o');
   const [saved, setSaved] = useState(false);
   const [fontSize, setFontSize] = useState(14);
   const [tabSize, setTabSize] = useState(2);
@@ -36,14 +50,22 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
     const loadSettings = async () => {
       if (window.electronAPI?.settings) {
         try {
-          const data = await window.electronAPI.settings.getAll();
+          const data = await window.electronAPI.settings.getAll() as {
+            ai_providers?: AIProvider[];
+            selected_provider?: string;
+            selected_model?: string;
+            fontSize?: number;
+            tabSize?: number;
+          };
           if (data.ai_providers) setProviders(data.ai_providers);
-          if (data.selected_model) setSelectedModel(data.selected_model);
+          if (data.selected_provider) setSelectedProviderId(data.selected_provider);
+          if (data.selected_model) setSelectedModelId(data.selected_model);
           if (data.fontSize) setFontSize(data.fontSize);
           if (data.tabSize) setTabSize(data.tabSize);
         } catch {}
       } else {
         const savedProviders = localStorage.getItem('ai_providers');
+        const savedProvider = localStorage.getItem('selected_provider');
         const savedModel = localStorage.getItem('selected_model');
         const savedFontSize = localStorage.getItem('fontSize');
         const savedTabSize = localStorage.getItem('tabSize');
@@ -52,7 +74,8 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
             setProviders(JSON.parse(savedProviders));
           } catch {}
         }
-        if (savedModel) setSelectedModel(savedModel);
+        if (savedProvider) setSelectedProviderId(savedProvider);
+        if (savedModel) setSelectedModelId(savedModel);
         if (savedFontSize) setFontSize(Number(savedFontSize));
         if (savedTabSize) setTabSize(Number(savedTabSize));
       }
@@ -65,17 +88,79 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
   const handleSave = () => {
     if (!window.electronAPI?.settings) {
       localStorage.setItem('ai_providers', JSON.stringify(providers));
-      localStorage.setItem('selected_model', selectedModel);
+      localStorage.setItem('selected_provider', selectedProviderId);
+      localStorage.setItem('selected_model', selectedModelId);
       localStorage.setItem('fontSize', String(fontSize));
       localStorage.setItem('tabSize', String(tabSize));
     } else {
       window.electronAPI.settings.set('ai_providers', providers);
-      window.electronAPI.settings.set('selected_model', selectedModel);
+      window.electronAPI.settings.set('selected_provider', selectedProviderId);
+      window.electronAPI.settings.set('selected_model', selectedModelId);
       window.electronAPI.settings.set('fontSize', fontSize);
       window.electronAPI.settings.set('tabSize', tabSize);
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const selectedProvider = providers.find((p) => p.id === selectedProviderId);
+  const selectedProviderModels = selectedProvider?.models || [];
+
+  const addProvider = () => {
+    const newId = `provider-${Date.now()}`;
+    setProviders([
+      ...providers,
+      {
+        id: newId,
+        name: 'New Provider',
+        apiEndpoint: 'https://api.example.com/v1',
+        apiKey: '',
+        models: [],
+      },
+    ]);
+    setSelectedProviderId(newId);
+  };
+
+  const removeProvider = (id: string) => {
+    if (providers.length <= 1) return;
+    const newProviders = providers.filter((p) => p.id !== id);
+    setProviders(newProviders);
+    if (selectedProviderId === id) {
+      setSelectedProviderId(newProviders[0].id);
+    }
+  };
+
+  const updateProvider = (id: string, updates: Partial<AIProvider>) => {
+    setProviders(providers.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+  };
+
+  const addModel = (providerId: string) => {
+    const provider = providers.find((p) => p.id === providerId);
+    if (!provider) return;
+    const newModelId = `model-${Date.now()}`;
+    updateProvider(providerId, {
+      models: [...provider.models, { id: newModelId, name: 'New Model' }],
+    });
+  };
+
+  const removeModel = (providerId: string, modelId: string) => {
+    const provider = providers.find((p) => p.id === providerId);
+    if (!provider || provider.models.length <= 1) return;
+    updateProvider(providerId, {
+      models: provider.models.filter((m) => m.id !== modelId),
+    });
+    if (selectedModelId === modelId) {
+      const remaining = provider.models.filter((m) => m.id !== modelId);
+      setSelectedModelId(remaining[0]?.id || '');
+    }
+  };
+
+  const updateModel = (providerId: string, modelId: string, updates: Partial<AIModel>) => {
+    const provider = providers.find((p) => p.id === providerId);
+    if (!provider) return;
+    updateProvider(providerId, {
+      models: provider.models.map((m) => (m.id === modelId ? { ...m, ...updates } : m)),
+    });
   };
 
   const tabs = [
@@ -131,25 +216,154 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
             {activeTab === 'ai' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-sm font-semibold text-white mb-4">Select AI Model</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {Object.entries(providers).map(([key, provider]) => (
-                      provider.models.map((model) => (
-                        <button
-                          key={`${key}-${model}`}
-                          onClick={() => setSelectedModel(model)}
-                          className={`p-3 rounded-xl border text-left transition-all ${
-                            selectedModel === model
-                              ? 'bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-indigo-500/50'
-                              : 'bg-white/5 border-white/10 hover:border-white/20'
-                          }`}
-                        >
-                          <div className="text-sm font-medium text-white">{model}</div>
-                          <div className="text-xs text-slate-400">{provider.name}</div>
-                        </button>
-                      ))
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-white">AI Providers</h3>
+                    <button
+                      onClick={addProvider}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs bg-indigo-500/20 text-indigo-400 rounded-lg hover:bg-indigo-500/30 transition-colors"
+                    >
+                      <PlusIcon size={14} />
+                      Add Provider
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 mb-6">
+                    {providers.map((provider) => (
+                      <div
+                        key={provider.id}
+                        className={`p-4 rounded-xl border transition-all ${
+                          selectedProviderId === provider.id
+                            ? 'bg-indigo-500/10 border-indigo-500/30'
+                            : 'bg-white/5 border-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <button
+                            onClick={() => setSelectedProviderId(provider.id)}
+                            className="text-sm font-medium text-white"
+                          >
+                            {provider.name}
+                          </button>
+                          {providers.length > 1 && (
+                            <button
+                              onClick={() => removeProvider(provider.id)}
+                              className="p-1 text-slate-500 hover:text-red-400 transition-colors"
+                            >
+                              <TrashIcon size={14} />
+                            </button>
+                          )}
+                        </div>
+
+                        {selectedProviderId === provider.id && (
+                          <div className="space-y-3 pl-2 border-l-2 border-indigo-500/20">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-400 mb-1">
+                                Provider Name
+                              </label>
+                              <input
+                                type="text"
+                                value={provider.name}
+                                onChange={(e) => updateProvider(provider.id, { name: e.target.value })}
+                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500/50"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-400 mb-1">
+                                API Endpoint
+                              </label>
+                              <input
+                                type="text"
+                                value={provider.apiEndpoint}
+                                onChange={(e) => updateProvider(provider.id, { apiEndpoint: e.target.value })}
+                                placeholder="https://api.example.com/v1"
+                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-400 mb-1">
+                                API Key
+                              </label>
+                              <input
+                                type="password"
+                                value={provider.apiKey}
+                                onChange={(e) => updateProvider(provider.id, { apiKey: e.target.value })}
+                                placeholder="sk-..."
+                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-white">Models</h3>
+                    <button
+                      onClick={() => addModel(selectedProviderId)}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs bg-indigo-500/20 text-indigo-400 rounded-lg hover:bg-indigo-500/30 transition-colors"
+                    >
+                      <PlusIcon size={14} />
+                      Add Model
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {selectedProviderModels.map((model) => (
+                      <div
+                        key={model.id}
+                        className={`p-3 rounded-xl border transition-all ${
+                          selectedModelId === model.id
+                            ? 'bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-indigo-500/50'
+                            : 'bg-white/5 border-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <button
+                            onClick={() => setSelectedModelId(model.id)}
+                            className="text-sm font-medium text-white"
+                          >
+                            {model.name}
+                          </button>
+                          {selectedProviderModels.length > 1 && (
+                            <button
+                              onClick={() => removeModel(selectedProviderId, model.id)}
+                              className="p-1 text-slate-500 hover:text-red-400 transition-colors"
+                            >
+                              <TrashIcon size={12} />
+                            </button>
+                          )}
+                        </div>
+
+                        {selectedModelId === model.id && (
+                          <div className="mt-2 pt-2 border-t border-white/10">
+                            <input
+                              type="text"
+                              value={model.name}
+                              onChange={(e) => updateModel(selectedProviderId, model.id, { name: e.target.value })}
+                              placeholder="Model Display Name"
+                              className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 mb-1"
+                            />
+                            <input
+                              type="text"
+                              value={model.id}
+                              onChange={(e) => updateModel(selectedProviderId, model.id, { id: e.target.value })}
+                              placeholder="model-id (e.g., gpt-4o)"
+                              className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {selectedProviderModels.length === 0 && (
+                    <div className="text-center py-8 text-slate-500 text-sm">
+                      No models configured. Click "Add Model" to add one.
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -159,26 +373,20 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                 <div>
                   <h3 className="text-sm font-semibold text-white mb-4">API Keys</h3>
                   <p className="text-xs text-slate-400 mb-4">
-                    API keys are stored locally and never sent to our servers.
+                    Configure API keys in the AI Providers tab above. Keys are stored locally.
                   </p>
-                  <div className="space-y-4">
-                    {Object.entries(providers).map(([key, provider]) => (
-                      <div key={key}>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          {provider.name} API Key
-                        </label>
-                        <input
-                          type="password"
-                          value={provider.apiKey}
-                          onChange={(e) => setProviders({
-                            ...providers,
-                            [key]: { ...provider, apiKey: e.target.value }
-                          })}
-                          placeholder="sk-..."
-                          className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                        />
+                  <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                        <KeyIcon size={16} className="text-indigo-400" />
                       </div>
-                    ))}
+                      <div>
+                        <div className="text-sm font-medium text-white">Local Storage</div>
+                        <div className="text-xs text-slate-400">
+                          {providers.length} provider(s), keys stored in browser localStorage
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -237,15 +445,6 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                         <option value="2" className="bg-slate-700">2 spaces</option>
                         <option value="4" className="bg-slate-700">4 spaces</option>
                       </select>
-                    </div>
-                    <div className="flex items-center justify-between py-2">
-                      <div>
-                        <div className="text-sm font-medium text-slate-300">Word Wrap</div>
-                        <div className="text-xs text-slate-500">Wrap long lines</div>
-                      </div>
-                      <button className="w-12 h-6 rounded-full bg-indigo-500 relative">
-                        <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-white shadow" />
-                      </button>
                     </div>
                   </div>
                 </div>

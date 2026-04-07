@@ -6,14 +6,22 @@ import Store from 'electron-store';
 log.initialize();
 log.info('Application starting...');
 
-interface AIProvider {
+interface AIModel {
+  id: string;
   name: string;
+}
+
+interface AIProvider {
+  id: string;
+  name: string;
+  apiEndpoint: string;
   apiKey: string;
-  models: string[];
+  models: AIModel[];
 }
 
 interface StoreSchema {
-  ai_providers: Record<string, AIProvider>;
+  ai_providers: AIProvider[];
+  selected_provider: string;
   selected_model: string;
   fontSize: number;
   tabSize: number;
@@ -21,11 +29,16 @@ interface StoreSchema {
 
 const store = new Store<StoreSchema>({
   defaults: {
-    ai_providers: {
-      openai: { name: 'OpenAI', apiKey: '', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
-      anthropic: { name: 'Anthropic', apiKey: '', models: ['claude-3-5-sonnet', 'claude-3-opus'] },
-      qwen: { name: 'Qwen', apiKey: '', models: ['qwen-coder-plus', 'qwen3-coder'] },
-    },
+    ai_providers: [
+      {
+        id: 'openai',
+        name: 'OpenAI',
+        apiEndpoint: 'https://api.openai.com/v1',
+        apiKey: '',
+        models: [{ id: 'gpt-4o', name: 'GPT-4o' }],
+      },
+    ],
+    selected_provider: 'openai',
     selected_model: 'gpt-4o',
     fontSize: 14,
     tabSize: 2,
@@ -124,6 +137,7 @@ ipcMain.handle('settings:getAll', () => {
     log.info('Getting all settings');
     return {
       ai_providers: store.get('ai_providers'),
+      selected_provider: store.get('selected_provider'),
       selected_model: store.get('selected_model'),
       fontSize: store.get('fontSize'),
       tabSize: store.get('tabSize'),
@@ -131,11 +145,16 @@ ipcMain.handle('settings:getAll', () => {
   } catch (error) {
     log.error('Failed to get all settings:', error);
     return {
-      ai_providers: {
-        openai: { name: 'OpenAI', apiKey: '', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
-        anthropic: { name: 'Anthropic', apiKey: '', models: ['claude-3-5-sonnet', 'claude-3-opus'] },
-        qwen: { name: 'Qwen', apiKey: '', models: ['qwen-coder-plus', 'qwen3-coder'] },
-      },
+      ai_providers: [
+        {
+          id: 'openai',
+          name: 'OpenAI',
+          apiEndpoint: 'https://api.openai.com/v1',
+          apiKey: '',
+          models: [{ id: 'gpt-4o', name: 'GPT-4o' }],
+        },
+      ],
+      selected_provider: 'openai',
       selected_model: 'gpt-4o',
       fontSize: 14,
       tabSize: 2,
