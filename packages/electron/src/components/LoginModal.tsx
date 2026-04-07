@@ -131,9 +131,11 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
-                setShowPasswordReqs(true);
+                if (mode === 'register') setShowPasswordReqs(true);
               }}
-              onFocus={() => setShowPasswordReqs(true)}
+              onFocus={() => {
+                if (mode === 'register') setShowPasswordReqs(true);
+              }}
               placeholder="••••••••"
               required
               minLength={8}
