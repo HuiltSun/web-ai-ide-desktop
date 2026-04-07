@@ -200,6 +200,7 @@ interface AIModel {
 - PBKDF2 key derivation with 100,000 iterations / PBKDF2 密钥派生，100,000 次迭代
 - Per-field encryption middleware / 字段级加密中间件
 - Optional ENCRYPTION_SALT for consistency / 可选 ENCRYPTION_SALT 保持一致性
+- Warning in production when using fixed salt / 生产环境使用固定盐值时输出警告
 
 **Encrypted Fields / 加密字段:**
 | Model | Encrypted Fields |

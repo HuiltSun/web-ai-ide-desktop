@@ -214,6 +214,8 @@ ENCRYPTION_SECRET=your-256-bit-secret-key-here
 ENCRYPTION_SALT=optional-16-byte-hex-salt  # If not set, a random salt will be generated
 ```
 
+**Note**: Using fixed `ENCRYPTION_SALT` in production will output a warning. It is recommended to use fixed salt only in development/testing environments.
+
 Generate a secure key:
 ```bash
 openssl rand -hex 32

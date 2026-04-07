@@ -214,6 +214,8 @@ ENCRYPTION_SECRET=your-256-bit-secret-key-here
 ENCRYPTION_SALT=optional-16-byte-hex-salt  # 如不设置则自动生成随机盐值
 ```
 
+**注意**：生产环境使用固定 `ENCRYPTION_SALT` 时会输出警告信息，建议仅在开发/测试环境使用固定盐值。
+
 生成安全密钥：
 ```bash
 openssl rand -hex 32
