@@ -58,8 +58,8 @@ try {
         exit 1
     }
 
-    $containerExists = docker ps -a --format '{{.Names}}' | Select-String -Pattern "^$DockerContainer$"
-    $containerRunning = docker ps --format '{{.Names}}' | Select-String -Pattern "^$DockerContainer$"
+    $containerExists = docker ps -a --format '{{.Names}}' | Select-String -Pattern "^$DockerContainer$" -Quiet
+    $containerRunning = docker ps --format '{{.Names}}' | Select-String -Pattern "^$DockerContainer$" -Quiet
 
     if ($containerRunning) {
         Write-Host "  容器 $DockerContainer 已在运行"
