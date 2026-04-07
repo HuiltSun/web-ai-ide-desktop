@@ -2,16 +2,16 @@ import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
-const AUTH_TAG_LENGTH = 16;
-const SALT_LENGTH = 32;
+const KEY_LENGTH = 32;
+const ITERATIONS = 100000;
 
 function getEncryptionKey(): Buffer {
   const secret = process.env.ENCRYPTION_SECRET;
   if (!secret) {
     throw new Error('ENCRYPTION_SECRET environment variable is not set');
   }
-  const salt = crypto.createHash('sha256').update(secret).digest();
-  return salt;
+  const salt = crypto.createHash('sha256').update('web-ai-ide-salt').digest();
+  return crypto.pbkdf2Sync(secret, salt, ITERATIONS, KEY_LENGTH, 'sha256');
 }
 
 export function encrypt(text: string): string {
