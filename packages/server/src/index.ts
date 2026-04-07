@@ -7,8 +7,7 @@ import { sessionsRouter } from './routes/sessions.js';
 import { chatRouter } from './routes/chat.js';
 import { filesRouter } from './routes/files.js';
 import { authRouter } from './routes/auth.js';
-import { RedisClient } from './utils/redis.js';
-import { redis } from './utils/redis.js';
+import { RedisClient, redis } from './utils/redis.js';
 import { appendFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
