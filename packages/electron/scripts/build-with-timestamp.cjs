@@ -35,7 +35,7 @@ try {
 
   console.log('\n3. Electron Builder...');
   let builderCmd = `npx electron-builder --win --config.directories.output="${outputDir}"`;
-  if (!isProduction && isUnpacked) {
+  if (isUnpacked) {
     builderCmd += ' --dir';
   }
   execSync(builderCmd, { stdio: 'inherit', cwd: pkgDir });
