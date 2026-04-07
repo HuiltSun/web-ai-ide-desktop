@@ -8,6 +8,10 @@ const SALT_LENGTH = 16;
 
 let cachedKey: Buffer | null = null;
 
+export function clearEncryptionCache(): void {
+  cachedKey = null;
+}
+
 function getEncryptionKey(): Buffer {
   if (cachedKey) return cachedKey;
 

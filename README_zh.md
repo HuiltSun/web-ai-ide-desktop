@@ -193,7 +193,7 @@ npx prisma db push      # 推送 schema 到数据库
 
 ### 数据加密
 
-所有敏感数据均使用 AES-256-GCM 加密存储：
+所有敏感数据均使用 AES-256-GCM 加密存储，采用 PBKDF2 密钥派生：
 
 | 模型 | 加密字段 |
 |------|---------|
@@ -201,6 +201,12 @@ npx prisma db push      # 推送 schema 到数据库
 | Project | path |
 | Session | cwd |
 | Message | content, systemPayload |
+
+**安全特性：**
+- AES-256-GCM 认证加密
+- PBKDF2 密钥派生，100,000 次迭代
+- 随机 16 字节盐值（或使用 `ENCRYPTION_SALT` 环境变量保持一致）
+- 密钥缓存以提高性能（测试时可调用 `clearEncryptionCache()`）
 
 **⚠️ 必需环境变量：**
 ```

@@ -193,7 +193,7 @@ npx prisma db push    # Push schema to database
 
 ### Data Encryption
 
-All sensitive data is encrypted at rest using AES-256-GCM:
+All sensitive data is encrypted at rest using AES-256-GCM with PBKDF2 key derivation:
 
 | Model | Encrypted Fields |
 |-------|-----------------|
@@ -201,6 +201,12 @@ All sensitive data is encrypted at rest using AES-256-GCM:
 | Project | path |
 | Session | cwd |
 | Message | content, systemPayload |
+
+**Security Features:**
+- AES-256-GCM authenticated encryption
+- PBKDF2 key derivation with 100,000 iterations
+- Random 16-byte salt (or use `ENCRYPTION_SALT` env var for consistency)
+- Key caching for performance (call `clearEncryptionCache()` for testing)
 
 **⚠️ Required Environment Variables:**
 ```
