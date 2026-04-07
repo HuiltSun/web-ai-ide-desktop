@@ -3,7 +3,7 @@ import Redis from 'ioredis';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const REDIS_ERROR_LOG_INTERVAL = (() => {
   const interval = parseInt(process.env.REDIS_ERROR_LOG_INTERVAL || '5000', 10);
-  return isNaN(interval) || interval <= 0 ? 5000 : interval;
+  return isNaN(interval) ? 5000 : Math.max(interval, 0);
 })();
 
 export class RedisClient {
@@ -21,6 +21,7 @@ export class RedisClient {
       });
 
       RedisClient.instance.on('error', (err) => {
+        if (REDIS_ERROR_LOG_INTERVAL === 0) return;
         const now = Date.now();
         if (now - RedisClient.lastErrorTime > REDIS_ERROR_LOG_INTERVAL) {
           console.error('Redis connection error:', err);
