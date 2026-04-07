@@ -1,17 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
-
-interface AIModel {
-  id: string;
-  name: string;
-}
-
-interface AIProvider {
-  id: string;
-  name: string;
-  apiEndpoint: string;
-  apiKey: string;
-  models: AIModel[];
-}
+import type { AIProvider, AIModel } from '../types';
 
 interface Settings {
   aiProviders: AIProvider[];

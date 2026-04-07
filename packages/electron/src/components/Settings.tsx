@@ -10,23 +10,11 @@ import {
   PlusIcon,
   TrashIcon,
 } from './Icons';
+import type { AIProvider, AIModel } from '../types';
 
 interface SettingsProps {
   isOpen: boolean;
   onClose: () => void;
-}
-
-interface AIModel {
-  id: string;
-  name: string;
-}
-
-interface AIProvider {
-  id: string;
-  name: string;
-  apiEndpoint: string;
-  apiKey: string;
-  models: AIModel[];
 }
 
 export function Settings({ isOpen, onClose }: SettingsProps) {
