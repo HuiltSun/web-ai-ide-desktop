@@ -5,14 +5,48 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      - nginx
     networks:
       - webaiide
 
-  backend:
-    build: ./packages/server
+  nginx:
+    image: nginx:alpine
     ports:
-      - "3001:3001"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api-1
+      - api-2
+      - api-3
+    networks:
+      - webaiide
+
+  api-1:
+    build: ./packages/server
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-webaiide}:${POSTGRES_PASSWORD:-webaiide}@db:5432/${POSTGRES_DB:-webaiide}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - db
+      - redis
+    networks:
+      - webaiide
+
+  api-2:
+    build: ./packages/server
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-webaiide}:${POSTGRES_PASSWORD:-webaiide}@db:5432/${POSTGRES_DB:-webaiide}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - db
+      - redis
+    networks:
+      - webaiide
+
+  api-3:
+    build: ./packages/server
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-webaiide}:${POSTGRES_PASSWORD:-webaiide}@db:5432/${POSTGRES_DB:-webaiide}
       REDIS_URL: redis://redis:6379
