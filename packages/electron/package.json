@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && tsc -p tsconfig.electron.json && electron-builder --win --dir",
+    "build": "node scripts/build-with-timestamp.js",
     "build:exe": "node scripts/build-with-timestamp.js"
   },
   "dependencies": {
