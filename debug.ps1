@@ -129,14 +129,18 @@ if (-not (Test-Path "$ServerDir\package.json")) {
     for ($i = 0; $i -lt 10; $i++) {
         Start-Sleep -Seconds 2
         try {
-            $response = Invoke-WebRequest -Uri "http://localhost:3001/api/projects" -UseBasicParsing -TimeoutSec 3 -ErrorAction SilentlyContinue
-            if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 401) {
+            $response = Invoke-WebRequest -Uri "http://localhost:3001/api/projects" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+            $serverReady = $true
+            Write-Host "  后端服务器就绪 (http://localhost:3001)"
+            break
+        } catch {
+            if ($_.Exception.Message -match "Unable to connect" -or $_.Exception.Message -match "No connection could be made") {
+                Write-Host "    检查中... ($($i + 1)/10)"
+            } else {
                 $serverReady = $true
                 Write-Host "  后端服务器就绪 (http://localhost:3001)"
                 break
             }
-        } catch {
-            Write-Host "    检查中... ($($i + 1)/10)"
         }
     }
 
