@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SendIcon, SparklesIcon } from './Icons';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -7,6 +8,7 @@ interface ChatInputProps {
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [input, setInput] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,22 +19,36 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border-t border-gray-200 p-4 bg-white">
-      <div className="flex gap-2">
+    <form onSubmit={handleSubmit} className="border-t border-[var(--color-border)] p-4 bg-[var(--color-bg-tertiary)]">
+      <div
+        className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 ${
+          isFocused
+            ? 'bg-[var(--color-bg-elevated)] border-2 border-indigo-500/50 shadow-lg shadow-indigo-500/10'
+            : 'bg-[var(--color-bg-secondary)] border border-[var(--color-border)]'
+        }`}
+      >
+        <SparklesIcon className={`transition-colors duration-300 ${isFocused ? 'text-indigo-400' : 'text-slate-500'}`} size={18} />
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message..."
+          placeholder="Ask me anything..."
           disabled={disabled}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none disabled:text-slate-500"
+          style={{ fontFamily: 'var(--font-sans)' }}
         />
         <button
           type="submit"
           disabled={disabled || !input.trim()}
-          className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className={`p-2 rounded-xl transition-all duration-300 ${
+            input.trim() && !disabled
+              ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25 hover:from-indigo-600 hover:to-purple-700'
+              : 'bg-[var(--color-bg-elevated)] text-slate-500'
+          } disabled:cursor-not-allowed`}
         >
-          Send
+          <SendIcon size={16} />
         </button>
       </div>
     </form>

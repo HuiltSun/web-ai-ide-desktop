@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FileNode } from '../services/api';
 import { FileTree } from './FileTree';
+import { PlusIcon, FolderIcon } from './Icons';
 
 interface FileExplorerProps {
   files: FileNode[];
@@ -36,19 +37,20 @@ export function FileExplorer({
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
-      <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-          Files
-        </h3>
+    <div className="h-full flex flex-col bg-[var(--color-bg-secondary)]">
+      <div className="p-3 border-b border-[var(--color-border)] flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FolderIcon size={14} className="text-indigo-400" />
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            Files
+          </h3>
+        </div>
         <button
           onClick={handleCreateFile}
-          className="p-1 hover:bg-gray-100 rounded"
+          className="p-1.5 hover:bg-[var(--color-bg-elevated)] rounded-lg transition-colors"
           title="New File"
         >
-          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
+          <PlusIcon size={14} className="text-slate-500" />
         </button>
       </div>
       <div className="flex-1 overflow-auto p-2">
@@ -60,7 +62,7 @@ export function FileExplorer({
             selectedPath={selectedPath}
           />
         ) : (
-          <div className="text-sm text-gray-500 p-2">
+          <div className="text-xs text-slate-500 p-4 text-center">
             No files yet. Create one to get started.
           </div>
         )}
@@ -72,7 +74,7 @@ export function FileExplorer({
             onClick={() => setContextMenu(null)}
           />
           <div
-            className="fixed bg-white border border-gray-200 rounded shadow-lg py-1 z-50"
+            className="fixed bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-xl shadow-xl py-1 z-50 backdrop-blur-xl"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <button
@@ -80,7 +82,7 @@ export function FileExplorer({
                 onFileDelete(contextMenu.path);
                 setContextMenu(null);
               }}
-              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600"
+              className="w-full px-4 py-2 text-left text-sm hover:bg-red-500/10 text-red-400 transition-colors"
             >
               Delete
             </button>
