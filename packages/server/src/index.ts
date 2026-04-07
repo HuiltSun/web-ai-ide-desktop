@@ -7,6 +7,23 @@ import { sessionsRouter } from './routes/sessions.js';
 import { chatRouter } from './routes/chat.js';
 import { filesRouter } from './routes/files.js';
 import { authRouter } from './routes/auth.js';
+import { appendFileSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
+
+const LOG_DIR = join(process.cwd(), 'logs');
+const LOG_FILE = join(LOG_DIR, `server-${new Date().toISOString().split('T')[0]}.log`);
+
+if (!existsSync(LOG_DIR)) {
+  mkdirSync(LOG_DIR, { recursive: true });
+}
+
+function writeToFile(message: string) {
+  try {
+    appendFileSync(LOG_FILE, `${message}\n`);
+  } catch (err) {
+    console.error('Failed to write to log file:', err);
+  }
+}
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -22,6 +39,7 @@ const server = Fastify({
       options: {
         translateTime: 'HH:MM:ss Z',
         ignore: 'pid,hostname',
+        destination: 1,
       },
     } : undefined,
   },
@@ -31,26 +49,33 @@ server.addHook('onRequest', async (request, reply) => {
   (request as any).startTime = Date.now();
 });
 
-server.addHook('onResponse', async (request, reply) => {
-  const startTime = (request as any).startTime || Date.now();
-  const duration = Date.now() - startTime;
-  server.log.info({
-    method: request.method,
-    url: request.url,
-    statusCode: reply.statusCode,
-    duration: `${duration}ms`,
-    ip: request.ip,
+if (process.env.NODE_ENV === 'production') {
+  server.addHook('onResponse', async (request, reply) => {
+    const startTime = (request as any).startTime || Date.now();
+    const duration = Date.now() - startTime;
+    const logMsg = `${new Date().toISOString()} [${reply.statusCode >= 400 ? 'ERROR' : 'INFO'}] ${request.method} ${request.url} ${reply.statusCode} - ${duration}ms`;
+    server.log.info({ method: request.method, url: request.url, statusCode: reply.statusCode, duration: `${duration}ms` });
+    writeToFile(logMsg);
   });
-});
 
-server.addHook('onError', async (request, reply, error) => {
-  server.log.error({
-    method: request.method,
-    url: request.url,
-    error: error.message,
-    stack: error.stack,
+  server.addHook('onError', async (request, reply, error) => {
+    const logMsg = `${new Date().toISOString()} [ERROR] ${request.method} ${request.url} - ${error.message}`;
+    server.log.error({ method: request.method, url: request.url, error: error.message, stack: error.stack });
+    writeToFile(logMsg);
   });
-});
+} else {
+  server.addHook('onResponse', async (request, reply) => {
+    const startTime = (request as any).startTime || Date.now();
+    const duration = Date.now() - startTime;
+    const logMsg = `${new Date().toISOString()} [${reply.statusCode >= 400 ? 'ERROR' : 'INFO'}] ${request.method} ${request.url} ${reply.statusCode} - ${duration}ms`;
+    writeToFile(logMsg);
+  });
+
+  server.addHook('onError', async (request, reply, error) => {
+    const logMsg = `${new Date().toISOString()} [ERROR] ${request.method} ${request.url} - ${error.message}`;
+    writeToFile(logMsg);
+  });
+}
 
 await server.register(cors, { origin: true });
 await server.register(websocket);
@@ -72,13 +97,19 @@ await server.register(authRouter, { prefix: '/api/auth' });
 
 const start = async () => {
   try {
+    const startMsg = `${new Date().toISOString()} [INFO] Starting Web AI IDE Server...`;
     server.log.info('Starting Web AI IDE Server...');
     server.log.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
     server.log.info(`Log Level: ${process.env.LOG_LEVEL || 'info'}`);
+    writeToFile(startMsg);
     await server.listen({ port: 3001, host: '0.0.0.0' });
+    const listenMsg = `${new Date().toISOString()} [INFO] Server listening at http://0.0.0.0:3001`;
     server.log.info('Server listening at http://0.0.0.0:3001');
+    writeToFile(listenMsg);
   } catch (err) {
+    const errorMsg = `${new Date().toISOString()} [ERROR] Failed to start server - ${err}`;
     server.log.error(err, 'Failed to start server');
+    writeToFile(errorMsg);
     process.exit(1);
   }
 };
