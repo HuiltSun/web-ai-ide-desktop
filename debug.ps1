@@ -111,7 +111,16 @@ if (Test-Path "$ServerDir\prisma\schema.prisma") {
 # 3. 启动后端服务器（新窗口）
 Write-Host ""
 Write-Host "[3/5] 启动后端服务器 (http://localhost:3001)..."
-
+# 先关闭可能正在运行的后端进程
+Write-Host "  检查并关闭已存在的后端进程..."
+$existingNodeProcesses = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object {
+    $_.CommandLine -like "*web-ai-ide*" -or $_.CommandLine -like "*server*"
+}
+if ($existingNodeProcesses) {
+    $existingNodeProcesses | Stop-Process -Force
+    Write-Host "  已关闭现有后端进程"
+    Start-Sleep -Seconds 1
+}
 if (-not (Test-Path "$ServerDir\package.json")) {
     Write-Host "  错误: 未找到 server package.json"
 } else {
