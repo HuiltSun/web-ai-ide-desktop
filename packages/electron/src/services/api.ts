@@ -11,6 +11,19 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 let authToken: string | null = null;
 
+function handleApiError(response: Response, defaultMessage: string): never {
+  if (response.status === 401) {
+    throw new Error('认证失败，请重新登录');
+  } else if (response.status === 403) {
+    throw new Error('没有权限访问此资源');
+  } else if (response.status === 404) {
+    throw new Error('请求的资源不存在');
+  } else if (response.status >= 500) {
+    throw new Error('服务器错误，请稍后重试');
+  }
+  throw new Error(`${defaultMessage}: ${response.status} ${response.statusText}`);
+}
+
 export const api = {
   setAuthToken(token: string | null) {
     authToken = token;
@@ -25,7 +38,7 @@ export const api = {
     const response = await fetch(`${API_BASE}/projects/${projectId}/files`, {
       headers: this.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch files');
+    if (!response.ok) handleApiError(response, 'Failed to fetch files');
     return response.json();
   },
 
@@ -33,7 +46,7 @@ export const api = {
     const response = await fetch(`${API_BASE}/projects/${projectId}/files/${path}`, {
       headers: this.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to read file');
+    if (!response.ok) handleApiError(response, 'Failed to read file');
     return response.text();
   },
 
@@ -43,7 +56,7 @@ export const api = {
       headers: { 'Content-Type': 'text/plain', ...this.getAuthHeaders() },
       body: content,
     });
-    if (!response.ok) throw new Error('Failed to write file');
+    if (!response.ok) handleApiError(response, 'Failed to write file');
   },
 
   async deleteFile(projectId: string, path: string): Promise<void> {
@@ -51,7 +64,7 @@ export const api = {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to delete file');
+    if (!response.ok) handleApiError(response, 'Failed to delete file');
   },
 
   async createProject(name: string, path: string, userId: string): Promise<ProjectWithSession> {
@@ -60,7 +73,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
       body: JSON.stringify({ name, path, userId }),
     });
-    if (!response.ok) throw new Error('Failed to create project');
+    if (!response.ok) handleApiError(response, 'Failed to create project');
     return response.json();
   },
 
@@ -68,7 +81,7 @@ export const api = {
     const response = await fetch(`${API_BASE}/projects`, {
       headers: this.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch projects');
+    if (!response.ok) handleApiError(response, 'Failed to fetch projects');
     return response.json();
   },
 
@@ -76,7 +89,7 @@ export const api = {
     const response = await fetch(`${API_BASE}/projects/${projectId}`, {
       headers: this.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch project');
+    if (!response.ok) handleApiError(response, 'Failed to fetch project');
     return response.json();
   },
 
@@ -85,6 +98,6 @@ export const api = {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to delete project');
+    if (!response.ok) handleApiError(response, 'Failed to delete project');
   },
 };
