@@ -1,7 +1,7 @@
 appId: com.webaiide.app
 productName: Web AI IDE
 directories:
-  output: release5
+  output: ../release
   buildResources: build
 files:
   - dist/**/*

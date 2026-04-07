@@ -6,6 +6,11 @@ $ReleaseDir = "E:\web\web-ai-ide\release"
 $ServerDir = "E:\web\web-ai-ide\packages\server"
 $DockerContainer = "webaiide-postgres"
 
+# 数据库配置（支持环境变量覆盖）
+$env:POSTGRES_USER = if ($env:POSTGRES_USER) { $env:POSTGRES_USER } else { 'user' }
+$env:POSTGRES_PASSWORD = if ($env:POSTGRES_PASSWORD) { $env:POSTGRES_PASSWORD } else { 'password' }
+$env:POSTGRES_DB = if ($env:POSTGRES_DB) { $env:POSTGRES_DB } else { 'webaiide' }
+
 Write-Host "========================================"
 Write-Host "Web AI IDE 一键调试脚本"
 Write-Host "========================================"
@@ -32,15 +37,15 @@ try {
     } else {
         Write-Host "  创建并启动新容器..."
         docker run -d --name $DockerContainer `
-            -e POSTGRES_USER=user `
-            -e POSTGRES_PASSWORD=password `
-            -e POSTGRES_DB=webaiide `
+            -e POSTGRES_USER=$env:POSTGRES_USER `
+            -e POSTGRES_PASSWORD=$env:POSTGRES_PASSWORD `
+            -e POSTGRES_DB=$env:POSTGRES_DB `
             -p 5432:5432 postgres:16
     }
 
     Start-Sleep -Seconds 2
 
-    $dbReady = docker exec $DockerContainer pg_isready -U user -d webaiide 2>$null
+    $dbReady = docker exec $DockerContainer pg_isready -U $env:POSTGRES_USER -d $env:POSTGRES_DB 2>$null
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  PostgreSQL 就绪 (localhost:5432)"
     } else {
