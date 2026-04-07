@@ -1,4 +1,5 @@
 import { ChatStreamEvent } from '../types';
+import { api } from './api';
 
 type MessageHandler = (event: ChatStreamEvent) => void;
 
@@ -13,7 +14,12 @@ class WebSocketService {
     }
 
     this.sessionId = sessionId;
-    this.ws = new WebSocket(`ws://localhost:3001/api/chat/${sessionId}/stream`);
+    const authHeaders = api.getAuthHeaders();
+    const token = (authHeaders as any).Authorization?.replace('Bearer ', '');
+    const wsUrl = token
+      ? `ws://localhost:3001/api/chat/${sessionId}/stream?token=${token}`
+      : `ws://localhost:3001/api/chat/${sessionId}/stream`;
+    this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
       console.log('WebSocket connected');

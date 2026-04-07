@@ -30,11 +30,11 @@ export async function chatRouter(fastify: FastifyInstance) {
     }
   });
 
-  // REST 端点需要认证
-  fastify.addHook('onRequest', fastify.authenticate);
-
   fastify.get<{ Params: { sessionId: string } }>(
     '/:sessionId/messages',
+    {
+      onRequest: [fastify.authenticate],
+    },
     async (request, reply) => {
       const messages = await sessionService.getMessages(request.params.sessionId);
       return messages.map((msg) => ({
@@ -44,11 +44,27 @@ export async function chatRouter(fastify: FastifyInstance) {
     }
   );
 
-  // WebSocket 端点 - 认证需要在连接建立后通过消息传递
-  fastify.get<{ Params: { sessionId: string } }>(
+  // WebSocket 端点 - 通过 query 参数传递 token
+  fastify.get<{ Params: { sessionId: string }; Querystring: { token?: string } }>(
     '/:sessionId/stream',
     { websocket: true },
     async (socket, request) => {
+      const token = request.query.token;
+
+      if (token) {
+        try {
+          await fastify.jwt.verify(token);
+        } catch (err) {
+          fastify.log.warn('WebSocket auth failed');
+          socket.send(JSON.stringify({
+            type: 'error',
+            content: 'Unauthorized',
+          } as ChatStreamEvent));
+          socket.close();
+          return;
+        }
+      }
+
       const sessionId = request.params.sessionId;
       fastify.log.info(`WebSocket connected for session: ${sessionId}`);
 
