@@ -12,6 +12,13 @@ interface AmqpChannel {
 
 interface AmqpMessage {
   content: Buffer;
+  fields: {
+    deliveryTag: number;
+    redelivered: boolean;
+    exchange: string;
+    routingKey: string;
+  };
+  properties: Record<string, unknown>;
 }
 
 let connection: Awaited<ReturnType<typeof amqp.connect>> | null = null;

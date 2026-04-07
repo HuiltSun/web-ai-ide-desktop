@@ -1,6 +1,17 @@
 import { randomUUID } from 'crypto';
 import { rabbitmq } from '../utils/rabbitmq.js';
 
+interface AmqpMessage {
+  content: Buffer;
+  fields: {
+    deliveryTag: number;
+    redelivered: boolean;
+    exchange: string;
+    routingKey: string;
+  };
+  properties: Record<string, unknown>;
+}
+
 export interface AITask {
   taskId: string;
   sessionId: string;
@@ -36,7 +47,7 @@ export const queueService = {
   ): Promise<void> {
     const channel = await rabbitmq.getChannel();
 
-    await channel.consume('ai.results', async (msg: any) => {
+    await channel.consume('ai.results', async (msg: AmqpMessage | null) => {
       if (!msg) return;
 
       try {
