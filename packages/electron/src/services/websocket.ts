@@ -18,8 +18,8 @@ class WebSocketService {
     this.sessionId = sessionId;
     const { Authorization: token } = api.getAuthHeaders();
     const tokenValue = token?.replace('Bearer ', '');
-    const wsProtocol = WS_BASE.startsWith('https') ? 'wss' : 'ws';
-    const wsBase = WS_BASE.replace(/^http/, wsProtocol);
+    const wsProtocol = WS_BASE.startsWith('https://') ? 'wss' : 'ws';
+    const wsBase = WS_BASE.replace(/^https?:\/\//, `${wsProtocol}://`);
     const wsUrl = tokenValue
       ? `${wsBase}/api/chat/${sessionId}/stream?token=${tokenValue}`
       : `${wsBase}/api/chat/${sessionId}/stream`;
