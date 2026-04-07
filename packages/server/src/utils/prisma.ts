@@ -99,21 +99,6 @@ const prismaClientSingleton = (url: string) => {
   return prisma;
 };
 
-async function createPrismaReadClient(): Promise<PrismaClient> {
-  if (DATABASE_REPLICA_URL === DATABASE_URL) {
-    return prismaClientSingleton(DATABASE_URL);
-  }
-
-  try {
-    const client = prismaClientSingleton(DATABASE_REPLICA_URL);
-    await client.$queryRaw`SELECT 1`;
-    return client;
-  } catch (error) {
-    console.warn('Failed to connect to read replica, falling back to primary database:', error);
-    return prismaClientSingleton(DATABASE_URL);
-  }
-}
-
 declare global {
   // eslint-disable-next-line no var
   var prisma: ReturnType<typeof prismaClientSingleton> | undefined;
@@ -127,29 +112,4 @@ if (process.env.NODE_ENV !== 'production') {
   global.prisma = prisma;
 }
 
-let prismaReadPromise: Promise<PrismaClient> | null = null;
-
-export const getPrismaRead = (): Promise<PrismaClient> => {
-  if (!prismaReadPromise) {
-    prismaReadPromise = createPrismaReadClient().then((client) => {
-      if (process.env.NODE_ENV !== 'production') {
-        global.prismaRead = client;
-      }
-      return client;
-    });
-  }
-  return prismaReadPromise;
-};
-
-export const prismaRead = new Proxy({} as PrismaClient, {
-  get(_, prop) {
-    return async (...args: unknown[]) => {
-      const client = await getPrismaRead();
-      const method = (client as any)[prop];
-      if (typeof method === 'function') {
-        return method.apply(client, args);
-      }
-      return method;
-    };
-  },
-});
+export const prismaRead: PrismaClient = global.prismaRead ?? prisma;
