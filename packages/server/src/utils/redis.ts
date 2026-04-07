@@ -2,6 +2,9 @@ import Redis from 'ioredis';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
+let lastErrorTime = 0;
+const ERROR_LOG_INTERVAL = 5000;
+
 export class RedisClient {
   private static instance: Redis;
 
@@ -16,7 +19,11 @@ export class RedisClient {
       });
 
       RedisClient.instance.on('error', (err) => {
-        console.error('Redis connection error:', err);
+        const now = Date.now();
+        if (now - lastErrorTime > ERROR_LOG_INTERVAL) {
+          console.error('Redis connection error:', err);
+          lastErrorTime = now;
+        }
       });
 
       RedisClient.instance.on('connect', () => {
