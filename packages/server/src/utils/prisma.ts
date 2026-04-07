@@ -112,4 +112,34 @@ if (process.env.NODE_ENV !== 'production') {
   global.prisma = prisma;
 }
 
-export const prismaRead: PrismaClient = global.prismaRead ?? prisma;
+const createPrismaReadClient = (): PrismaClient => {
+  if (DATABASE_REPLICA_URL === DATABASE_URL) {
+    return prisma;
+  }
+
+  try {
+    const replicaClient = prismaClientSingleton(DATABASE_REPLICA_URL);
+    replicaClient.$queryRaw`SELECT 1`.catch((error) => {
+      console.warn('Failed to connect to read replica, falling back to primary database:', error);
+    });
+    return replicaClient;
+  } catch (error) {
+    console.warn('Failed to connect to read replica, falling back to primary database:', error);
+    return prisma;
+  }
+};
+
+const prismaReadClient = global.prismaRead ?? createPrismaReadClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  global.prismaRead = prismaReadClient;
+}
+
+export const prismaRead = new Proxy({} as PrismaClient, {
+  get(target, prop) {
+    if (prop === 'then' || prop === 'catch' || prop === Symbol.toStringTag) {
+      return undefined;
+    }
+    return (prismaReadClient as any)[prop];
+  },
+});
