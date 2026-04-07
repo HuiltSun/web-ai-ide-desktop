@@ -50,7 +50,7 @@ A browser-based + Electron desktop AI-assisted coding environment similar to Cla
 ```bash
 cd packages/electron
 npm install
-npm run build:exe
+npm run build
 ```
 
 2. Start PostgreSQL:
@@ -73,7 +73,7 @@ npm run dev
 
 4. Run desktop app:
 ```
-packages/electron/release5/win-unpacked/Web AI IDE.exe
+web-ai-ide/release/release-{timestamp}/Web AI IDE Setup 1.0.0.exe
 ```
 
 ### Option 2: Docker Deployment
@@ -106,6 +106,7 @@ web-ai-ide/
 │   ├── electron/           # Electron desktop app
 │   │   ├── electron/      # Main process (main.ts, preload.ts)
 │   │   ├── src/           # React frontend
+│   │   ├── scripts/       # Build scripts
 │   │   └── dist/          # Build output
 │   │
 │   ├── cli/               # Standalone React app (optional)
@@ -124,8 +125,9 @@ web-ai-ide/
 │   │
 │   └── shared/             # Shared type definitions
 │
+├── release/                 # Build output (release-{timestamp}/)
 ├── docs/                   # Documentation
-├── docker-compose.yml       # Docker orchestration
+├── docker-compose.yml      # Docker orchestration
 └── package.json
 ```
 
@@ -185,10 +187,15 @@ DASHSCOPE_API_KEY=sk-...
 
 ```bash
 cd packages/electron
-npm run build:exe
+npm run build
 ```
 
-Output: `packages/electron/release5/win-unpacked/Web AI IDE.exe`
+**Output directory:** `packages/electron/release/release-{timestamp}/`
+
+| Build Mode | Command | Output |
+|------------|---------|--------|
+| Production (NSIS installer) | `npm run build` | `release/release-{timestamp}/Web AI IDE Setup 1.0.0.exe` |
+| Development (unpacked) | `npm run build -- --dir` | `release/dev/win-unpacked/` |
 
 ---
 

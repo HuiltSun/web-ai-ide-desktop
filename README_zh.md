@@ -50,7 +50,7 @@
 ```bash
 cd packages/electron
 npm install
-npm run build:exe
+npm run build
 ```
 
 2. 启动 PostgreSQL 数据库：
@@ -73,7 +73,7 @@ npm run dev
 
 4. 运行桌面应用：
 ```
-packages/electron/release5/win-unpacked/Web AI IDE.exe
+web-ai-ide/release/release-{timestamp}/Web AI IDE Setup 1.0.0.exe
 ```
 
 ### 方式二：Docker 部署
@@ -105,27 +105,29 @@ web-ai-ide/
 ├── packages/
 │   ├── electron/           # Electron 桌面应用
 │   │   ├── electron/       # 主进程 (main.ts, preload.ts)
-│   │   ├── src/            # React 前端
-│   │   └── dist/           # 构建输出
+│   │   ├── src/           # React 前端
+│   │   ├── scripts/       # 构建脚本
+│   │   └── dist/          # 构建输出
 │   │
 │   ├── cli/                # 独立 React 应用（可选）
 │   │
 │   ├── core/               # AI 核心逻辑
 │   │   └── src/
 │   │       ├── ai/         # AI 网关和提供商
-│   │       ├── models/      # 模型配置
-│   │       └── tools/       # 工具系统
+│   │       ├── models/     # 模型配置
+│   │       └── tools/      # 工具系统
 │   │
-│   ├── server/              # Fastify 后端
+│   ├── server/             # Fastify 后端
 │   │   ├── src/
-│   │   │   ├── routes/      # API 路由
-│   │   │   └── services/    # 业务逻辑
-│   │   └── prisma/          # 数据库 schema
+│   │   │   ├── routes/     # API 路由
+│   │   │   └── services/   # 业务逻辑
+│   │   └── prisma/         # 数据库 schema
 │   │
-│   └── shared/              # 共享类型定义
+│   └── shared/             # 共享类型定义
 │
-├── docs/                    # 设计文档
-├── docker-compose.yml       # Docker 编排
+├── release/                 # 构建输出 (release-{timestamp}/)
+├── docs/                   # 设计文档
+├── docker-compose.yml      # Docker 编排
 └── package.json
 ```
 
@@ -185,10 +187,15 @@ DASHSCOPE_API_KEY=sk-...
 
 ```bash
 cd packages/electron
-npm run build:exe
+npm run build
 ```
 
-输出：`packages/electron/release5/win-unpacked/Web AI IDE.exe`
+**输出目录：** `packages/electron/release/release-{timestamp}/`
+
+| 构建模式 | 命令 | 输出 |
+|----------|------|------|
+| 正式构建（NSIS 安装程序） | `npm run build` | `release/release-{timestamp}/Web AI IDE Setup 1.0.0.exe` |
+| 开发构建（未打包） | `npm run build -- --dir` | `release/dev/win-unpacked/` |
 
 ---
 
