@@ -34,7 +34,10 @@ if (-not $env:POSTGRES_USER -or -not $env:POSTGRES_PASSWORD) {
 if (-not $env:ENCRYPTION_SECRET) {
     Write-Host ""
     Write-Host "警告: 未设置 ENCRYPTION_SECRET，将自动生成..."
-    $env:ENCRYPTION_SECRET = [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }) | ForEach-Object { [byte]$_ })
+    $randomBytes = [byte[]]::new(32)
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    $rng.GetBytes($randomBytes)
+    $env:ENCRYPTION_SECRET = [Convert]::ToBase64String($randomBytes)
     Write-Host "  已生成加密密钥 (仅用于开发环境)"
 }
 
