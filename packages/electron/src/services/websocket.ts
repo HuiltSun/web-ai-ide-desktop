@@ -1,6 +1,8 @@
 import { ChatStreamEvent } from '../types';
 import { api } from './api';
 
+const WS_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 type MessageHandler = (event: ChatStreamEvent) => void;
 
 class WebSocketService {
@@ -16,9 +18,11 @@ class WebSocketService {
     this.sessionId = sessionId;
     const { Authorization: token } = api.getAuthHeaders();
     const tokenValue = token?.replace('Bearer ', '');
+    const wsProtocol = WS_BASE.startsWith('https') ? 'wss' : 'ws';
+    const wsBase = WS_BASE.replace(/^http/, wsProtocol);
     const wsUrl = tokenValue
-      ? `ws://localhost:3001/api/chat/${sessionId}/stream?token=${tokenValue}`
-      : `ws://localhost:3001/api/chat/${sessionId}/stream`;
+      ? `${wsBase}/api/chat/${sessionId}/stream?token=${tokenValue}`
+      : `${wsBase}/api/chat/${sessionId}/stream`;
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
