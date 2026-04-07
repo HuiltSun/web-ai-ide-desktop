@@ -1,4 +1,5 @@
 import { prisma } from '../utils/prisma.js';
+import { sessionCacheService } from './session-cache.service.js';
 
 export interface SessionListItem {
   sessionId: string;
@@ -36,7 +37,7 @@ export const sessionService = {
     gitBranch?: string;
     model?: string;
   }) {
-    return prisma.session.create({
+    const session = await prisma.session.create({
       data: {
         projectId: data.projectId,
         cwd: data.cwd,
@@ -44,6 +45,19 @@ export const sessionService = {
         model: data.model || 'gpt-4o',
       },
     });
+
+    await sessionCacheService.setSession(session.id, {
+      id: session.id,
+      tenantId: '',
+      userId: '',
+      projectId: session.projectId,
+      cursor: '',
+      context: [],
+      provider: session.model,
+      createdAt: session.createdAt.getTime(),
+    });
+
+    return session;
   },
 
   async getSessionByProject(projectId: string) {
@@ -56,7 +70,13 @@ export const sessionService = {
   },
 
   async getSession(id: string) {
-    return prisma.session.findUnique({
+    const cached = await sessionCacheService.getSession(id);
+    if (cached) {
+      console.log(`Session ${id} found in cache`);
+      return cached;
+    }
+
+    const session = await prisma.session.findUnique({
       where: { id },
       include: {
         messages: {
@@ -65,6 +85,21 @@ export const sessionService = {
         project: true,
       },
     });
+
+    if (session) {
+      await sessionCacheService.setSession(session.id, {
+        id: session.id,
+        tenantId: '',
+        userId: '',
+        projectId: session.projectId,
+        cursor: '',
+        context: session.messages,
+        provider: session.model,
+        createdAt: session.createdAt.getTime(),
+      });
+    }
+
+    return session;
   },
 
   async listSessions(projectId: string) {
@@ -176,6 +211,7 @@ export const sessionService = {
   },
 
   async deleteSession(id: string) {
+    await sessionCacheService.deleteSession(id);
     return prisma.session.delete({ where: { id } });
   },
 

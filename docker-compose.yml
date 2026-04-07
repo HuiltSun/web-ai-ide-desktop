@@ -15,8 +15,10 @@ services:
       - "3001:3001"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-webaiide}:${POSTGRES_PASSWORD:-webaiide}@db:5432/${POSTGRES_DB:-webaiide}
+      REDIS_URL: redis://redis:6379
     depends_on:
       - db
+      - redis
     networks:
       - webaiide
 
@@ -31,9 +33,19 @@ services:
     networks:
       - webaiide
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - webaiide
+
 networks:
   webaiide:
     driver: bridge
 
 volumes:
   pgdata:
+  redis_data:
