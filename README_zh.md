@@ -191,6 +191,27 @@ npx prisma generate    # 生成 Prisma Client
 npx prisma db push      # 推送 schema 到数据库
 ```
 
+### 数据加密
+
+所有敏感数据均使用 AES-256-GCM 加密存储：
+
+| 模型 | 加密字段 |
+|------|---------|
+| User | apiKeys |
+| Project | path |
+| Session | cwd |
+| Message | content, systemPayload |
+
+**⚠️ 必需环境变量：**
+```
+ENCRYPTION_SECRET=your-256-bit-secret-key-here
+```
+
+生成安全密钥：
+```bash
+openssl rand -hex 32
+```
+
 ---
 
 ## AI 模型配置

@@ -12,7 +12,7 @@ Write-Host "========================================"
 
 # 检查数据库配置
 Write-Host ""
-Write-Host "[0/4] 检查数据库配置..."
+Write-Host "[0/5] 检查环境配置..."
 
 if (-not $env:POSTGRES_USER -or -not $env:POSTGRES_PASSWORD) {
     Write-Host ""
@@ -30,14 +30,23 @@ if (-not $env:POSTGRES_USER -or -not $env:POSTGRES_PASSWORD) {
     exit 1
 }
 
+# 检查加密密钥配置
+if (-not $env:ENCRYPTION_SECRET) {
+    Write-Host ""
+    Write-Host "警告: 未设置 ENCRYPTION_SECRET，将自动生成..."
+    $env:ENCRYPTION_SECRET = [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }) | ForEach-Object { [byte]$_ })
+    Write-Host "  已生成加密密钥 (仅用于开发环境)"
+}
+
 $env:POSTGRES_DB = if ($env:POSTGRES_DB) { $env:POSTGRES_DB } else { 'webaiide' }
 
 Write-Host "  用户名: $env:POSTGRES_USER"
 Write-Host "  数据库: $env:POSTGRES_DB"
+Write-Host "  加密: 已启用"
 
 # 1. 启动 PostgreSQL (Docker)
 Write-Host ""
-Write-Host "[1/4] 启动 PostgreSQL 数据库..."
+Write-Host "[1/5] 启动 PostgreSQL 数据库..."
 
 try {
     $dockerRunning = docker ps 2>$null
@@ -78,7 +87,7 @@ try {
 
 # 2. 初始化数据库
 Write-Host ""
-Write-Host "[2/4] 初始化数据库..."
+Write-Host "[2/5] 初始化数据库..."
 
 if (Test-Path "$ServerDir\prisma\schema.prisma") {
     Push-Location $ServerDir -ErrorAction SilentlyContinue
@@ -98,7 +107,7 @@ if (Test-Path "$ServerDir\prisma\schema.prisma") {
 
 # 3. 启动后端服务器（新窗口）
 Write-Host ""
-Write-Host "[3/4] 启动后端服务器 (http://localhost:3001)..."
+Write-Host "[3/5] 启动后端服务器 (http://localhost:3001)..."
 
 if (-not (Test-Path "$ServerDir\package.json")) {
     Write-Host "  错误: 未找到 server package.json"
@@ -135,7 +144,7 @@ if (-not (Test-Path "$ServerDir\package.json")) {
 
 # 4. 查找并启动桌面应用
 Write-Host ""
-Write-Host "[4/4] 启动桌面应用..."
+Write-Host "[4/5] 启动桌面应用..."
 
 if (-not (Test-Path $ReleaseDir)) {
     Write-Host "  错误: release 目录不存在: $ReleaseDir"

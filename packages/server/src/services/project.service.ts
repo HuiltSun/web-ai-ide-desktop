@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
+import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 const DEFAULT_USER_ID = 'default-user';
 
@@ -9,12 +8,13 @@ async function ensureDefaultUser() {
   const user = await prisma.user.findUnique({ where: { id: DEFAULT_USER_ID } });
   if (!user) {
     const defaultPassword = process.env.DEFAULT_USER_PASSWORD || crypto.randomUUID();
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
     return prisma.user.create({
       data: {
         id: DEFAULT_USER_ID,
         email: 'default@webaiide.local',
         name: 'Default User',
-        password: defaultPassword,
+        password: hashedPassword,
       },
     });
   }

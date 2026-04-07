@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 import bcrypt from 'bcryptjs';
 
-const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
 
 export interface RegisterInput {

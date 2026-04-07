@@ -191,6 +191,27 @@ npx prisma generate    # Generate Prisma Client
 npx prisma db push    # Push schema to database
 ```
 
+### Data Encryption
+
+All sensitive data is encrypted at rest using AES-256-GCM:
+
+| Model | Encrypted Fields |
+|-------|-----------------|
+| User | apiKeys |
+| Project | path |
+| Session | cwd |
+| Message | content, systemPayload |
+
+**⚠️ Required Environment Variable:**
+```
+ENCRYPTION_SECRET=your-256-bit-secret-key-here
+```
+
+Generate a secure key:
+```bash
+openssl rand -hex 32
+```
+
 ---
 
 ## AI Model Configuration
