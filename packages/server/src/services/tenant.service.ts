@@ -20,7 +20,7 @@ export const tenantService = {
       },
     });
 
-    await prisma.$executeRaw`CREATE SCHEMA IF NOT EXISTS ${data.schemaName}`;
+    await prisma.$executeRawUnsafe('CREATE SCHEMA IF NOT EXISTS $1', data.schemaName);
 
     return tenant;
   },
@@ -57,6 +57,6 @@ export const tenantService = {
   },
 
   async setSearchPath(schema: string) {
-    await prisma.$executeRaw`SET search_path TO ${schema}, public`;
+    await prisma.$executeRawUnsafe('SET search_path TO $1, public', schema);
   },
 };
