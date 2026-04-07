@@ -7,6 +7,7 @@ import { sessionsRouter } from './routes/sessions.js';
 import { chatRouter } from './routes/chat.js';
 import { filesRouter } from './routes/files.js';
 import { authRouter } from './routes/auth.js';
+import { RedisClient } from './utils/redis.js';
 import { redis } from './utils/redis.js';
 import { appendFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -112,14 +113,14 @@ start();
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully...');
   await server.close();
-  await redis.quit();
+  await RedisClient.close();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully...');
   await server.close();
-  await redis.quit();
+  await RedisClient.close();
   process.exit(0);
 });
 
