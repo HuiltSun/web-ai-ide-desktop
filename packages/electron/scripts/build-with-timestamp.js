@@ -24,6 +24,12 @@ try {
 
   console.log(`\n✓ Build completed!`);
   console.log(`  Output: ${outputDir}`);
+
+  const debugFile = path.join(outputDir, 'builder-debug.yml');
+  if (fs.existsSync(debugFile)) {
+    fs.unlinkSync(debugFile);
+    console.log(`  Cleaned: builder-debug.yml`);
+  }
 } catch (error) {
   console.error('\n✗ Build failed');
   process.exit(1);
