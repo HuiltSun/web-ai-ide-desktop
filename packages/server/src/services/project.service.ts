@@ -1,4 +1,4 @@
-import { prisma } from '../utils/prisma.js';
+import { prisma, prismaRead } from '../utils/prisma.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
@@ -23,13 +23,13 @@ async function ensureDefaultUser() {
 
 export const projectService = {
   async listProjects() {
-    return prisma.project.findMany({
+    return prismaRead.project.findMany({
       orderBy: { updatedAt: 'desc' },
     });
   },
 
   async getProject(id: string) {
-    return prisma.project.findUnique({ where: { id } });
+    return prismaRead.project.findUnique({ where: { id } });
   },
 
   async createProject(data: { name: string; path: string; userId?: string }) {

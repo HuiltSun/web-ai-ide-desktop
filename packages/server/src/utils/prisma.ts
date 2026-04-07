@@ -1,6 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import { encrypt, decrypt } from '../utils/encryption.js';
 
+const DATABASE_URL = process.env.DATABASE_URL || '';
+const DATABASE_REPLICA_URL = process.env.DATABASE_REPLICA_URL || DATABASE_URL;
+
 const FIELDS_TO_ENCRYPT = {
   user: ['apiKeys'],
   project: ['path'],
@@ -65,8 +68,11 @@ function decryptFields(data: unknown, modelName: ModelName): unknown {
   return result;
 }
 
-const prismaClientSingleton = () => {
+const prismaClientSingleton = (url: string) => {
   const prisma = new PrismaClient({
+    datasources: {
+      db: { url },
+    },
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
 
@@ -96,10 +102,14 @@ const prismaClientSingleton = () => {
 declare global {
   // eslint-disable-next-line no var
   var prisma: ReturnType<typeof prismaClientSingleton> | undefined;
+  // eslint-disable-next-line no var
+  var prismaRead: ReturnType<typeof prismaClientSingleton> | undefined;
 }
 
-export const prisma = global.prisma ?? prismaClientSingleton();
+export const prisma = global.prisma ?? prismaClientSingleton(DATABASE_URL);
+export const prismaRead = global.prismaRead ?? prismaClientSingleton(DATABASE_REPLICA_URL);
 
 if (process.env.NODE_ENV !== 'production') {
   global.prisma = prisma;
+  global.prismaRead = prismaRead;
 }

@@ -1,4 +1,4 @@
-import { prisma } from '../utils/prisma.js';
+import { prisma, prismaRead } from '../utils/prisma.js';
 import { sessionCacheService } from './session-cache.service.js';
 
 export interface SessionListItem {
@@ -61,7 +61,7 @@ export const sessionService = {
   },
 
   async getSessionByProject(projectId: string) {
-    const sessions = await prisma.session.findMany({
+    const sessions = await prismaRead.session.findMany({
       where: { projectId },
       orderBy: { updatedAt: 'desc' },
       take: 1,
@@ -76,7 +76,7 @@ export const sessionService = {
       return cached;
     }
 
-    const session = await prisma.session.findUnique({
+    const session = await prismaRead.session.findUnique({
       where: { id },
       include: {
         messages: {
@@ -103,7 +103,7 @@ export const sessionService = {
   },
 
   async listSessions(projectId: string) {
-    const sessions = await prisma.session.findMany({
+    const sessions = await prismaRead.session.findMany({
       where: { projectId },
       orderBy: { updatedAt: 'desc' },
       include: {
@@ -132,7 +132,7 @@ export const sessionService = {
   },
 
   async reconstructConversation(sessionId: string): Promise<ConversationRecord | null> {
-    const session = await prisma.session.findUnique({
+    const session = await prismaRead.session.findUnique({
       where: { id: sessionId },
       include: {
         messages: {
@@ -197,7 +197,7 @@ export const sessionService = {
   },
 
   async getMessages(sessionId: string) {
-    return prisma.message.findMany({
+    return prismaRead.message.findMany({
       where: { sessionId },
       orderBy: { createdAt: 'asc' },
     });
