@@ -2,7 +2,7 @@
 
 A browser-based + Electron desktop AI-assisted coding environment similar to Claude Code.
 
-[中文](README_cn.md) | English
+[English](README.md) | [中文](README_zh.md)
 
 ---
 
