@@ -1,10 +1,14 @@
-FROM node:20-alpine
+FROM node:20.18.0-alpine3.19
 
 WORKDIR /app
 
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+
 COPY package*.json ./
-RUN npm install
+RUN npm ci && npm cache clean --force
 
-COPY . .
+COPY --chown=nodejs:nodejs . .
 
-CMD ["npm", "run", "dev"]
+USER nodejs
+
+CMD ["npm", "run", "start"]
