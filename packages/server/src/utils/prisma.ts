@@ -117,8 +117,13 @@ const createPrismaReadClient = (): { client: PrismaClient; isReplica: boolean } 
     return { client: prisma, isReplica: false };
   }
 
-  const replicaClient = prismaClientSingleton(DATABASE_REPLICA_URL);
-  return { client: replicaClient, isReplica: true };
+  try {
+    const replicaClient = prismaClientSingleton(DATABASE_REPLICA_URL);
+    return { client: replicaClient, isReplica: true };
+  } catch (error) {
+    console.warn('Failed to create read replica client, using primary database:', error);
+    return { client: prisma, isReplica: false };
+  }
 };
 
 const prismaReadState = global.prismaRead
