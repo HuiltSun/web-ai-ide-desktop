@@ -20,7 +20,7 @@ function isValidSchemaName(name: string): boolean {
 export const tenantService = {
   async createTenant(data: CreateTenantInput) {
     if (!isValidSchemaName(data.schemaName)) {
-      throw new Error('Invalid schema name. Must match: /^[a-zA-Z_][a-zA-Z0-9_]*$/ and be 1-63 characters long');
+      throw new Error('Invalid schema name. Must match: /^[a-zA-Z_][a-zA-Z0-9_]*$/ and be at most 63 characters long');
     }
 
     const tenant = await prisma.tenant.create({
