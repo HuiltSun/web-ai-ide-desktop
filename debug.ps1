@@ -6,14 +6,34 @@ $ReleaseDir = "E:\web\web-ai-ide\release"
 $ServerDir = "E:\web\web-ai-ide\packages\server"
 $DockerContainer = "webaiide-postgres"
 
-# 数据库配置（支持环境变量覆盖）
-$env:POSTGRES_USER = if ($env:POSTGRES_USER) { $env:POSTGRES_USER } else { 'user' }
-$env:POSTGRES_PASSWORD = if ($env:POSTGRES_PASSWORD) { $env:POSTGRES_PASSWORD } else { 'password' }
-$env:POSTGRES_DB = if ($env:POSTGRES_DB) { $env:POSTGRES_DB } else { 'webaiide' }
-
 Write-Host "========================================"
 Write-Host "Web AI IDE 一键调试脚本"
 Write-Host "========================================"
+
+# 检查数据库配置
+Write-Host ""
+Write-Host "[0/4] 检查数据库配置..."
+
+if (-not $env:POSTGRES_USER -or -not $env:POSTGRES_PASSWORD) {
+    Write-Host ""
+    Write-Host "错误: 缺少必需的数据库环境变量"
+    Write-Host ""
+    Write-Host "请设置以下环境变量后重新运行脚本："
+    Write-Host "  $env:POSTGRES_USER  - PostgreSQL 用户名"
+    Write-Host "  $env:POSTGRES_PASSWORD - PostgreSQL 密码"
+    Write-Host "  $env:POSTGRES_DB - 数据库名称（可选，默认为 webaiide）"
+    Write-Host ""
+    Write-Host "示例："
+    Write-Host "  $env:POSTGRES_USER='myuser'"
+    Write-Host "  $env:POSTGRES_PASSWORD='StrongPass123!'"
+    Write-Host "  .\debug.ps1"
+    exit 1
+}
+
+$env:POSTGRES_DB = if ($env:POSTGRES_DB) { $env:POSTGRES_DB } else { 'webaiide' }
+
+Write-Host "  用户名: $env:POSTGRES_USER"
+Write-Host "  数据库: $env:POSTGRES_DB"
 
 # 1. 启动 PostgreSQL (Docker)
 Write-Host ""

@@ -8,6 +8,29 @@ interface LoginModalProps {
   onRegister: (email: string, password: string, name?: string) => Promise<void>;
 }
 
+interface PasswordRequirement {
+  test: (pw: string) => boolean;
+  label: string;
+}
+
+const PASSWORD_REQUIREMENTS: PasswordRequirement[] = [
+  { test: (pw) => pw.length >= 8, label: 'At least 8 characters' },
+  { test: (pw) => /[A-Z]/.test(pw), label: 'One uppercase letter' },
+  { test: (pw) => /[a-z]/.test(pw), label: 'One lowercase letter' },
+  { test: (pw) => /[0-9]/.test(pw), label: 'One number' },
+  { test: (pw) => /[^A-Za-z0-9]/.test(pw), label: 'One special character' },
+];
+
+function getPasswordStrength(password: string): { level: number; color: string; text: string } {
+  const passed = PASSWORD_REQUIREMENTS.filter((req) => req.test(password)).length;
+
+  if (passed === 0) return { level: 0, color: 'bg-slate-600', text: '' };
+  if (passed <= 2) return { level: 1, color: 'bg-red-500', text: 'Weak' };
+  if (passed <= 3) return { level: 2, color: 'bg-yellow-500', text: 'Fair' };
+  if (passed <= 4) return { level: 3, color: 'bg-blue-500', text: 'Good' };
+  return { level: 4, color: 'bg-green-500', text: 'Strong' };
+}
+
 export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -15,13 +38,23 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPasswordReqs, setShowPasswordReqs] = useState(false);
 
   if (!isOpen) return null;
+
+  const passwordStrength = getPasswordStrength(password);
+  const requirementsMet = PASSWORD_REQUIREMENTS.filter((req) => req.test(password)).length;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    if (mode === 'register' && requirementsMet < PASSWORD_REQUIREMENTS.length) {
+      setError('Please meet all password requirements');
+      setLoading(false);
+      return;
+    }
 
     try {
       if (mode === 'login') {
@@ -96,17 +129,57 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setShowPasswordReqs(true);
+              }}
+              onFocus={() => setShowPasswordReqs(true)}
               placeholder="••••••••"
               required
-              minLength={6}
+              minLength={8}
               className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all"
             />
+
+            {mode === 'register' && showPasswordReqs && (
+              <div className="mt-3 space-y-2">
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4].map((level) => (
+                    <div
+                      key={level}
+                      className={`h-1 flex-1 rounded-full transition-all ${
+                        level <= passwordStrength.level ? passwordStrength.color : 'bg-slate-700'
+                      }`}
+                    />
+                  ))}
+                </div>
+                {passwordStrength.text && (
+                  <p className={`text-xs ${
+                    passwordStrength.level <= 1 ? 'text-red-400' :
+                    passwordStrength.level === 2 ? 'text-yellow-400' :
+                    passwordStrength.level === 3 ? 'text-blue-400' : 'text-green-400'
+                  }`}>
+                    {passwordStrength.text} password
+                  </p>
+                )}
+                <div className="text-xs text-slate-500">
+                  {PASSWORD_REQUIREMENTS.map((req, i) => (
+                    <div
+                      key={i}
+                      className={`flex items-center gap-1.5 ${
+                        req.test(password) ? 'text-green-400' : 'text-slate-500'
+                      }`}
+                    >
+                      {req.test(password) ? '✓' : '○'} {req.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (mode === 'register' && requirementsMet < PASSWORD_REQUIREMENTS.length)}
             className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50"
           >
             {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
@@ -118,6 +191,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
               onClick={() => {
                 setMode(mode === 'login' ? 'register' : 'login');
                 setError('');
+                setShowPasswordReqs(false);
               }}
               className="text-sm text-slate-400 hover:text-white transition-colors"
             >

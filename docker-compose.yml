@@ -14,7 +14,7 @@ services:
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: postgresql://webaiide:webaiide@db:5432/webaiide
+      DATABASE_URL: postgresql://${POSTGRES_USER:-webaiide}:${POSTGRES_PASSWORD:-webaiide}@db:5432/${POSTGRES_DB:-webaiide}
     depends_on:
       - db
     networks:
@@ -23,9 +23,9 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: webaiide
-      POSTGRES_PASSWORD: webaiide
-      POSTGRES_DB: webaiide
+      POSTGRES_USER: ${POSTGRES_USER:-webaiide}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-webaiide}
+      POSTGRES_DB: ${POSTGRES_DB:-webaiide}
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:

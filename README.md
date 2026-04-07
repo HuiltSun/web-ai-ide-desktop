@@ -49,8 +49,16 @@ A browser-based + Electron desktop AI-assisted coding environment similar to Cla
 **Use the debug script for one-click startup:**
 ```powershell
 cd web-ai-ide
+# Set database credentials (required)
+$env:POSTGRES_USER="your_username"
+$env:POSTGRES_PASSWORD="your_strong_password"
 .\debug.ps1
 ```
+
+**⚠️ Security Requirements:**
+- `POSTGRES_USER` and `POSTGRES_PASSWORD` must be set via environment variables
+- Use strong passwords, do not use defaults or weak passwords
+- Credentials are not stored in the script, must be set each time
 
 This script automatically:
 - Starts PostgreSQL database (Docker)
@@ -70,8 +78,8 @@ npm run build
 2. Start PostgreSQL:
 ```bash
 docker run -d --name webaiide-postgres \
-  -e POSTGRES_USER=user \
-  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_USER=your_username \
+  -e POSTGRES_PASSWORD=your_strong_password \
   -e POSTGRES_DB=webaiide \
   -p 5432:5432 postgres:16
 ```
@@ -163,8 +171,10 @@ web-ai-ide/
 
 Environment variable (`packages/server/.env`):
 ```
-DATABASE_URL="postgresql://user:password@localhost:5432/webaiide?schema=public"
+DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}?schema=public"
 ```
+
+**⚠️ Security:** Please set `POSTGRES_USER` and `POSTGRES_PASSWORD` environment variables before running.
 
 ### Database Models
 

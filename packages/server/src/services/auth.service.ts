@@ -15,6 +15,31 @@ export interface LoginInput {
   password: string;
 }
 
+function validatePasswordStrength(password: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    errors.push('Password must contain at least one special character');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
 export async function register(data: RegisterInput) {
   const existingUser = await prisma.user.findUnique({
     where: { email: data.email },
@@ -22,6 +47,11 @@ export async function register(data: RegisterInput) {
 
   if (existingUser) {
     throw new Error('User with this email already exists');
+  }
+
+  const passwordValidation = validatePasswordStrength(data.password);
+  if (!passwordValidation.valid) {
+    throw new Error(`Password does not meet security requirements:\n${passwordValidation.errors.join('\n')}`);
   }
 
   const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS);

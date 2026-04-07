@@ -49,8 +49,16 @@
 **使用 debug.ps1 脚本一键启动：**
 ```powershell
 cd web-ai-ide
+# 设置数据库凭据（必需）
+$env:POSTGRES_USER="your_username"
+$env:POSTGRES_PASSWORD="your_strong_password"
 .\debug.ps1
 ```
+
+**⚠️ 安全配置要求：**
+- `POSTGRES_USER` 和 `POSTGRES_PASSWORD` 必须通过环境变量设置
+- 请使用强密码，不要使用默认值或弱密码
+- 凭据不会存储在脚本中，每次运行需重新设置
 
 该脚本自动完成：
 - 启动 PostgreSQL 数据库 (Docker)
@@ -70,8 +78,8 @@ npm run build
 2. 启动 PostgreSQL 数据库：
 ```bash
 docker run -d --name webaiide-postgres \
-  -e POSTGRES_USER=user \
-  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_USER=your_username \
+  -e POSTGRES_PASSWORD=your_strong_password \
   -e POSTGRES_DB=webaiide \
   -p 5432:5432 postgres:16
 ```
@@ -163,8 +171,10 @@ web-ai-ide/
 
 环境变量 (`packages/server/.env`)：
 ```
-DATABASE_URL="postgresql://user:password@localhost:5432/webaiide?schema=public"
+DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}?schema=public"
 ```
+
+**⚠️ 安全提示：** 请在运行前设置 `POSTGRES_USER` 和 `POSTGRES_PASSWORD` 环境变量。
 
 ### 数据库模型
 
