@@ -26,6 +26,7 @@ function App() {
     const savedToken = localStorage.getItem('auth_token');
     const savedUser = localStorage.getItem('user');
     if (savedToken && savedUser) {
+      api.setAuthToken(savedToken);
       setToken(savedToken);
       setUser(JSON.parse(savedUser));
     }
@@ -58,6 +59,7 @@ function App() {
     const data = await response.json();
     localStorage.setItem('auth_token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
+    api.setAuthToken(data.token);
     setToken(data.token);
     setUser(data.user);
     setSelectedProjectId(null);
@@ -90,6 +92,7 @@ function App() {
     const data = await loginResponse.json();
     localStorage.setItem('auth_token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
+    api.setAuthToken(data.token);
     setToken(data.token);
     setUser(data.user);
     setSelectedProjectId(null);
@@ -100,6 +103,7 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
+    api.setAuthToken(null);
     setToken(null);
     setUser(null);
     setSelectedProjectId(null);

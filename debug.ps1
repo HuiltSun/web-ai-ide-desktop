@@ -134,13 +134,7 @@ if (-not (Test-Path "$ServerDir\package.json")) {
             Write-Host "  后端服务器就绪 (http://localhost:3001)"
             break
         } catch {
-            if ($_.Exception.Message -match "Unable to connect" -or $_.Exception.Message -match "No connection could be made") {
-                Write-Host "    检查中... ($($i + 1)/10)"
-            } else {
-                $serverReady = $true
-                Write-Host "  后端服务器就绪 (http://localhost:3001)"
-                break
-            }
+            Write-Host "    检查中... ($($i + 1)/10)"
         }
     }
 
