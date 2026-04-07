@@ -19,6 +19,9 @@ interface ChatStreamEvent {
 }
 
 export async function chatRouter(fastify: FastifyInstance) {
+  // REST 端点需要认证
+  fastify.addHook('onRequest', fastify.authenticate);
+
   fastify.get<{ Params: { sessionId: string } }>(
     '/:sessionId/messages',
     async (request, reply) => {
@@ -30,6 +33,7 @@ export async function chatRouter(fastify: FastifyInstance) {
     }
   );
 
+  // WebSocket 端点 - 认证需要在连接建立后通过消息传递
   fastify.get<{ Params: { sessionId: string } }>(
     '/:sessionId/stream',
     { websocket: true },

@@ -2,6 +2,8 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { projectService } from '../services/project.service.js';
 
 export async function projectsRouter(fastify: FastifyInstance) {
+  fastify.addHook('onRequest', fastify.authenticate);
+
   fastify.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
     const projects = await projectService.listProjects();
     return projects;

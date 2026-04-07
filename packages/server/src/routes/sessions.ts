@@ -2,6 +2,8 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { sessionService } from '../services/session.service.js';
 
 export async function sessionsRouter(fastify: FastifyInstance) {
+  fastify.addHook('onRequest', fastify.authenticate);
+
   fastify.get<{ Params: { projectId: string } }>(
     '/project/:projectId',
     async (request, reply) => {
