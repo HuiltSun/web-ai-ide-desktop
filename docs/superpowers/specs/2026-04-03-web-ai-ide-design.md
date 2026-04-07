@@ -168,6 +168,47 @@ web-ai-ide/
 - Session supports cwd, gitBranch / 会话支持 cwd、gitBranch
 - UUID-based message chain for tree structure / 基于 UUID 的消息链支持树形结构
 
+### 4.6 Settings - Dynamic AI Providers / 设置 - 动态 AI 提供商
+
+**Features / 功能:**
+- User-configurable AI providers / 用户可配置的 AI 提供商
+- Each provider has: name, API endpoint, API key / 每个提供商有：名称、API 端点、API 密钥
+- Multiple models per provider / 每个提供商多个模型
+- Custom model ID and display name / 自定义模型 ID 和显示名称
+- Select active provider and model / 选择当前提供商和模型
+
+**Data Structure / 数据结构:**
+```typescript
+interface AIProvider {
+  id: string;           // Provider unique ID
+  name: string;         // Display name
+  apiEndpoint: string;  // API endpoint
+  apiKey: string;       // API key
+  models: AIModel[];    // Model list
+}
+
+interface AIModel {
+  id: string;           // Model ID (e.g., gpt-4o)
+  name: string;         // Display name
+}
+```
+
+### 4.7 Data Encryption / 数据加密
+
+**Features / 功能:**
+- AES-256-GCM authenticated encryption / AES-256-GCM 认证加密
+- PBKDF2 key derivation with 100,000 iterations / PBKDF2 密钥派生，100,000 次迭代
+- Per-field encryption middleware / 字段级加密中间件
+- Optional ENCRYPTION_SALT for consistency / 可选 ENCRYPTION_SALT 保持一致性
+
+**Encrypted Fields / 加密字段:**
+| Model | Encrypted Fields |
+|-------|-----------------|
+| User | apiKeys |
+| Project | path |
+| Session | cwd |
+| Message | content, systemPayload |
+
 ---
 
 ## 5. Data Model / 数据模型

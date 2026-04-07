@@ -24,8 +24,13 @@ function getEncryptionKey(): Buffer {
   if (saltEnvVar) {
     const salt = Buffer.from(saltEnvVar, 'hex');
     if (salt.length === SALT_LENGTH) {
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('[Encryption] Warning: Using fixed ENCRYPTION_SALT in production. Consider using random salt for better security.');
+      }
       cachedKey = crypto.pbkdf2Sync(secret, salt, ITERATIONS, KEY_LENGTH, 'sha256');
       return cachedKey;
+    } else {
+      console.warn(`[Encryption] ENCRYPTION_SALT must be ${SALT_LENGTH * 2} hex characters (${SALT_LENGTH} bytes). Using random salt instead.`);
     }
   }
 
