@@ -34,14 +34,6 @@ declare module 'fastify' {
 const server = Fastify({
   logger: {
     level: process.env.LOG_LEVEL || 'info',
-    transport: process.env.NODE_ENV !== 'production' ? {
-      target: 'pino-pretty',
-      options: {
-        translateTime: 'HH:MM:ss Z',
-        ignore: 'pid,hostname',
-        destination: 1,
-      },
-    } : undefined,
   },
 });
 

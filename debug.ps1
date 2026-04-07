@@ -19,13 +19,13 @@ if (-not $env:POSTGRES_USER -or -not $env:POSTGRES_PASSWORD) {
     Write-Host "错误: 缺少必需的数据库环境变量"
     Write-Host ""
     Write-Host "请设置以下环境变量后重新运行脚本："
-    Write-Host "  $env:POSTGRES_USER  - PostgreSQL 用户名"
-    Write-Host "  $env:POSTGRES_PASSWORD - PostgreSQL 密码"
-    Write-Host "  $env:POSTGRES_DB - 数据库名称（可选，默认为 webaiide）"
+    Write-Host '  $env:POSTGRES_USER  - PostgreSQL 用户名'
+    Write-Host '  $env:POSTGRES_PASSWORD - PostgreSQL 密码'
+    Write-Host '  $env:POSTGRES_DB - 数据库名称（可选，默认为 webaiide）'
     Write-Host ""
     Write-Host "示例："
-    Write-Host "  $env:POSTGRES_USER='myuser'"
-    Write-Host "  $env:POSTGRES_PASSWORD='StrongPass123!'"
+    Write-Host '  $env:POSTGRES_USER="myuser"'
+    Write-Host '  $env:POSTGRES_PASSWORD="StrongPass123!"'
     Write-Host "  .\debug.ps1"
     exit 1
 }
