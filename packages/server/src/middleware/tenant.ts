@@ -36,7 +36,7 @@ export async function tenantMiddleware(
     request.tenantId = result[0].tenant_id;
     request.tenantSchema = result[0].schema;
 
-    await prisma.$executeRawUnsafe('SET search_path TO $1, public', request.tenantSchema);
+    await prisma.$executeRaw`SET search_path TO ${request.tenantSchema}, public`;
   } catch (error) {
     console.error('Tenant middleware error:', error);
     return reply.status(500).send({ error: 'Internal server error' });

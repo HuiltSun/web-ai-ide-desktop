@@ -11,8 +11,18 @@ export interface CreateApiKeyInput {
   name?: string;
 }
 
+const SCHEMA_NAME_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+function isValidSchemaName(name: string): boolean {
+  return SCHEMA_NAME_REGEX.test(name) && name.length <= 63;
+}
+
 export const tenantService = {
   async createTenant(data: CreateTenantInput) {
+    if (!isValidSchemaName(data.schemaName)) {
+      throw new Error('Invalid schema name. Must match: /^[a-zA-Z_][a-zA-Z0-9_]*$/ and max 63 chars');
+    }
+
     const tenant = await prisma.tenant.create({
       data: {
         name: data.name,
@@ -20,7 +30,7 @@ export const tenantService = {
       },
     });
 
-    await prisma.$executeRawUnsafe('CREATE SCHEMA IF NOT EXISTS $1', data.schemaName);
+    await prisma.$executeRaw`CREATE SCHEMA IF NOT EXISTS ${data.schemaName}`;
 
     return tenant;
   },
@@ -57,6 +67,6 @@ export const tenantService = {
   },
 
   async setSearchPath(schema: string) {
-    await prisma.$executeRawUnsafe('SET search_path TO $1, public', schema);
+    await prisma.$executeRaw`SET search_path TO ${schema}, public`;
   },
 };
