@@ -7,8 +7,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/build-with-timestamp.js",
-    "build:exe": "node scripts/build-with-timestamp.js"
+    "build": "node scripts/build-with-timestamp.js"
   },
   "dependencies": {
     "electron-log": "^5.1.0",
