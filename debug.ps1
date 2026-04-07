@@ -61,9 +61,9 @@ try {
     $containerExists = docker ps -a --format '{{.Names}}' | Select-String -Pattern "^$DockerContainer$" -Quiet
     $containerRunning = docker ps --format '{{.Names}}' | Select-String -Pattern "^$DockerContainer$" -Quiet
 
-    if ($containerRunning) {
+    if ($containerRunning -eq $true) {
         Write-Host "  容器 $DockerContainer 已在运行"
-    } elseif ($containerExists) {
+    } elseif ($containerExists -eq $true) {
         Write-Host "  启动已有容器 $DockerContainer..."
         docker start $DockerContainer
     } else {
