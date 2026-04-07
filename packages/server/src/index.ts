@@ -11,7 +11,7 @@ import { appendFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 const LOG_DIR = join(process.cwd(), 'logs');
-const LOG_FILE = join(LOG_DIR, `server-${new Date().toISOString().split('T')[0]}.log`);
+const LOG_FILE = join(LOG_DIR, `server-${process.pid}-${Date.now()}.log`);
 
 if (!existsSync(LOG_DIR)) {
   mkdirSync(LOG_DIR, { recursive: true });
