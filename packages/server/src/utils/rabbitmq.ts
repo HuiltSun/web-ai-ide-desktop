@@ -2,14 +2,28 @@ import amqp from 'amqplib';
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672';
 
-let connection: any = null;
-let channel: any = null;
+interface AmqpChannel {
+  assertQueue(queue: string, options?: { durable: boolean }): Promise<void>;
+  sendToQueue(queue: string, content: Buffer, options?: { persistent: boolean }): boolean;
+  consume(queue: string, onMessage: (msg: any) => void): Promise<void>;
+  ack(msg: any): void;
+  close(): Promise<void>;
+}
+
+interface AmqpConnection {
+  createChannel(): Promise<AmqpChannel>;
+  close(): Promise<void>;
+}
+
+let connection: AmqpConnection | null = null;
+let channel: AmqpChannel | null = null;
 
 export const rabbitmq = {
-  async getChannel(): Promise<any> {
+  async getChannel(): Promise<AmqpChannel> {
     if (!channel) {
-      connection = await amqp.connect(RABBITMQ_URL);
-      channel = await connection.createChannel();
+      const conn = await amqp.connect(RABBITMQ_URL);
+      connection = conn as unknown as AmqpConnection;
+      channel = await (conn as any).createChannel() as AmqpChannel;
 
       await channel.assertQueue('ai.tasks', { durable: true });
       await channel.assertQueue('ai.results', { durable: true });
@@ -23,7 +37,7 @@ export const rabbitmq = {
       channel = null;
     }
     if (connection) {
-      await connection.close();
+      await (connection as any).close();
       connection = null;
     }
   }
