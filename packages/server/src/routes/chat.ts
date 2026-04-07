@@ -1,6 +1,7 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import crypto from 'crypto';
 import { sessionService } from '../services/session.service.js';
+import { tenantService } from '../services/tenant.service.js';
 
 interface ChatMessage {
   type: 'message' | 'approve' | 'reject';
@@ -19,6 +20,16 @@ interface ChatStreamEvent {
 }
 
 export async function chatRouter(fastify: FastifyInstance) {
+  fastify.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
+    const apiKey = request.headers['x-api-key'] as string;
+    if (apiKey) {
+      const tenant = await tenantService.getTenantByApiKey(apiKey);
+      if (tenant) {
+        await tenantService.setSearchPath(tenant.schema);
+      }
+    }
+  });
+
   // REST 端点需要认证
   fastify.addHook('onRequest', fastify.authenticate);
 
