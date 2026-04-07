@@ -68,7 +68,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           if (data.selected_model) setSettings(prev => ({ ...prev, selectedModel: data.selected_model as string }));
           if (data.fontSize) setSettings(prev => ({ ...prev, fontSize: data.fontSize as number }));
           if (data.tabSize) setSettings(prev => ({ ...prev, tabSize: data.tabSize as number }));
-        } catch {}
+        } catch (err) {
+          console.error('Failed to load settings from electron:', err);
+        }
       }
     };
     loadSettings();

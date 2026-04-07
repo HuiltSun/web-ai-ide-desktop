@@ -5,6 +5,7 @@ import { Sidebar } from './components/Sidebar';
 import { Chat } from './components/Chat';
 import { Settings } from './components/Settings';
 import { LoginModal } from './components/LoginModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { SparklesIcon, CodeIcon, BotIcon } from './components/Icons';
 import type { Project, ProjectWithSession } from './types';
 import { api } from './services/api';
@@ -176,7 +177,7 @@ function App() {
   }
 
   return (
-    <>
+    <ErrorBoundary>
       <Layout
         header={
           <Header
@@ -233,14 +234,18 @@ function App() {
           </div>
         )}
       </Layout>
-      <Settings isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      <LoginModal
-        isOpen={loginOpen}
-        onClose={() => setLoginOpen(false)}
-        onLogin={handleLogin}
-        onRegister={handleRegister}
-      />
-    </>
+      <ErrorBoundary>
+        <Settings isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <LoginModal
+          isOpen={loginOpen}
+          onClose={() => setLoginOpen(false)}
+          onLogin={handleLogin}
+          onRegister={handleRegister}
+        />
+      </ErrorBoundary>
+    </ErrorBoundary>
   );
 }
 

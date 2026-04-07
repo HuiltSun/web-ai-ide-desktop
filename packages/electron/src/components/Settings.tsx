@@ -39,18 +39,25 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
       if (window.electronAPI?.settings) {
         try {
           const data = await window.electronAPI.settings.getAll() as {
-            ai_providers?: AIProvider[];
+            ai_providers?: AIProvider[] | Record<string, AIProvider>;
             selected_provider?: string;
             selected_model?: string;
             fontSize?: number;
             tabSize?: number;
           };
-          if (data.ai_providers) setProviders(data.ai_providers);
+          if (data.ai_providers) {
+            const loadedProviders = Array.isArray(data.ai_providers)
+              ? data.ai_providers
+              : Object.values(data.ai_providers);
+            setProviders(loadedProviders);
+          }
           if (data.selected_provider) setSelectedProviderId(data.selected_provider);
           if (data.selected_model) setSelectedModelId(data.selected_model);
           if (data.fontSize) setFontSize(data.fontSize);
           if (data.tabSize) setTabSize(data.tabSize);
-        } catch {}
+        } catch (err) {
+          console.error('Failed to load settings from electron:', err);
+        }
       } else {
         const savedProviders = localStorage.getItem('ai_providers');
         const savedProvider = localStorage.getItem('selected_provider');
@@ -59,8 +66,13 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
         const savedTabSize = localStorage.getItem('tabSize');
         if (savedProviders) {
           try {
-            setProviders(JSON.parse(savedProviders));
-          } catch {}
+            const parsed = JSON.parse(savedProviders);
+            if (Array.isArray(parsed)) {
+              setProviders(parsed);
+            }
+          } catch (err) {
+            console.error('Failed to parse saved providers:', err);
+          }
         }
         if (savedProvider) setSelectedProviderId(savedProvider);
         if (savedModel) setSelectedModelId(savedModel);
