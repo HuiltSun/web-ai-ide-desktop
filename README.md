@@ -44,7 +44,21 @@ A browser-based + Electron desktop AI-assisted coding environment similar to Cla
 - Docker & Docker Compose
 - PostgreSQL 16+ (if not using Docker)
 
-### Option 1: Desktop App (Recommended)
+### Option 1: Desktop App (Recommended) - One-Click Launch
+
+**Use the debug script for one-click startup:**
+```powershell
+cd web-ai-ide
+.\debug.ps1
+```
+
+This script automatically:
+- Starts PostgreSQL database (Docker)
+- Initializes database schema (Prisma)
+- Launches backend server in a new window
+- Starts the latest desktop app release
+
+**Manual steps (if you prefer):**
 
 1. Build EXE:
 ```bash
@@ -103,31 +117,41 @@ npm run dev
 ```
 web-ai-ide/
 ├── packages/
-│   ├── electron/           # Electron desktop app
-│   │   ├── electron/      # Main process (main.ts, preload.ts)
-│   │   ├── src/           # React frontend
-│   │   ├── scripts/       # Build scripts
-│   │   └── dist/          # Build output
+│   ├── electron/             # Electron desktop app
+│   │   ├── electron/         # Main process (main.ts, preload.ts)
+│   │   ├── src/             # React frontend
+│   │   │   ├── components/   # Chat, Editor, FileExplorer, Terminal, Settings...
+│   │   │   ├── hooks/       # useChat, useFileSystem, useTerminal
+│   │   │   ├── services/    # api.ts, websocket.ts
+│   │   │   └── contexts/    # SettingsContext
+│   │   ├── scripts/         # Build scripts
+│   │   └── dist/            # Build output
 │   │
-│   ├── cli/               # Standalone React app (optional)
-│   │
-│   ├── core/               # AI core logic
+│   ├── cli/                  # Standalone React web app
 │   │   └── src/
-│   │       ├── ai/         # AI gateway and providers
-│   │       ├── models/     # Model configuration
-│   │       └── tools/      # Tool system
+│   │       ├── components/   # UI components
+│   │       ├── hooks/        # useChat, useFileSystem, useTerminal
+│   │       ├── services/     # api.ts, websocket.ts
+│   │       └── contexts/     # SettingsContext
 │   │
-│   ├── server/             # Fastify backend
+│   ├── core/                  # AI core logic
+│   │   └── src/
+│   │       ├── ai/           # gateway.ts + providers (openai, anthropic, qwen)
+│   │       ├── models/        # config.ts
+│   │       └── tools/        # edit, file-read, file-write, glob, grep, shell, registry
+│   │
+│   ├── server/               # Fastify backend
 │   │   ├── src/
-│   │   │   ├── routes/     # API routes
-│   │   │   └── services/   # Business logic
-│   │   └── prisma/         # Database schema
+│   │   │   ├── routes/       # auth, chat, files, projects, sessions
+│   │   │   └── services/    # auth, project, session services
+│   │   └── prisma/           # Database schema
 │   │
-│   └── shared/             # Shared type definitions
+│   └── shared/               # Shared type definitions
 │
-├── release/                 # Build output (release-{timestamp}/)
-├── docs/                   # Documentation
-├── docker-compose.yml      # Docker orchestration
+├── release/                  # Build output (release-{timestamp}/)
+├── docs/                     # Design documents
+├── docker-compose.yml         # Docker orchestration
+├── debug.ps1                 # One-click startup script
 └── package.json
 ```
 

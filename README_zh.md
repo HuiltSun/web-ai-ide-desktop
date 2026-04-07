@@ -44,7 +44,21 @@
 - Docker & Docker Compose
 - PostgreSQL 16+ (如不使用 Docker)
 
-### 方式一：桌面应用（推荐）
+### 方式一：桌面应用（推荐）- 一键启动
+
+**使用 debug.ps1 脚本一键启动：**
+```powershell
+cd web-ai-ide
+.\debug.ps1
+```
+
+该脚本自动完成：
+- 启动 PostgreSQL 数据库 (Docker)
+- 初始化数据库 Schema (Prisma)
+- 在新窗口启动后端服务器
+- 启动最新版本的桌面应用
+
+**手动启动步骤（可选）：**
 
 1. 构建 EXE：
 ```bash
@@ -103,31 +117,41 @@ npm run dev
 ```
 web-ai-ide/
 ├── packages/
-│   ├── electron/           # Electron 桌面应用
-│   │   ├── electron/       # 主进程 (main.ts, preload.ts)
-│   │   ├── src/           # React 前端
-│   │   ├── scripts/       # 构建脚本
-│   │   └── dist/          # 构建输出
+│   ├── electron/             # Electron 桌面应用
+│   │   ├── electron/         # 主进程 (main.ts, preload.ts)
+│   │   ├── src/             # React 前端
+│   │   │   ├── components/   # Chat, Editor, FileExplorer, Terminal, Settings...
+│   │   │   ├── hooks/       # useChat, useFileSystem, useTerminal
+│   │   │   ├── services/    # api.ts, websocket.ts
+│   │   │   └── contexts/    # SettingsContext
+│   │   ├── scripts/         # 构建脚本
+│   │   └── dist/            # 构建输出
 │   │
-│   ├── cli/                # 独立 React 应用（可选）
-│   │
-│   ├── core/               # AI 核心逻辑
+│   ├── cli/                  # 独立 React Web 应用
 │   │   └── src/
-│   │       ├── ai/         # AI 网关和提供商
-│   │       ├── models/     # 模型配置
-│   │       └── tools/      # 工具系统
+│   │       ├── components/   # UI 组件
+│   │       ├── hooks/        # useChat, useFileSystem, useTerminal
+│   │       ├── services/     # api.ts, websocket.ts
+│   │       └── contexts/     # SettingsContext
 │   │
-│   ├── server/             # Fastify 后端
+│   ├── core/                  # AI 核心逻辑
+│   │   └── src/
+│   │       ├── ai/           # gateway.ts + providers (openai, anthropic, qwen)
+│   │       ├── models/        # config.ts
+│   │       └── tools/        # edit, file-read, file-write, glob, grep, shell, registry
+│   │
+│   ├── server/               # Fastify 后端
 │   │   ├── src/
-│   │   │   ├── routes/     # API 路由
-│   │   │   └── services/   # 业务逻辑
-│   │   └── prisma/         # 数据库 schema
+│   │   │   ├── routes/       # auth, chat, files, projects, sessions
+│   │   │   └── services/    # auth, project, session services
+│   │   └── prisma/           # 数据库 schema
 │   │
-│   └── shared/             # 共享类型定义
+│   └── shared/               # 共享类型定义
 │
-├── release/                 # 构建输出 (release-{timestamp}/)
-├── docs/                   # 设计文档
-├── docker-compose.yml      # Docker 编排
+├── release/                  # 构建输出 (release-{timestamp}/)
+├── docs/                     # 设计文档
+├── docker-compose.yml         # Docker 编排
+├── debug.ps1                 # 一键启动脚本
 └── package.json
 ```
 
