@@ -24,12 +24,14 @@ function handleApiError(response: Response, defaultMessage: string): never {
   throw new Error(`${defaultMessage}: ${response.status} ${response.statusText}`);
 }
 
+export interface AuthHeaders extends Record<string, string> {}
+
 export const api = {
   setAuthToken(token: string | null) {
     authToken = token;
   },
 
-  getAuthHeaders(): HeadersInit {
+  getAuthHeaders(): AuthHeaders {
     if (!authToken) return {};
     return { Authorization: `Bearer ${authToken}` };
   },

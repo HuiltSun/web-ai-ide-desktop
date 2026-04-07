@@ -14,10 +14,10 @@ class WebSocketService {
     }
 
     this.sessionId = sessionId;
-    const authHeaders = api.getAuthHeaders();
-    const token = (authHeaders as any).Authorization?.replace('Bearer ', '');
-    const wsUrl = token
-      ? `ws://localhost:3001/api/chat/${sessionId}/stream?token=${token}`
+    const { Authorization: token } = api.getAuthHeaders();
+    const tokenValue = token?.replace('Bearer ', '');
+    const wsUrl = tokenValue
+      ? `ws://localhost:3001/api/chat/${sessionId}/stream?token=${tokenValue}`
       : `ws://localhost:3001/api/chat/${sessionId}/stream`;
     this.ws = new WebSocket(wsUrl);
 
