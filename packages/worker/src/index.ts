@@ -35,8 +35,16 @@ async function main() {
   channel.consume(INPUT_QUEUE, async (msg) => {
     if (!msg) return;
 
+    let task: AITask;
     try {
-      const task: AITask = JSON.parse(msg.content.toString());
+      task = JSON.parse(msg.content.toString());
+    } catch (parseError) {
+      console.error('Failed to parse message:', parseError);
+      channel.ack(msg);
+      return;
+    }
+
+    try {
       console.log(`Received task ${task.taskId}`);
 
       const result = await processAITask(task);
@@ -56,7 +64,6 @@ async function main() {
       console.log(`Task ${task.taskId} completed`);
     } catch (error) {
       console.error('Task failed:', error);
-      const task = JSON.parse(msg.content.toString());
       channel.sendToQueue(
         OUTPUT_QUEUE,
         Buffer.from(JSON.stringify({

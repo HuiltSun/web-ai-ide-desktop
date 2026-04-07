@@ -36,12 +36,21 @@ export const queueService = {
   ): Promise<void> {
     const channel = await rabbitmq.getChannel();
 
-    await channel.consume('ai.results', async (msg) => {
-      if (msg) {
+    await channel.consume('ai.results', async (msg: any) => {
+      if (!msg) return;
+
+      try {
         const result = JSON.parse(msg.content.toString());
         if (result.sessionId === sessionId) {
-          callback(result);
+          try {
+            callback(result);
+          } catch (callbackError) {
+            console.error('Callback error in subscribeToResults:', callbackError);
+          }
         }
+        channel.ack(msg);
+      } catch (parseError) {
+        console.error('Failed to parse result message:', parseError);
         channel.ack(msg);
       }
     });
