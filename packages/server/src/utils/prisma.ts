@@ -112,27 +112,32 @@ if (process.env.NODE_ENV !== 'production') {
   global.prisma = prisma;
 }
 
-const createPrismaReadClient = (): PrismaClient => {
+const createPrismaReadClient = (): { client: PrismaClient; isReplica: boolean } => {
   if (DATABASE_REPLICA_URL === DATABASE_URL) {
-    return prisma;
+    return { client: prisma, isReplica: false };
   }
 
-  try {
-    const replicaClient = prismaClientSingleton(DATABASE_REPLICA_URL);
-    replicaClient.$queryRaw`SELECT 1`.catch((error) => {
-      console.warn('Failed to connect to read replica, falling back to primary database:', error);
-    });
-    return replicaClient;
-  } catch (error) {
-    console.warn('Failed to connect to read replica, falling back to primary database:', error);
-    return prisma;
-  }
+  const replicaClient = prismaClientSingleton(DATABASE_REPLICA_URL);
+  return { client: replicaClient, isReplica: true };
 };
 
-const prismaReadClient = global.prismaRead ?? createPrismaReadClient();
+const prismaReadState = global.prismaRead
+  ? { client: global.prismaRead, isReplica: global.prismaRead !== prisma }
+  : createPrismaReadClient();
 
 if (process.env.NODE_ENV !== 'production') {
-  global.prismaRead = prismaReadClient;
+  global.prismaRead = prismaReadState.client;
+}
+
+if (prismaReadState.isReplica && DATABASE_REPLICA_URL !== DATABASE_URL) {
+  prismaReadState.client.$connect().catch((error) => {
+    console.warn('Failed to connect to read replica, using primary database:', error);
+    prismaReadState.client = prisma;
+    prismaReadState.isReplica = false;
+    if (global.prismaRead !== prisma) {
+      global.prismaRead = prisma;
+    }
+  });
 }
 
 export const prismaRead = new Proxy({} as PrismaClient, {
@@ -140,6 +145,6 @@ export const prismaRead = new Proxy({} as PrismaClient, {
     if (prop === 'then' || prop === 'catch' || prop === Symbol.toStringTag) {
       return undefined;
     }
-    return (prismaReadClient as any)[prop];
+    return (prismaReadState.client as any)[prop];
   },
 });
