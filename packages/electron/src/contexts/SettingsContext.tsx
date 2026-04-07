@@ -63,7 +63,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const loadSettings = async () => {
       if (window.electronAPI?.settings) {
         try {
-          const data = await window.electronAPI.settings.getAll();
+          const data = await window.electronAPI.settings.getAll() as {
+            ai_providers?: AIProvider[] | Record<string, AIProvider>;
+            selected_provider?: string;
+            selected_model?: string;
+            fontSize?: number;
+            tabSize?: number;
+          };
           if (data.ai_providers) {
             const providers = Array.isArray(data.ai_providers)
               ? data.ai_providers

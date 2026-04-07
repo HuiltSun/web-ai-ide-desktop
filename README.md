@@ -202,9 +202,10 @@ All sensitive data is encrypted at rest using AES-256-GCM:
 | Session | cwd |
 | Message | content, systemPayload |
 
-**⚠️ Required Environment Variable:**
+**⚠️ Required Environment Variables:**
 ```
 ENCRYPTION_SECRET=your-256-bit-secret-key-here
+ENCRYPTION_SALT=optional-16-byte-hex-salt  # If not set, a random salt will be generated
 ```
 
 Generate a secure key:
@@ -216,20 +217,17 @@ openssl rand -hex 32
 
 ## AI Model Configuration
 
-### Supported Models
+### Custom Providers and Models
 
-| Model | Provider | Description |
-|-------|----------|-------------|
-| GPT-4o | OpenAI | Most capable model |
-| GPT-4o Mini | OpenAI | Fast and cost-effective |
-| Claude 3.5 Sonnet | Anthropic | Balanced performance |
-| Claude 3 Opus | Anthropic | Most capable Claude |
-| Qwen Coder Plus | Qwen | Optimized for code |
-| Qwen3 Coder | Qwen | Latest open-source coder |
+The Settings panel allows you to configure custom AI providers and models. You can:
+- Add/remove AI providers (OpenAI, Anthropic, custom endpoints)
+- Configure each provider's API endpoint and API key
+- Add multiple models per provider with custom model IDs and display names
+- Select active provider and model
 
-### API Key Setup
+### Environment Variable Configuration
 
-Configure API keys in the Settings panel, or via environment variables:
+Alternatively, configure API keys via environment variables:
 ```env
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...

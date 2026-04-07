@@ -205,6 +205,7 @@ npx prisma db push      # 推送 schema 到数据库
 **⚠️ 必需环境变量：**
 ```
 ENCRYPTION_SECRET=your-256-bit-secret-key-here
+ENCRYPTION_SALT=optional-16-byte-hex-salt  # 如不设置则自动生成随机盐值
 ```
 
 生成安全密钥：
@@ -216,20 +217,17 @@ openssl rand -hex 32
 
 ## AI 模型配置
 
-### 支持的模型
+### 自定义提供商和模型
 
-| 模型 | 提供商 | 描述 |
-|------|--------|------|
-| GPT-4o | OpenAI | 最强能力的模型 |
-| GPT-4o Mini | OpenAI | 快速且成本效益高 |
-| Claude 3.5 Sonnet | Anthropic | 平衡性能和智能 |
-| Claude 3 Opus | Anthropic | 最强的 Claude 模型 |
-| Qwen Coder Plus | Qwen | 专为代码优化 |
-| Qwen3 Coder | Qwen | 最新开源 coder 模型 |
+Settings 面板允许您配置自定义 AI 提供商和模型。您可以：
+- 添加/删除 AI 提供商（OpenAI、Anthropic、自定义端点）
+- 配置每个提供商的 API 端点和 API 密钥
+- 为每个提供商添加多个模型，自定义模型 ID 和显示名称
+- 选择当前使用的提供商和模型
 
-### API 密钥设置
+### 环境变量配置
 
-在 Settings 面板中配置 API 密钥，或设置环境变量：
+或者，通过环境变量配置 API 密钥：
 ```env
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...

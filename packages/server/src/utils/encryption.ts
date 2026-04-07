@@ -4,14 +4,30 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 const KEY_LENGTH = 32;
 const ITERATIONS = 100000;
+const SALT_LENGTH = 16;
+
+let cachedKey: Buffer | null = null;
 
 function getEncryptionKey(): Buffer {
+  if (cachedKey) return cachedKey;
+
   const secret = process.env.ENCRYPTION_SECRET;
   if (!secret) {
     throw new Error('ENCRYPTION_SECRET environment variable is not set');
   }
-  const salt = crypto.createHash('sha256').update('web-ai-ide-salt').digest();
-  return crypto.pbkdf2Sync(secret, salt, ITERATIONS, KEY_LENGTH, 'sha256');
+
+  const saltEnvVar = process.env.ENCRYPTION_SALT;
+  if (saltEnvVar) {
+    const salt = Buffer.from(saltEnvVar, 'hex');
+    if (salt.length === SALT_LENGTH) {
+      cachedKey = crypto.pbkdf2Sync(secret, salt, ITERATIONS, KEY_LENGTH, 'sha256');
+      return cachedKey;
+    }
+  }
+
+  const salt = crypto.randomBytes(SALT_LENGTH);
+  cachedKey = crypto.pbkdf2Sync(secret, salt, ITERATIONS, KEY_LENGTH, 'sha256');
+  return cachedKey;
 }
 
 export function encrypt(text: string): string {
