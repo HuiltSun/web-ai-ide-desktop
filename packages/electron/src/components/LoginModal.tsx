@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CloseIcon } from './Icons';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -10,28 +11,29 @@ interface LoginModalProps {
 
 interface PasswordRequirement {
   test: (pw: string) => boolean;
-  label: string;
+  labelKey: 'length' | 'uppercase' | 'lowercase' | 'number' | 'special';
 }
 
 const PASSWORD_REQUIREMENTS: PasswordRequirement[] = [
-  { test: (pw) => pw.length >= 8, label: 'At least 8 characters' },
-  { test: (pw) => /[A-Z]/.test(pw), label: 'One uppercase letter' },
-  { test: (pw) => /[a-z]/.test(pw), label: 'One lowercase letter' },
-  { test: (pw) => /[0-9]/.test(pw), label: 'One number' },
-  { test: (pw) => /[^A-Za-z0-9]/.test(pw), label: 'One special character' },
+  { test: (pw) => pw.length >= 8, labelKey: 'length' },
+  { test: (pw) => /[A-Z]/.test(pw), labelKey: 'uppercase' },
+  { test: (pw) => /[a-z]/.test(pw), labelKey: 'lowercase' },
+  { test: (pw) => /[0-9]/.test(pw), labelKey: 'number' },
+  { test: (pw) => /[^A-Za-z0-9]/.test(pw), labelKey: 'special' },
 ];
 
-function getPasswordStrength(password: string): { level: number; color: string; text: string } {
+function getPasswordStrength(password: string): { level: number; color: string; textKey: string } {
   const passed = PASSWORD_REQUIREMENTS.filter((req) => req.test(password)).length;
 
-  if (passed === 0) return { level: 0, color: 'bg-slate-600', text: '' };
-  if (passed <= 2) return { level: 1, color: 'bg-red-500', text: 'Weak' };
-  if (passed <= 3) return { level: 2, color: 'bg-yellow-500', text: 'Fair' };
-  if (passed <= 4) return { level: 3, color: 'bg-blue-500', text: 'Good' };
-  return { level: 4, color: 'bg-green-500', text: 'Strong' };
+  if (passed === 0) return { level: 0, color: 'bg-slate-600', textKey: '' };
+  if (passed <= 2) return { level: 1, color: 'bg-red-500', textKey: 'weak' };
+  if (passed <= 3) return { level: 2, color: 'bg-yellow-500', textKey: 'fair' };
+  if (passed <= 4) return { level: 3, color: 'bg-blue-500', textKey: 'good' };
+  return { level: 4, color: 'bg-green-500', textKey: 'strong' };
 }
 
 export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalProps) {
+  const { t } = useSettings();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -76,7 +78,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
       <div className="relative w-full max-w-md mx-4 bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-white/5">
           <h2 className="text-lg font-semibold text-white">
-            {mode === 'login' ? 'Sign In' : 'Create Account'}
+            {mode === 'login' ? t.login.title : t.login.register}
           </h2>
           <button
             onClick={onClose}
@@ -110,7 +112,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
 
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Email
+              {t.login.email}
             </label>
             <input
               type="email"
@@ -124,7 +126,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
 
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Password
+              {t.login.password}
             </label>
             <input
               type="password"
@@ -154,13 +156,13 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
                     />
                   ))}
                 </div>
-                {passwordStrength.text && (
+                {passwordStrength.textKey && (
                   <p className={`text-xs ${
                     passwordStrength.level <= 1 ? 'text-red-400' :
                     passwordStrength.level === 2 ? 'text-yellow-400' :
                     passwordStrength.level === 3 ? 'text-blue-400' : 'text-green-400'
                   }`}>
-                    {passwordStrength.text} password
+                    {passwordStrength.textKey} password
                   </p>
                 )}
                 <div className="text-xs text-slate-500">
@@ -171,7 +173,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
                         req.test(password) ? 'text-green-400' : 'text-slate-500'
                       }`}
                     >
-                      {req.test(password) ? '✓' : '○'} {req.label}
+                      {req.test(password) ? '✓' : '○'} {req.labelKey}
                     </div>
                   ))}
                 </div>
@@ -184,7 +186,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
             disabled={loading || (mode === 'register' && requirementsMet < PASSWORD_REQUIREMENTS.length)}
             className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50"
           >
-            {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+            {loading ? 'Please wait...' : mode === 'login' ? t.login.login : t.login.register}
           </button>
 
           <div className="text-center">
@@ -199,13 +201,13 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
             >
               {mode === 'login' ? (
                 <>
-                  Don't have an account?{' '}
-                  <span className="text-indigo-400">Sign up</span>
+                  {t.login.noAccount}{' '}
+                  <span className="text-indigo-400">{t.login.register}</span>
                 </>
               ) : (
                 <>
-                  Already have an account?{' '}
-                  <span className="text-indigo-400">Sign in</span>
+                  {t.login.hasAccount}{' '}
+                  <span className="text-indigo-400">{t.login.login}</span>
                 </>
               )}
             </button>

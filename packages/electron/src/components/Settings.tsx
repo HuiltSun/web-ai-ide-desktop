@@ -1,482 +1,350 @@
-import { useState, useEffect } from 'react';
-import {
-  SettingsIcon,
-  CloseIcon,
-  KeyIcon,
-  SparklesIcon,
-  DatabaseIcon,
-  CodeIcon,
-  CheckIcon,
-  PlusIcon,
-  TrashIcon,
-} from './Icons';
-import type { AIProvider, AIModel } from '../types';
+import { useState } from 'react';
+import { useSettings } from '../contexts/SettingsContext';
+import { CloseIcon, PlusIcon, TrashIcon, SparklesIcon, KeyIcon, DatabaseIcon, CodeIcon, GlobeIcon } from './Icons';
+import { Language } from '../i18n/translations';
 
-interface SettingsProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+type Tab = 'ai' | 'api' | 'database' | 'editor' | 'language';
 
-export function Settings({ isOpen, onClose }: SettingsProps) {
-  const [activeTab, setActiveTab] = useState('ai');
-  const [providers, setProviders] = useState<AIProvider[]>([
-    {
-      id: 'openai',
-      name: 'OpenAI',
-      apiEndpoint: 'https://api.openai.com/v1',
-      apiKey: '',
-      models: [{ id: 'gpt-4o', name: 'GPT-4o' }],
-    },
-  ]);
-  const [selectedProviderId, setSelectedProviderId] = useState('openai');
-  const [selectedModelId, setSelectedModelId] = useState('gpt-4o');
+export function Settings() {
+  const { settings, t, setSelectedProvider, setSelectedModel, addProvider, removeProvider, updateProvider, addModel, removeModel, updateModel, setLanguage, updateSettings } = useSettings();
+  const [activeTab, setActiveTab] = useState<Tab>('ai');
   const [saved, setSaved] = useState(false);
-  const [fontSize, setFontSize] = useState(14);
-  const [tabSize, setTabSize] = useState(2);
 
-  useEffect(() => {
-    const loadSettings = async () => {
-      if (window.electronAPI?.settings) {
-        try {
-          const data = await window.electronAPI.settings.getAll() as {
-            ai_providers?: AIProvider[] | Record<string, AIProvider>;
-            selected_provider?: string;
-            selected_model?: string;
-            fontSize?: number;
-            tabSize?: number;
-          };
-          if (data.ai_providers) {
-            const loadedProviders = Array.isArray(data.ai_providers)
-              ? data.ai_providers
-              : Object.values(data.ai_providers);
-            setProviders(loadedProviders);
-          }
-          if (data.selected_provider) setSelectedProviderId(data.selected_provider);
-          if (data.selected_model) setSelectedModelId(data.selected_model);
-          if (data.fontSize) setFontSize(data.fontSize);
-          if (data.tabSize) setTabSize(data.tabSize);
-        } catch (err) {
-          console.error('Failed to load settings from electron:', err);
-        }
-      } else {
-        const savedProviders = localStorage.getItem('ai_providers');
-        const savedProvider = localStorage.getItem('selected_provider');
-        const savedModel = localStorage.getItem('selected_model');
-        const savedFontSize = localStorage.getItem('fontSize');
-        const savedTabSize = localStorage.getItem('tabSize');
-        if (savedProviders) {
-          try {
-            const parsed = JSON.parse(savedProviders);
-            if (Array.isArray(parsed)) {
-              setProviders(parsed);
-            }
-          } catch (err) {
-            console.error('Failed to parse saved providers:', err);
-          }
-        }
-        if (savedProvider) setSelectedProviderId(savedProvider);
-        if (savedModel) setSelectedModelId(savedModel);
-        if (savedFontSize) setFontSize(Number(savedFontSize));
-        if (savedTabSize) setTabSize(Number(savedTabSize));
-      }
-    };
-    loadSettings();
-  }, []);
-
-  if (!isOpen) return null;
+  const tabs: { id: Tab; icon: React.ReactNode }[] = [
+    { id: 'ai', icon: <SparklesIcon size={16} /> },
+    { id: 'api', icon: <KeyIcon size={16} /> },
+    { id: 'database', icon: <DatabaseIcon size={16} /> },
+    { id: 'editor', icon: <CodeIcon size={16} /> },
+    { id: 'language', icon: <GlobeIcon size={16} /> },
+  ];
 
   const handleSave = () => {
-    if (!window.electronAPI?.settings) {
-      localStorage.setItem('ai_providers', JSON.stringify(providers));
-      localStorage.setItem('selected_provider', selectedProviderId);
-      localStorage.setItem('selected_model', selectedModelId);
-      localStorage.setItem('fontSize', String(fontSize));
-      localStorage.setItem('tabSize', String(tabSize));
-    } else {
-      window.electronAPI.settings.set('ai_providers', providers);
-      window.electronAPI.settings.set('selected_provider', selectedProviderId);
-      window.electronAPI.settings.set('selected_model', selectedModelId);
-      window.electronAPI.settings.set('fontSize', fontSize);
-      window.electronAPI.settings.set('tabSize', tabSize);
-    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const selectedProvider = providers.find((p) => p.id === selectedProviderId);
-  const selectedProviderModels = selectedProvider?.models || [];
-
-  const addProvider = () => {
-    const newId = `provider-${Date.now()}`;
-    setProviders([
-      ...providers,
-      {
-        id: newId,
-        name: 'New Provider',
-        apiEndpoint: 'https://api.example.com/v1',
-        apiKey: '',
-        models: [],
-      },
-    ]);
-    setSelectedProviderId(newId);
+  const handleLanguageChange = (lang: Language) => {
+    setLanguage(lang);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
-  const removeProvider = (id: string) => {
-    if (providers.length <= 1) return;
-    const newProviders = providers.filter((p) => p.id !== id);
-    setProviders(newProviders);
-    if (selectedProviderId === id) {
-      setSelectedProviderId(newProviders[0].id);
-    }
-  };
-
-  const updateProvider = (id: string, updates: Partial<AIProvider>) => {
-    setProviders(providers.map((p) => (p.id === id ? { ...p, ...updates } : p)));
-  };
-
-  const addModel = (providerId: string) => {
-    const provider = providers.find((p) => p.id === providerId);
-    if (!provider) return;
-    const newModelId = `model-${Date.now()}`;
-    updateProvider(providerId, {
-      models: [...provider.models, { id: newModelId, name: 'New Model' }],
-    });
-  };
-
-  const removeModel = (providerId: string, modelId: string) => {
-    const provider = providers.find((p) => p.id === providerId);
-    if (!provider || provider.models.length <= 1) return;
-    updateProvider(providerId, {
-      models: provider.models.filter((m) => m.id !== modelId),
-    });
-    if (selectedModelId === modelId) {
-      const remaining = provider.models.filter((m) => m.id !== modelId);
-      setSelectedModelId(remaining[0]?.id || '');
-    }
-  };
-
-  const updateModel = (providerId: string, modelId: string, updates: Partial<AIModel>) => {
-    const provider = providers.find((p) => p.id === providerId);
-    if (!provider) return;
-    updateProvider(providerId, {
-      models: provider.models.map((m) => (m.id === modelId ? { ...m, ...updates } : m)),
-    });
-  };
-
-  const tabs = [
-    { id: 'ai', label: 'AI Providers', icon: SparklesIcon },
-    { id: 'api', label: 'API Keys', icon: KeyIcon },
-    { id: 'database', label: 'Database', icon: DatabaseIcon },
-    { id: 'editor', label: 'Editor', icon: CodeIcon },
-  ];
+  const selectedProvider = settings.aiProviders.find(p => p.id === settings.selectedProvider);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl h-[80vh] bg-gradient-to-br from-slate-800 via-slate-800 to-slate-900 rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
-              <SettingsIcon className="text-white" size={20} />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Settings</h2>
-              <p className="text-xs text-slate-400">Configure your AI IDE</p>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="w-[720px] max-h-[85vh] bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] shadow-2xl overflow-hidden animate-scale-in">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)]">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{t.settings.title}</h2>
+            <p className="text-sm text-[var(--color-text-tertiary)]">{t.settings.subtitle}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
-          >
-            <CloseIcon size={20} />
-          </button>
+          {saved && (
+            <span className="text-sm text-[var(--color-success)] animate-fade-in">{t.settings.actions.saved}</span>
+          )}
         </div>
 
-        <div className="flex h-[calc(100%-72px)]">
-          <div className="w-48 p-4 border-r border-white/5">
-            <nav className="space-y-1">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-white border border-indigo-500/30'
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <tab.icon size={16} />
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          <div className="flex-1 p-6 overflow-y-auto">
-            {activeTab === 'ai' && (
-              <div className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-white">AI Providers</h3>
-                    <button
-                      onClick={addProvider}
-                      className="flex items-center gap-1 px-3 py-1.5 text-xs bg-indigo-500/20 text-indigo-400 rounded-lg hover:bg-indigo-500/30 transition-colors"
-                    >
-                      <PlusIcon size={14} />
-                      Add Provider
-                    </button>
-                  </div>
-
-                  <div className="space-y-3 mb-6">
-                    {providers.map((provider) => (
-                      <div
-                        key={provider.id}
-                        className={`p-4 rounded-xl border transition-all ${
-                          selectedProviderId === provider.id
-                            ? 'bg-indigo-500/10 border-indigo-500/30'
-                            : 'bg-white/5 border-white/10 hover:border-white/20'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <button
-                            onClick={() => setSelectedProviderId(provider.id)}
-                            className="text-sm font-medium text-white"
-                          >
-                            {provider.name}
-                          </button>
-                          {providers.length > 1 && (
-                            <button
-                              onClick={() => removeProvider(provider.id)}
-                              className="p-1 text-slate-500 hover:text-red-400 transition-colors"
-                            >
-                              <TrashIcon size={14} />
-                            </button>
-                          )}
-                        </div>
-
-                        {selectedProviderId === provider.id && (
-                          <div className="space-y-3 pl-2 border-l-2 border-indigo-500/20">
-                            <div>
-                              <label className="block text-xs font-medium text-slate-400 mb-1">
-                                Provider Name
-                              </label>
-                              <input
-                                type="text"
-                                value={provider.name}
-                                onChange={(e) => updateProvider(provider.id, { name: e.target.value })}
-                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500/50"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-slate-400 mb-1">
-                                API Endpoint
-                              </label>
-                              <input
-                                type="text"
-                                value={provider.apiEndpoint}
-                                onChange={(e) => updateProvider(provider.id, { apiEndpoint: e.target.value })}
-                                placeholder="https://api.example.com/v1"
-                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-slate-400 mb-1">
-                                API Key
-                              </label>
-                              <input
-                                type="password"
-                                value={provider.apiKey}
-                                onChange={(e) => updateProvider(provider.id, { apiKey: e.target.value })}
-                                placeholder="sk-..."
-                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-white">Models</h3>
-                    <button
-                      onClick={() => addModel(selectedProviderId)}
-                      className="flex items-center gap-1 px-3 py-1.5 text-xs bg-indigo-500/20 text-indigo-400 rounded-lg hover:bg-indigo-500/30 transition-colors"
-                    >
-                      <PlusIcon size={14} />
-                      Add Model
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    {selectedProviderModels.map((model) => (
-                      <div
-                        key={model.id}
-                        className={`p-3 rounded-xl border transition-all ${
-                          selectedModelId === model.id
-                            ? 'bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-indigo-500/50'
-                            : 'bg-white/5 border-white/10 hover:border-white/20'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <button
-                            onClick={() => setSelectedModelId(model.id)}
-                            className="text-sm font-medium text-white"
-                          >
-                            {model.name}
-                          </button>
-                          {selectedProviderModels.length > 1 && (
-                            <button
-                              onClick={() => removeModel(selectedProviderId, model.id)}
-                              className="p-1 text-slate-500 hover:text-red-400 transition-colors"
-                            >
-                              <TrashIcon size={12} />
-                            </button>
-                          )}
-                        </div>
-
-                        {selectedModelId === model.id && (
-                          <div className="mt-2 pt-2 border-t border-white/10">
-                            <input
-                              type="text"
-                              value={model.name}
-                              onChange={(e) => updateModel(selectedProviderId, model.id, { name: e.target.value })}
-                              placeholder="Model Display Name"
-                              className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 mb-1"
-                            />
-                            <input
-                              type="text"
-                              value={model.id}
-                              onChange={(e) => updateModel(selectedProviderId, model.id, { id: e.target.value })}
-                              placeholder="model-id (e.g., gpt-4o)"
-                              className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {selectedProviderModels.length === 0 && (
-                    <div className="text-center py-8 text-slate-500 text-sm">
-                      No models configured. Click "Add Model" to add one.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'api' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-semibold text-white mb-4">API Keys</h3>
-                  <p className="text-xs text-slate-400 mb-4">
-                    Configure API keys in the AI Providers tab above. Keys are stored locally.
-                  </p>
-                  <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
-                        <KeyIcon size={16} className="text-indigo-400" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-white">Local Storage</div>
-                        <div className="text-xs text-slate-400">
-                          {providers.length} provider(s), keys stored in browser localStorage
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'database' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-semibold text-white mb-4">Database Connection</h3>
-                  <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                      <span className="text-sm text-emerald-400 font-medium">Connected</span>
-                    </div>
-                    <div className="space-y-2 text-xs text-slate-400">
-                      <div>Host: localhost:5432</div>
-                      <div>Database: webaiide</div>
-                      <div>Status: Ready</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'editor' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-semibold text-white mb-4">Editor Settings</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Font Size
-                      </label>
-                      <select
-                        value={fontSize}
-                        onChange={(e) => setFontSize(Number(e.target.value))}
-                        className="w-full px-4 py-2.5 bg-slate-700 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer"
-                        style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%239ca3af\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
-                      >
-                        <option value="12" className="bg-slate-700">12px</option>
-                        <option value="14" className="bg-slate-700">14px</option>
-                        <option value="16" className="bg-slate-700">16px</option>
-                        <option value="18" className="bg-slate-700">18px</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Tab Size
-                      </label>
-                      <select
-                        value={tabSize}
-                        onChange={(e) => setTabSize(Number(e.target.value))}
-                        className="w-full px-4 py-2.5 bg-slate-700 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer"
-                        style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%239ca3af\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
-                      >
-                        <option value="2" className="bg-slate-700">2 spaces</option>
-                        <option value="4" className="bg-slate-700">4 spaces</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+        <div className="flex border-b border-[var(--color-border)]">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? 'text-[var(--color-accent)] border-b-2 border-[var(--color-accent)]'
+                  : 'text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]'
+              }`}
+            >
+              {tab.icon}
+              {t.settings.tabs[tab.id]}
+            </button>
+          ))}
         </div>
 
-        <div className="absolute bottom-0 inset-x-0 p-4 bg-black/20 border-t border-white/5">
-          <div className="flex items-center justify-between">
-            {saved && (
-              <div className="flex items-center gap-2 text-emerald-400">
-                <CheckIcon size={16} />
-                <span className="text-sm">Settings saved</span>
+        <div className="p-6 overflow-y-auto max-h-[calc(85vh-140px)]">
+          {activeTab === 'ai' && (
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-[var(--color-text-secondary)]">{t.settings.ai.providers}</h3>
+                  <button
+                    onClick={addProvider}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--color-accent)] bg-[var(--color-accent-subtle)] rounded-lg hover:bg-[var(--color-accent)]/20 transition-colors"
+                  >
+                    <PlusIcon size={14} />
+                    {t.settings.ai.addProvider}
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {settings.aiProviders.map(provider => (
+                    <div
+                      key={provider.id}
+                      onClick={() => setSelectedProvider(provider.id)}
+                      className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                        settings.selectedProvider === provider.id
+                          ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
+                          : 'border-[var(--color-border)] bg-[var(--color-bg-tertiary)] hover:border-[var(--color-border-hover)]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-[var(--color-text-primary)]">{provider.name}</span>
+                        {settings.aiProviders.length > 1 && (
+                          <button
+                            onClick={e => { e.stopPropagation(); removeProvider(provider.id); }}
+                            className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-colors"
+                          >
+                            <TrashIcon size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
-            <div className="flex-1" />
-            <div className="flex gap-3">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 bg-white/5 text-slate-300 text-sm font-medium rounded-xl hover:bg-white/10 transition-all"
-              >
-                Cancel
-              </button>
+
+              {selectedProvider && (
+                <div className="space-y-4 p-4 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
+                  <div className="grid gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+                        {t.settings.ai.providerName}
+                      </label>
+                      <input
+                        type="text"
+                        value={selectedProvider.name}
+                        onChange={e => updateProvider(selectedProvider.id, { name: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+                        {t.settings.ai.apiEndpoint}
+                      </label>
+                      <input
+                        type="text"
+                        value={selectedProvider.apiEndpoint}
+                        onChange={e => updateProvider(selectedProvider.id, { apiEndpoint: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+                        {t.settings.ai.apiKey}
+                      </label>
+                      <input
+                        type="password"
+                        value={selectedProvider.apiKey}
+                        onChange={e => updateProvider(selectedProvider.id, { apiKey: e.target.value })}
+                        placeholder="sk-..."
+                        className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[var(--color-border)] pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-medium text-[var(--color-text-secondary)]">{t.settings.ai.models}</h4>
+                      <button
+                        onClick={() => addModel(selectedProvider.id)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-[var(--color-accent)] bg-[var(--color-accent-subtle)] rounded-md hover:bg-[var(--color-accent)]/20 transition-colors"
+                      >
+                        <PlusIcon size={12} />
+                        {t.settings.ai.addModel}
+                      </button>
+                    </div>
+
+                    {selectedProvider.models.length === 0 ? (
+                      <p className="text-sm text-[var(--color-text-muted)]">{t.settings.ai.noModels}</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {selectedProvider.models.map(model => (
+                          <div key={model.id} className="flex items-center gap-2">
+                            <button
+                              onClick={() => setSelectedModel(model.id)}
+                              className={`flex-1 p-2 text-left rounded-md border transition-all ${
+                                settings.selectedModel === model.id
+                                  ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
+                                  : 'border-[var(--color-border)] bg-[var(--color-bg-primary)] hover:border-[var(--color-border-hover)]'
+                              }`}
+                            >
+                              <div className="text-sm font-medium text-[var(--color-text-primary)]">{model.name}</div>
+                              <div className="text-xs text-[var(--color-text-muted)]">{model.id}</div>
+                            </button>
+                            {selectedProvider.models.length > 1 && (
+                              <button
+                                onClick={() => removeModel(selectedProvider.id, model.id)}
+                                className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-colors"
+                              >
+                                <TrashIcon size={14} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={handleSave}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all shadow-lg shadow-indigo-500/25"
+                className="w-full py-2.5 rounded-lg font-medium text-white bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] transition-colors"
               >
-                Save Changes
+                {t.settings.actions.save}
               </button>
             </div>
-          </div>
+          )}
+
+          {activeTab === 'api' && (
+            <div className="space-y-6">
+              <div className="p-4 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
+                <div className="flex items-center gap-3 mb-3">
+                  <KeyIcon size={20} className="text-[var(--color-accent)]" />
+                  <h3 className="text-sm font-medium text-[var(--color-text-primary)]">{t.settings.api.title}</h3>
+                </div>
+                <p className="text-sm text-[var(--color-text-tertiary)] mb-4">{t.settings.api.description}</p>
+                <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                  <span className="text-[var(--color-success)]">●</span>
+                  <span>{t.settings.api.localStorage}: {settings.aiProviders.length} {t.settings.api.providerCount}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'database' && (
+            <div className="space-y-6">
+              <div className="p-4 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
+                <div className="flex items-center gap-3 mb-4">
+                  <DatabaseIcon size={20} className="text-[var(--color-accent)]" />
+                  <h3 className="text-sm font-medium text-[var(--color-text-primary)]">{t.settings.database.title}</h3>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[var(--color-success)]">●</span>
+                    <span className="text-[var(--color-text-secondary)]">{t.settings.database.connected}</span>
+                  </div>
+                  <div className="text-[var(--color-text-muted)]">{t.settings.database.host}</div>
+                  <div className="text-[var(--color-text-muted)]">{t.settings.database.database}</div>
+                  <div className="text-[var(--color-text-muted)]">{t.settings.database.status}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'editor' && (
+            <div className="space-y-6">
+              <div className="p-4 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
+                <div className="flex items-center gap-3 mb-4">
+                  <CodeIcon size={20} className="text-[var(--color-accent)]" />
+                  <h3 className="text-sm font-medium text-[var(--color-text-primary)]">{t.settings.editor.title}</h3>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+                      {t.settings.editor.fontSize}
+                    </label>
+                    <input
+                      type="number"
+                      value={settings.fontSize}
+                      onChange={e => {
+                        const fontSize = parseInt(e.target.value);
+                        if (!isNaN(fontSize) && fontSize > 0) {
+                          updateSettings({ fontSize });
+                        }
+                      }}
+                      min={10}
+                      max={24}
+                      className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+                      {t.settings.editor.tabSize}
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => updateSettings({ tabSize: 2 })}
+                        className={`flex-1 py-2 text-sm rounded-lg border transition-colors ${
+                          settings.tabSize === 2
+                            ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] text-[var(--color-text-primary)]'
+                            : 'border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)]'
+                        }`}
+                      >
+                        {t.settings.editor.spaces2}
+                      </button>
+                      <button
+                        onClick={() => updateSettings({ tabSize: 4 })}
+                        className={`flex-1 py-2 text-sm rounded-lg border transition-colors ${
+                          settings.tabSize === 4
+                            ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] text-[var(--color-text-primary)]'
+                            : 'border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)]'
+                        }`}
+                      >
+                        {t.settings.editor.spaces4}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'language' && (
+            <div className="space-y-6">
+              <div className="p-4 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
+                <div className="flex items-center gap-3 mb-4">
+                  <GlobeIcon size={20} className="text-[var(--color-accent)]" />
+                  <h3 className="text-sm font-medium text-[var(--color-text-primary)]">{t.settings.language.title}</h3>
+                </div>
+                <p className="text-sm text-[var(--color-text-tertiary)] mb-4">{t.settings.language.description}</p>
+
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+                    {t.settings.language.selectLanguage}
+                  </label>
+
+                  <button
+                    onClick={() => handleLanguageChange('en')}
+                    className={`w-full p-4 rounded-lg border transition-all ${
+                      settings.language === 'en'
+                        ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
+                        : 'border-[var(--color-border)] bg-[var(--color-bg-primary)] hover:border-[var(--color-border-hover)]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="text-left">
+                        <div className="font-medium text-[var(--color-text-primary)]">{t.settings.language.english}</div>
+                        <div className="text-sm text-[var(--color-text-muted)]">English</div>
+                      </div>
+                      {settings.language === 'en' && (
+                        <span className="text-[var(--color-accent)]">✓</span>
+                      )}
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleLanguageChange('zh')}
+                    className={`w-full p-4 rounded-lg border transition-all ${
+                      settings.language === 'zh'
+                        ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
+                        : 'border-[var(--color-border)] bg-[var(--color-bg-primary)] hover:border-[var(--color-border-hover)]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="text-left">
+                        <div className="font-medium text-[var(--color-text-primary)]">{t.settings.language.chinese}</div>
+                        <div className="text-sm text-[var(--color-text-muted)]">中文</div>
+                      </div>
+                      {settings.language === 'zh' && (
+                        <span className="text-[var(--color-accent)]">✓</span>
+                      )}
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

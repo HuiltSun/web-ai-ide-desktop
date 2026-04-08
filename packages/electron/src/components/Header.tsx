@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BotIcon, SettingsIcon, RefreshIcon, UserIcon, CloseIcon } from './Icons';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface HeaderProps {
   projectId: string | null;
@@ -11,6 +12,7 @@ interface HeaderProps {
 }
 
 export function Header({ projectId, onSettingsClick, onRefreshClick, onLoginClick, userEmail, onLogout }: HeaderProps) {
+  const { t } = useSettings();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
@@ -34,7 +36,7 @@ export function Header({ projectId, onSettingsClick, onRefreshClick, onLoginClic
           <button
             onClick={onRefreshClick}
             className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-200"
-            title="Refresh"
+            title={t.header.refresh}
           >
             <RefreshIcon size={18} />
           </button>
@@ -49,7 +51,7 @@ export function Header({ projectId, onSettingsClick, onRefreshClick, onLoginClic
               }
             }}
             className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-200 flex items-center gap-2"
-            title={userEmail || 'Sign In'}
+            title={userEmail || t.header.login}
           >
             <UserIcon size={18} />
             {userEmail && <span className="text-xs text-slate-400 max-w-[120px] truncate">{userEmail}</span>}
@@ -68,7 +70,7 @@ export function Header({ projectId, onSettingsClick, onRefreshClick, onLoginClic
                 className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-white/5 transition-colors flex items-center gap-2"
               >
                 <CloseIcon size={14} />
-                Sign Out
+                {t.header.logout}
               </button>
             </div>
           )}
@@ -76,6 +78,7 @@ export function Header({ projectId, onSettingsClick, onRefreshClick, onLoginClic
         <button
           onClick={onSettingsClick}
           className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-200"
+          title={t.header.settings}
         >
           <SettingsIcon size={18} />
         </button>

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import type { AIProvider, AIModel } from '../types';
+import { Language, getTranslation, Translations } from '../i18n/translations';
 
 interface Settings {
   aiProviders: AIProvider[];
@@ -8,10 +9,12 @@ interface Settings {
   theme: 'light' | 'dark';
   fontSize: number;
   tabSize: number;
+  language: Language;
 }
 
 interface SettingsContextValue {
   settings: Settings;
+  t: Translations;
   updateSettings: (updates: Partial<Settings>) => void;
   addProvider: () => void;
   removeProvider: (id: string) => void;
@@ -21,6 +24,7 @@ interface SettingsContextValue {
   updateModel: (providerId: string, modelId: string, updates: Partial<AIModel>) => void;
   setSelectedProvider: (id: string) => void;
   setSelectedModel: (id: string) => void;
+  setLanguage: (lang: Language) => void;
   getSelectedProvider: () => AIProvider | undefined;
   getSelectedModel: () => AIModel | undefined;
 }
@@ -40,12 +44,18 @@ const defaultSettings: Settings = {
   theme: 'dark',
   fontSize: 14,
   tabSize: 2,
+  language: 'en',
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [t, setT] = useState<Translations>(getTranslation(defaultSettings.language));
+
+  useEffect(() => {
+    setT(getTranslation(settings.language));
+  }, [settings.language]);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -57,6 +67,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             selected_model?: string;
             fontSize?: number;
             tabSize?: number;
+            language?: Language;
           };
           if (data.ai_providers) {
             const providers = Array.isArray(data.ai_providers)
@@ -68,8 +79,38 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           if (data.selected_model) setSettings(prev => ({ ...prev, selectedModel: data.selected_model as string }));
           if (data.fontSize) setSettings(prev => ({ ...prev, fontSize: data.fontSize as number }));
           if (data.tabSize) setSettings(prev => ({ ...prev, tabSize: data.tabSize as number }));
+          if (data.language) {
+            const lang = data.language as Language;
+            setSettings(prev => ({ ...prev, language: lang }));
+            setT(getTranslation(lang));
+          }
         } catch (err) {
           console.error('Failed to load settings from electron:', err);
+        }
+      } else {
+        const savedProviders = localStorage.getItem('ai_providers');
+        const savedProvider = localStorage.getItem('selected_provider');
+        const savedModel = localStorage.getItem('selected_model');
+        const savedFontSize = localStorage.getItem('fontSize');
+        const savedTabSize = localStorage.getItem('tabSize');
+        const savedLanguage = localStorage.getItem('language') as Language | null;
+        if (savedProviders) {
+          try {
+            const parsed = JSON.parse(savedProviders);
+            if (Array.isArray(parsed)) {
+              setSettings(prev => ({ ...prev, aiProviders: parsed }));
+            }
+          } catch (err) {
+            console.error('Failed to parse saved providers:', err);
+          }
+        }
+        if (savedProvider) setSettings(prev => ({ ...prev, selectedProvider: savedProvider }));
+        if (savedModel) setSettings(prev => ({ ...prev, selectedModel: savedModel }));
+        if (savedFontSize) setSettings(prev => ({ ...prev, fontSize: Number(savedFontSize) }));
+        if (savedTabSize) setSettings(prev => ({ ...prev, tabSize: Number(savedTabSize) }));
+        if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'zh')) {
+          setSettings(prev => ({ ...prev, language: savedLanguage }));
+          setT(getTranslation(savedLanguage));
         }
       }
     };
@@ -86,6 +127,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         window.electronAPI.settings.set('selected_model', newSettings.selectedModel);
         window.electronAPI.settings.set('fontSize', newSettings.fontSize);
         window.electronAPI.settings.set('tabSize', newSettings.tabSize);
+        window.electronAPI.settings.set('language', newSettings.language);
+      } else {
+        localStorage.setItem('ai_providers', JSON.stringify(newSettings.aiProviders));
+        localStorage.setItem('selected_provider', newSettings.selectedProvider);
+        localStorage.setItem('selected_model', newSettings.selectedModel);
+        localStorage.setItem('fontSize', String(newSettings.fontSize));
+        localStorage.setItem('tabSize', String(newSettings.tabSize));
+        localStorage.setItem('language', newSettings.language);
       }
 
       return newSettings;
@@ -110,6 +159,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (window.electronAPI?.settings) {
         window.electronAPI.settings.set('ai_providers', newProviders);
         window.electronAPI.settings.set('selected_provider', newId);
+      } else {
+        localStorage.setItem('ai_providers', JSON.stringify(newProviders));
+        localStorage.setItem('selected_provider', newId);
       }
 
       return newSettings;
@@ -127,6 +179,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         window.electronAPI.settings.set('ai_providers', newProviders);
         window.electronAPI.settings.set('selected_provider', newSelectedProvider);
         window.electronAPI.settings.set('selected_model', newSelectedModel);
+      } else {
+        localStorage.setItem('ai_providers', JSON.stringify(newProviders));
+        localStorage.setItem('selected_provider', newSelectedProvider);
+        localStorage.setItem('selected_model', newSelectedModel);
       }
 
       return {
@@ -144,6 +200,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
       if (window.electronAPI?.settings) {
         window.electronAPI.settings.set('ai_providers', newProviders);
+      } else {
+        localStorage.setItem('ai_providers', JSON.stringify(newProviders));
       }
 
       return { ...prev, aiProviders: newProviders };
@@ -162,6 +220,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (window.electronAPI?.settings) {
         window.electronAPI.settings.set('ai_providers', newProviders);
         window.electronAPI.settings.set('selected_model', newModelId);
+      } else {
+        localStorage.setItem('ai_providers', JSON.stringify(newProviders));
+        localStorage.setItem('selected_model', newModelId);
       }
 
       return newSettings;
@@ -185,6 +246,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (window.electronAPI?.settings) {
         window.electronAPI.settings.set('ai_providers', newProviders);
         window.electronAPI.settings.set('selected_model', newSelectedModel);
+      } else {
+        localStorage.setItem('ai_providers', JSON.stringify(newProviders));
+        localStorage.setItem('selected_model', newSelectedModel);
       }
 
       return { ...prev, aiProviders: newProviders, selectedModel: newSelectedModel };
@@ -200,6 +264,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
       if (window.electronAPI?.settings) {
         window.electronAPI.settings.set('ai_providers', newProviders);
+      } else {
+        localStorage.setItem('ai_providers', JSON.stringify(newProviders));
       }
 
       return { ...prev, aiProviders: newProviders };
@@ -214,6 +280,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (window.electronAPI?.settings) {
         window.electronAPI.settings.set('selected_provider', id);
         window.electronAPI.settings.set('selected_model', newModel);
+      } else {
+        localStorage.setItem('selected_provider', id);
+        localStorage.setItem('selected_model', newModel);
       }
 
       return { ...prev, selectedProvider: id, selectedModel: newModel };
@@ -224,9 +293,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings(prev => {
       if (window.electronAPI?.settings) {
         window.electronAPI.settings.set('selected_model', id);
+      } else {
+        localStorage.setItem('selected_model', id);
       }
       return { ...prev, selectedModel: id };
     });
+  }, []);
+
+  const setLanguage = useCallback((lang: Language) => {
+    setSettings(prev => {
+      if (window.electronAPI?.settings) {
+        window.electronAPI.settings.set('language', lang);
+      } else {
+        localStorage.setItem('language', lang);
+      }
+      return { ...prev, language: lang };
+    });
+    setT(getTranslation(lang));
   }, []);
 
   const getSelectedProvider = useCallback(() => {
@@ -242,6 +325,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     <SettingsContext.Provider
       value={{
         settings,
+        t,
         updateSettings,
         addProvider,
         removeProvider,
@@ -251,6 +335,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateModel,
         setSelectedProvider,
         setSelectedModel,
+        setLanguage,
         getSelectedProvider,
         getSelectedModel,
       }}
