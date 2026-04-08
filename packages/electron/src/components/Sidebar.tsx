@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Project } from '../types';
 import { FolderIcon, PlusIcon, TrashIcon, SparklesIcon } from './Icons';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface SidebarProps {
   projects: Project[];
@@ -17,6 +18,7 @@ export function Sidebar({
   onCreateProject,
   onDeleteProject,
 }: SidebarProps) {
+  const { t } = useSettings();
   const [isCreating, setIsCreating] = useState(false);
   const [projectName, setProjectName] = useState('');
 
@@ -30,7 +32,7 @@ export function Sidebar({
 
   const handleDelete = (e: React.MouseEvent, projectId: string) => {
     e.stopPropagation();
-    if (confirm('Delete this project?')) {
+    if (confirm(t.sidebar.confirmDeleteProject)) {
       onDeleteProject(projectId);
     }
   };
@@ -41,7 +43,7 @@ export function Sidebar({
         <div className="flex items-center gap-2 text-slate-400">
           <SparklesIcon size={14} className="text-indigo-400" />
           <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Projects
+            {t.sidebar.projects}
           </h2>
         </div>
       </div>
@@ -51,8 +53,8 @@ export function Sidebar({
             <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-white/5 flex items-center justify-center">
               <FolderIcon className="text-slate-500" size={24} />
             </div>
-            <p className="text-xs text-slate-500">No projects yet</p>
-            <p className="text-[10px] text-slate-600 mt-1">Create one to get started</p>
+            <p className="text-xs text-slate-500">{t.sidebar.noProjects}</p>
+            <p className="text-[10px] text-slate-600 mt-1">{t.sidebar.createOneToStart}</p>
           </div>
         ) : (
           <ul className="space-y-1">
@@ -72,7 +74,7 @@ export function Sidebar({
                 <button
                   onClick={(e) => handleDelete(e, project.id)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
-                  title="Delete project"
+                  title={t.sidebar.deleteProject}
                 >
                   <TrashIcon size={14} />
                 </button>
@@ -88,7 +90,7 @@ export function Sidebar({
               type="text"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              placeholder="Project name"
+              placeholder={t.sidebar.projectName}
               className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all"
               autoFocus
               onKeyDown={(e) => {
@@ -101,13 +103,13 @@ export function Sidebar({
                 onClick={handleCreate}
                 className="flex-1 px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all shadow-lg shadow-indigo-500/25"
               >
-                Create
+                {t.sidebar.create}
               </button>
               <button
                 onClick={() => setIsCreating(false)}
                 className="px-3 py-2 bg-white/5 text-slate-400 text-sm font-medium rounded-xl hover:bg-white/10 transition-all"
               >
-                Cancel
+                {t.sidebar.cancel}
               </button>
             </div>
           </div>
@@ -117,7 +119,7 @@ export function Sidebar({
             className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all shadow-lg shadow-indigo-500/25"
           >
             <PlusIcon size={16} />
-            New Project
+            {t.sidebar.newProject}
           </button>
         )}
       </div>

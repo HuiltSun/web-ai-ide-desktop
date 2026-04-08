@@ -9,10 +9,12 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { SparklesIcon, CodeIcon, BotIcon } from './components/Icons';
 import type { Project, ProjectWithSession } from './types';
 import { api } from './services/api';
+import { useSettings } from './contexts/SettingsContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function App() {
+  const { t } = useSettings();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -164,7 +166,7 @@ function App() {
         </div>
         <div className="mt-6 flex items-center gap-2 text-slate-400">
           <div className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
-          <span className="text-sm font-medium">Loading...</span>
+          <span className="text-sm font-medium">{t.welcome.loading}</span>
         </div>
       </div>
     );
@@ -207,21 +209,21 @@ function App() {
                 </div>
               </div>
               <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">
-                Welcome to Web AI IDE
+                {t.welcome.title}
               </h2>
               <p className="text-slate-400 text-sm leading-relaxed">
                 {user
-                  ? `Welcome back, ${user.email}. Select a project or create a new one.`
-                  : 'Your intelligent coding companion. Sign in to sync your projects across devices.'}
+                  ? `${t.welcome.loggedIn}, ${user.email}. ${t.welcome.selectOrCreate}`
+                  : t.welcome.loggedOut}
               </p>
               <div className="mt-8 flex items-center justify-center gap-6">
                 <div className="flex items-center gap-2 text-slate-500">
                   <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="text-xs font-medium">Connected</span>
+                  <span className="text-xs font-medium">{t.welcome.connected}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-500">
                   <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                  <span className="text-xs font-medium">AI Ready</span>
+                  <span className="text-xs font-medium">{t.welcome.aiReady}</span>
                 </div>
               </div>
             </div>

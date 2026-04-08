@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { SendIcon, SparklesIcon } from './Icons';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -7,6 +8,7 @@ interface ChatInputProps {
 }
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
+  const { t } = useSettings();
   const [input, setInput] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -40,8 +42,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     <form onSubmit={handleSubmit} className="relative">
       <div className={`
         relative flex items-end rounded-2xl border transition-all duration-200
-        ${isFocused 
-          ? 'border-indigo-500/50 bg-slate-800/80 shadow-lg shadow-indigo-500/10' 
+        ${isFocused
+          ? 'border-indigo-500/50 bg-slate-800/80 shadow-lg shadow-indigo-500/10'
           : 'border-slate-700/50 bg-slate-800/50'
         }
         ${disabled ? 'opacity-50' : ''}
@@ -53,7 +55,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           onKeyDown={handleKeyDown}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          placeholder="Message AI Assistant..."
+          placeholder={t.chat.messagePlaceholder}
           disabled={disabled}
           rows={1}
           className="flex-1 px-4 py-3 bg-transparent text-white placeholder-slate-500 text-sm resize-none focus:outline-none max-h-[150px]"
@@ -70,8 +72,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             disabled={disabled || !input.trim()}
             className={`
               p-2.5 rounded-xl transition-all duration-200
-              ${input.trim() 
-                ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/30 hover:from-indigo-600 hover:to-purple-600' 
+              ${input.trim()
+                ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/30 hover:from-indigo-600 hover:to-purple-600'
                 : 'bg-slate-700/50 text-slate-500'
               }
             `}
@@ -82,7 +84,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
       </div>
       <div className="mt-2 flex items-center justify-between px-1">
         <span className="text-[10px] text-slate-500">
-          Press Enter to send, Shift+Enter for new line
+          {t.chat.pressEnter}
         </span>
       </div>
     </form>

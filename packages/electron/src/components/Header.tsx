@@ -25,9 +25,9 @@ export function Header({ projectId, onSettingsClick, onRefreshClick, onLoginClic
           <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
         </div>
         <div className="flex flex-col">
-          <h1 className="text-sm font-semibold text-white tracking-tight">Web AI IDE</h1>
+          <h1 className="text-sm font-semibold text-white tracking-tight">{t.header.appName}</h1>
           <span className="text-[10px] text-slate-400 font-medium">
-            {projectId ? 'Project Active' : 'No Project'}
+            {projectId ? t.header.projectActive : t.header.noProject}
           </span>
         </div>
       </div>

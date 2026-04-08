@@ -88,6 +88,9 @@ export interface Translations {
     };
   };
   header: {
+    appName: string;
+    projectActive: string;
+    noProject: string;
     settings: string;
     refresh: string;
     login: string;
@@ -98,10 +101,17 @@ export interface Translations {
     newProject: string;
     deleteProject: string;
     noProjects: string;
+    createOneToStart: string;
+    projectName: string;
+    create: string;
+    cancel: string;
+    confirmDeleteProject: string;
   };
   chat: {
     placeholder: string;
     send: string;
+    messagePlaceholder: string;
+    pressEnter: string;
   };
   welcome: {
     title: string;
@@ -109,6 +119,8 @@ export interface Translations {
     loggedOut: string;
     connected: string;
     aiReady: string;
+    selectOrCreate: string;
+    loading: string;
   };
 }
 
@@ -201,6 +213,9 @@ export const translations: Record<Language, Translations> = {
       },
     },
     header: {
+      appName: 'Web AI IDE',
+      projectActive: 'Project Active',
+      noProject: 'No Project',
       settings: 'Settings',
       refresh: 'Refresh',
       login: 'Sign In',
@@ -211,10 +226,17 @@ export const translations: Record<Language, Translations> = {
       newProject: 'New Project',
       deleteProject: 'Delete Project',
       noProjects: 'No projects yet',
+      createOneToStart: 'Create one to get started',
+      projectName: 'Project name',
+      create: 'Create',
+      cancel: 'Cancel',
+      confirmDeleteProject: 'Delete this project?',
     },
     chat: {
       placeholder: 'Type your message...',
       send: 'Send',
+      messagePlaceholder: 'Message AI Assistant...',
+      pressEnter: 'Press Enter to send, Shift+Enter for new line',
     },
     welcome: {
       title: 'Welcome to Web AI IDE',
@@ -222,6 +244,8 @@ export const translations: Record<Language, Translations> = {
       loggedOut: 'Your intelligent coding companion. Sign in to sync your projects across devices.',
       connected: 'Connected',
       aiReady: 'AI Ready',
+      selectOrCreate: 'Select a project or create a new one.',
+      loading: 'Loading...',
     },
   },
   zh: {
@@ -312,6 +336,9 @@ export const translations: Record<Language, Translations> = {
       },
     },
     header: {
+      appName: 'Web AI IDE',
+      projectActive: '项目进行中',
+      noProject: '无项目',
       settings: '设置',
       refresh: '刷新',
       login: '登录',
@@ -322,10 +349,17 @@ export const translations: Record<Language, Translations> = {
       newProject: '新建项目',
       deleteProject: '删除项目',
       noProjects: '暂无项目',
+      createOneToStart: '创建一个开始吧',
+      projectName: '项目名称',
+      create: '创建',
+      cancel: '取消',
+      confirmDeleteProject: '确定删除此项目？',
     },
     chat: {
       placeholder: '输入消息...',
       send: '发送',
+      messagePlaceholder: '向 AI 助手发送消息...',
+      pressEnter: '按 Enter 发送，Shift+Enter 换行',
     },
     welcome: {
       title: '欢迎使用 Web AI IDE',
@@ -333,6 +367,8 @@ export const translations: Record<Language, Translations> = {
       loggedOut: '您的智能编程助手。登录以跨设备同步项目。',
       connected: '已连接',
       aiReady: 'AI 就绪',
+      selectOrCreate: '选择一个项目或创建一个新项目。',
+      loading: '加载中...',
     },
   },
 };

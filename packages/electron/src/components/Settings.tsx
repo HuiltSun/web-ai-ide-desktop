@@ -5,7 +5,12 @@ import { Language } from '../i18n/translations';
 
 type Tab = 'ai' | 'api' | 'database' | 'editor' | 'language';
 
-export function Settings() {
+interface SettingsProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function Settings({ isOpen, onClose }: SettingsProps) {
   const { settings, t, setSelectedProvider, setSelectedModel, addProvider, removeProvider, updateProvider, addModel, removeModel, updateModel, setLanguage, updateSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<Tab>('ai');
   const [saved, setSaved] = useState(false);
@@ -31,6 +36,8 @@ export function Settings() {
 
   const selectedProvider = settings.aiProviders.find(p => p.id === settings.selectedProvider);
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
       <div className="w-[720px] max-h-[85vh] bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] shadow-2xl overflow-hidden animate-scale-in">
@@ -39,9 +46,17 @@ export function Settings() {
             <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{t.settings.title}</h2>
             <p className="text-sm text-[var(--color-text-tertiary)]">{t.settings.subtitle}</p>
           </div>
-          {saved && (
-            <span className="text-sm text-[var(--color-success)] animate-fade-in">{t.settings.actions.saved}</span>
-          )}
+          <div className="flex items-center gap-3">
+            {saved && (
+              <span className="text-sm text-[var(--color-success)] animate-fade-in">{t.settings.actions.saved}</span>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+            >
+              <CloseIcon size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="flex border-b border-[var(--color-border)]">
