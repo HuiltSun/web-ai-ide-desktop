@@ -142,6 +142,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addProvider = useCallback((provider?: AIProvider) => {
+    if (provider && !provider.id) {
+      console.warn('Provider object passed without id property');
+    }
     const newId = `provider-${Date.now()}`;
     const newProvider = provider || {
       id: newId,

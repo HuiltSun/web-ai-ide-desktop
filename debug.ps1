@@ -66,7 +66,7 @@ Write-Host "  加密: 已启用"
 Write-Host ""
 Write-Host "[2/6] 构建 packages..."
 
-$PackagesDir = "E:\web\web-ai-ide\packages"
+$PackagesDir = "E:\web\web-ai-ide\packages\electron\"
 if (Test-Path "$PackagesDir\package.json") {
     Push-Location $PackagesDir -ErrorAction SilentlyContinue
     try {

@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { FileNode } from '../services/api';
-import { FolderIcon, FileIcon, ChevronRightIcon } from './Icons';
+import { FolderIcon, FileIcon, ChevronRightIcon, ChevronDownIcon } from './Icons';
 
 interface FileTreeProps {
   files: FileNode[];
@@ -24,6 +25,21 @@ const extColorMap: Record<string, string> = {
 };
 
 export function FileTree({ files, level = 0, onSelect, onContextMenu, selectedPath }: FileTreeProps) {
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (e: React.MouseEvent, path: string) => {
+    e.stopPropagation();
+    setExpandedPaths(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="text-sm">
       {files.map((file) => (
@@ -40,7 +56,16 @@ export function FileTree({ files, level = 0, onSelect, onContextMenu, selectedPa
           >
             {file.isDirectory ? (
               <>
-                <ChevronRightIcon size={12} className="text-slate-600" />
+                <span
+                  onClick={(e) => toggleExpand(e, file.path)}
+                  className="cursor-pointer"
+                >
+                  {expandedPaths.has(file.path) ? (
+                    <ChevronDownIcon size={12} className="text-slate-600" />
+                  ) : (
+                    <ChevronRightIcon size={12} className="text-slate-600" />
+                  )}
+                </span>
                 <FolderIcon size={14} className={selectedPath === file.path ? 'text-indigo-400' : 'text-amber-400'} />
               </>
             ) : (
@@ -51,7 +76,7 @@ export function FileTree({ files, level = 0, onSelect, onContextMenu, selectedPa
             )}
             <span className="truncate text-xs">{file.name}</span>
           </div>
-          {file.isDirectory && file.children && (
+          {file.isDirectory && file.children && expandedPaths.has(file.path) && (
             <FileTree
               files={file.children}
               level={level + 1}

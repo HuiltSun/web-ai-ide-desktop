@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { useChat } from '../hooks/useChat';
+import { useSettings } from '../contexts/SettingsContext';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ToolCallCard } from './ToolCallCard';
@@ -10,6 +11,7 @@ interface ChatProps {
 }
 
 export function Chat({ sessionId }: ChatProps) {
+  const { t } = useSettings();
   const {
     messages,
     streamingContent,
@@ -38,19 +40,19 @@ export function Chat({ sessionId }: ChatProps) {
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/20 flex items-center justify-center mb-4">
               <BotIcon className="text-indigo-400" size={32} />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">AI Assistant</h3>
+            <h3 className="text-lg font-semibold text-white mb-2">{t.chat.aiAssistant}</h3>
             <p className="text-slate-400 text-sm max-w-md">
-              Ask me anything about your code, or let me help you build something amazing.
+              {t.chat.askMeAnything}
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
               <span className="px-3 py-1 rounded-full bg-white/5 text-xs text-slate-400 border border-white/10">
-                Write code
+                {t.chat.writeCode}
               </span>
               <span className="px-3 py-1 rounded-full bg-white/5 text-xs text-slate-400 border border-white/10">
-                Debug errors
+                {t.chat.debugErrors}
               </span>
               <span className="px-3 py-1 rounded-full bg-white/5 text-xs text-slate-400 border border-white/10">
-                Explain logic
+                {t.chat.explainLogic}
               </span>
             </div>
           </div>
@@ -65,7 +67,7 @@ export function Chat({ sessionId }: ChatProps) {
             <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-gradient-to-br from-slate-800 to-slate-800/80 border border-slate-700/50 shadow-lg">
               <div className="flex items-center gap-2 text-slate-400">
                 <SparklesIcon size={14} className="text-indigo-400 animate-pulse" />
-                <span className="text-xs">Thinking...</span>
+                <span className="text-xs">{t.chat.thinking}</span>
               </div>
               <div className="mt-2 text-sm text-slate-300 whitespace-pre-wrap break-words">
                 {streamingContent}
@@ -93,7 +95,7 @@ export function Chat({ sessionId }: ChatProps) {
       {!isConnected && (
         <div className="absolute inset-x-0 bottom-20 flex items-center justify-center">
           <div className="px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
-            Disconnected. Reconnecting...
+            {t.chat.disconnected}
           </div>
         </div>
       )}
