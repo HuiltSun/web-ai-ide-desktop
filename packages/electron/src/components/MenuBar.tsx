@@ -93,73 +93,75 @@ export function MenuBar({ menus, onMenuClick }: MenuBarProps) {
   return (
     <div
       ref={menuBarRef}
-      className="flex items-center h-9 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] px-2 select-none relative z-50"
+      className="flex items-center h-9 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] select-none relative z-50"
       style={{ fontFamily: 'var(--font-sans)' }}
     >
-      {menus.map((menu, index) => (
-        <div key={menu.label} className="relative">
-          <button
-            onClick={() => handleMenuClick(index)}
-            onMouseEnter={() => handleMouseEnter(index)}
-            className={`
-              px-3 h-9 flex items-center gap-2 text-[13px] font-medium
-              transition-all duration-150 rounded-md
-              ${activeIndex === index
-                ? 'bg-[var(--color-accent)]/15 text-[var(--color-text-primary)] shadow-[0_0_12px_rgba(99,102,241,0.15)]'
-                : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
-              }
-            `}
-          >
-            <span>{menu.label}</span>
-            <svg
-              className={`w-3 h-3 transition-transform duration-150 ${activeIndex === index ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+      <div className="flex items-center h-full flex-1 px-2" style={{ WebkitAppRegion: 'drag' as unknown as React.CSSProperties['WebkitAppRegion'] }}>
+        {menus.map((menu, index) => (
+          <div key={menu.label} className="relative" style={{ WebkitAppRegion: 'no-drag' as unknown as React.CSSProperties['WebkitAppRegion'] }}>
+            <button
+              onClick={() => handleMenuClick(index)}
+              onMouseEnter={() => handleMouseEnter(index)}
+              className={`
+                px-3 h-9 flex items-center gap-2 text-[13px] font-medium
+                transition-all duration-150 rounded-md
+                ${activeIndex === index
+                  ? 'bg-[var(--color-accent)]/15 text-[var(--color-text-primary)] shadow-[0_0_12px_rgba(99,102,241,0.15)]'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
+                }
+              `}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+              <span>{menu.label}</span>
+              <svg
+                className={`w-3 h-3 transition-transform duration-150 ${activeIndex === index ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
 
-          {activeIndex === index && (
-            <div className="absolute top-full left-0 mt-1 min-w-[220px] z-50">
-              <div className="glass-panel border border-[var(--color-border)] rounded-lg shadow-[var(--shadow-lg)] overflow-hidden animate-scale-in">
-                <div className="py-1">
-                  {menu.items.map((item, itemIndex) => {
-                    if (item.type === 'separator') {
+            {activeIndex === index && (
+              <div className="absolute top-full left-0 mt-1 min-w-[220px] z-50">
+                <div className="glass-panel border border-[var(--color-border)] rounded-lg shadow-[var(--shadow-lg)] overflow-hidden animate-scale-in">
+                  <div className="py-1">
+                    {menu.items.map((item, itemIndex) => {
+                      if (item.type === 'separator') {
+                        return (
+                          <div
+                            key={itemIndex}
+                            className="h-px mx-2 my-1 bg-[var(--color-border)]"
+                          />
+                        );
+                      }
+
                       return (
-                        <div
+                        <button
                           key={itemIndex}
-                          className="h-px mx-2 my-1 bg-[var(--color-border)]"
-                        />
+                          onClick={() => handleItemClick(item)}
+                          className="w-full px-3 py-2 flex items-center justify-between text-[13px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] transition-all duration-100"
+                        >
+                          <span>{item.label}</span>
+                          {item.accelerator && (
+                            <span className="text-[11px] text-[var(--color-text-muted)] font-mono ml-4">
+                              {item.accelerator}
+                            </span>
+                          )}
+                        </button>
                       );
-                    }
-
-                    return (
-                      <button
-                        key={itemIndex}
-                        onClick={() => handleItemClick(item)}
-                        className="w-full px-3 py-2 flex items-center justify-between text-[13px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] transition-all duration-100"
-                      >
-                        <span>{item.label}</span>
-                        {item.accelerator && (
-                          <span className="text-[11px] text-[var(--color-text-muted)] font-mono ml-4">
-                            {item.accelerator}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        ))}
 
-      <div className="flex-1" />
+        <div className="flex-1" />
+      </div>
 
-      <div className="flex items-center gap-1 mr-1">
+      <div className="flex items-center gap-1 mr-1" style={{ WebkitAppRegion: 'no-drag' as unknown as React.CSSProperties['WebkitAppRegion'] }}>
         <button
           onClick={() => window.electronAPI?.window.minimize()}
           onMouseEnter={() => setHoveredBtn('minimize')}

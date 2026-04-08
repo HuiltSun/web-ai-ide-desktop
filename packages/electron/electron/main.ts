@@ -186,6 +186,24 @@ ipcMain.handle('window:isMaximized', () => {
   return mainWindow?.isMaximized() ?? false;
 });
 
+ipcMain.handle('window:reload', () => {
+  mainWindow?.reload();
+});
+
+ipcMain.handle('window:toggleDevTools', () => {
+  if (mainWindow?.webContents.isDevToolsOpened()) {
+    mainWindow?.webContents.closeDevTools();
+  } else {
+    mainWindow?.webContents.openDevTools();
+  }
+});
+
+ipcMain.handle('window:toggleFullScreen', () => {
+  if (mainWindow) {
+    mainWindow.setFullScreen(!mainWindow.isFullScreen());
+  }
+});
+
 ipcMain.handle('shell:openExternal', (_event, url: string) => {
   shell.openExternal(url);
 });

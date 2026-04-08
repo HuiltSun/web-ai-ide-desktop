@@ -5,6 +5,7 @@ import { Sidebar } from './components/Sidebar';
 import { Chat } from './components/Chat';
 import { Settings } from './components/Settings';
 import { LoginModal } from './components/LoginModal';
+import { AboutDialog } from './components/AboutDialog';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SparklesIcon, CodeIcon, BotIcon } from './components/Icons';
 import type { Project, ProjectWithSession } from './types';
@@ -21,6 +22,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
 
   useEffect(() => {
@@ -84,12 +86,7 @@ function App() {
         }
         break;
       case 'about':
-        alert(`Web AI IDE
-Version 1.0.0
-
-Your intelligent coding companion.
-
-© 2024 Web AI IDE`);
+        setAboutOpen(true);
         break;
     }
   };
@@ -335,6 +332,12 @@ Your intelligent coding companion.
           onClose={() => setLoginOpen(false)}
           onLogin={handleLogin}
           onRegister={handleRegister}
+        />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <AboutDialog
+          isOpen={aboutOpen}
+          onClose={() => setAboutOpen(false)}
         />
       </ErrorBoundary>
     </ErrorBoundary>

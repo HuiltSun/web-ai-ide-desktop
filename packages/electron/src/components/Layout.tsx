@@ -78,18 +78,18 @@ export function Layout({ header, sidebar, children, onMenuClick }: LayoutProps) 
         {
           label: t.menu.reload,
           accelerator: 'Ctrl+R',
-          click: () => window.location.reload(),
+          click: () => window.electronAPI?.window.reload(),
         },
         {
           label: t.menu.toggleDeveloperTools,
           accelerator: 'Ctrl+Shift+I',
-          click: () => console.log('Toggle DevTools'),
+          click: () => window.electronAPI?.window.toggleDevTools(),
         },
         { type: 'separator' },
         {
           label: t.menu.toggleFullScreen,
           accelerator: 'F11',
-          click: () => console.log('Toggle Full Screen'),
+          click: () => window.electronAPI?.window.toggleFullScreen(),
         },
       ],
     },

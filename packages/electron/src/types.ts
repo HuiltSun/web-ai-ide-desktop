@@ -77,6 +77,9 @@ export interface ElectronAPI {
     maximize: () => Promise<void>;
     close: () => Promise<void>;
     isMaximized: () => Promise<boolean>;
+    reload: () => Promise<void>;
+    toggleDevTools: () => Promise<void>;
+    toggleFullScreen: () => Promise<void>;
   };
   shell: {
     openExternal: (url: string) => Promise<void>;

@@ -34,6 +34,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     maximize: () => ipcRenderer.invoke('window:maximize'),
     close: () => ipcRenderer.invoke('window:close'),
     isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+    reload: () => ipcRenderer.invoke('window:reload'),
+    toggleDevTools: () => ipcRenderer.invoke('window:toggleDevTools'),
+    toggleFullScreen: () => ipcRenderer.invoke('window:toggleFullScreen'),
   },
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
