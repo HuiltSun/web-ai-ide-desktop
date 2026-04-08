@@ -150,7 +150,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       apiKey: '',
       models: [],
     };
-    if (!provider) {
+    if (!provider?.id) {
       newProvider.id = newId;
     }
     setSettings(prev => {
