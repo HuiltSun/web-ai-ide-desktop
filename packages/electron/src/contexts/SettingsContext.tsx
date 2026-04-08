@@ -16,7 +16,7 @@ interface SettingsContextValue {
   settings: Settings;
   t: Translations;
   updateSettings: (updates: Partial<Settings>) => void;
-  addProvider: () => void;
+  addProvider: (provider?: AIProvider) => void;
   removeProvider: (id: string) => void;
   updateProvider: (id: string, updates: Partial<AIProvider>) => void;
   addModel: (providerId: string) => void;
@@ -141,27 +141,31 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const addProvider = useCallback(() => {
+  const addProvider = useCallback((provider?: AIProvider) => {
     const newId = `provider-${Date.now()}`;
+    const newProvider = provider || {
+      id: newId,
+      name: 'New Provider',
+      apiEndpoint: 'https://api.example.com/v1',
+      apiKey: '',
+      models: [],
+    };
+    if (!provider) {
+      newProvider.id = newId;
+    }
     setSettings(prev => {
       const newProviders = [
         ...prev.aiProviders,
-        {
-          id: newId,
-          name: 'New Provider',
-          apiEndpoint: 'https://api.example.com/v1',
-          apiKey: '',
-          models: [],
-        },
+        newProvider,
       ];
-      const newSettings = { ...prev, aiProviders: newProviders, selectedProvider: newId };
+      const newSettings = { ...prev, aiProviders: newProviders, selectedProvider: newProvider.id };
 
       if (window.electronAPI?.settings) {
         window.electronAPI.settings.set('ai_providers', newProviders);
-        window.electronAPI.settings.set('selected_provider', newId);
+        window.electronAPI.settings.set('selected_provider', newProvider.id);
       } else {
         localStorage.setItem('ai_providers', JSON.stringify(newProviders));
-        localStorage.setItem('selected_provider', newId);
+        localStorage.setItem('selected_provider', newProvider.id);
       }
 
       return newSettings;
