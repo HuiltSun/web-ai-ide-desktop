@@ -206,28 +206,17 @@ if (-not (Test-Path "$ServerDir\package.json")) {
     }
 }
 
-# 5. 查找并启动桌面应用
+# 5. 启动桌面应用
 Write-Host ""
 Write-Host "[6/6] 启动桌面应用..."
 
-if (-not (Test-Path $ReleaseDir)) {
-    Write-Host "  错误: release 目录不存在: $ReleaseDir"
+$launchBat = "E:\web\web-ai-ide\launch.bat"
+if (Test-Path $launchBat) {
+    Write-Host "  使用 launch.bat 启动桌面应用..."
+    Start-Process $launchBat
 } else {
-    $latestRelease = Get-ChildItem $ReleaseDir -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    if ($null -eq $latestRelease) {
-        Write-Host "  错误: release 目录为空"
-    } else {
-        $exePath = Join-Path $latestRelease.FullName "win-unpacked\Web AI IDE.exe"
-
-        Write-Host "  最新 release: $($latestRelease.Name)"
-
-        if (Test-Path $exePath) {
-            Write-Host "  启动桌面应用..."
-            Start-Process $exePath
-        } else {
-            Write-Host "  错误: 未找到 exe 文件"
-        }
-    }
+    Write-Host "  错误: launch.bat 不存在，请先构建应用"
+    Write-Host "  运行: cd packages\electron; npm run build"
 }
 
 # 完成信息

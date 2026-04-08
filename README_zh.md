@@ -97,8 +97,14 @@ npm run dev
 
 4. 运行桌面应用：
 ```
-web-ai-ide/release/release-{timestamp}/Web AI IDE Setup 1.0.0.exe
+web-ai-ide\launch.bat
 ```
+或直接运行：
+```
+web-ai-ide\release\release-{timestamp}\Web AI IDE Setup 1.0.0.exe
+```
+
+**💡 提示**：构建后 `launch.bat` 会自动更新为最新构建的 EXE 路径。
 
 ### 方式二：Docker 部署
 
@@ -130,12 +136,14 @@ web-ai-ide/
 │   ├── electron/             # Electron 桌面应用
 │   │   ├── electron/         # 主进程 (main.ts, preload.ts)
 │   │   ├── src/             # React 前端
-│   │   │   ├── components/   # Chat, Editor, FileExplorer, Terminal, Settings...
+│   │   │   ├── components/   # Chat, Editor, FileExplorer, Terminal, Settings, MenuBar, AboutDialog...
 │   │   │   ├── hooks/       # useChat, useFileSystem, useTerminal
 │   │   │   ├── services/    # api.ts, websocket.ts
-│   │   │   └── contexts/    # SettingsContext
-│   │   ├── scripts/         # 构建脚本
-│   │   └── dist/            # 构建输出
+│   │   │   ├── contexts/    # SettingsContext
+│   │   │   ├── i18n/       # translations.ts (国际化)
+│   │   │   └── index.css   # 设计系统 (CSS 变量)
+│   │   ├── scripts/         # build-with-timestamp.cjs
+│   │   └── dist/           # 构建输出
 │   │
 │   ├── cli/                  # 独立 React Web 应用
 │   │   └── src/
@@ -153,15 +161,17 @@ web-ai-ide/
 │   ├── server/               # Fastify 后端
 │   │   ├── src/
 │   │   │   ├── routes/       # auth, chat, files, projects, sessions
-│   │   │   └── services/    # auth, project, session services
+│   │   │   ├── services/      # auth, project, session services
+│   │   │   └── utils/        # encryption, prisma
 │   │   └── prisma/           # 数据库 schema
 │   │
 │   └── shared/               # 共享类型定义
 │
 ├── release/                  # 构建输出 (release-{timestamp}/)
 ├── docs/                     # 设计文档
-├── docker-compose.yml         # Docker 编排
+├── docker-compose.yml        # Docker 编排
 ├── debug.ps1                 # 一键启动脚本
+├── launch.bat                # 快捷启动脚本 (自动生成)
 └── package.json
 ```
 

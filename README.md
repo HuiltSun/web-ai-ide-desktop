@@ -97,8 +97,14 @@ npm run dev
 
 4. Run desktop app:
 ```
-web-ai-ide/release/release-{timestamp}/Web AI IDE Setup 1.0.0.exe
+web-ai-ide\launch.bat
 ```
+or directly:
+```
+web-ai-ide\release\release-{timestamp}\Web AI IDE Setup 1.0.0.exe
+```
+
+**💡 Tip**: After each build, `launch.bat` is automatically updated to point to the latest EXE.
 
 ### Option 2: Docker Deployment
 
@@ -130,12 +136,14 @@ web-ai-ide/
 │   ├── electron/             # Electron desktop app
 │   │   ├── electron/         # Main process (main.ts, preload.ts)
 │   │   ├── src/             # React frontend
-│   │   │   ├── components/   # Chat, Editor, FileExplorer, Terminal, Settings...
+│   │   │   ├── components/   # Chat, Editor, FileExplorer, Terminal, Settings, MenuBar, AboutDialog...
 │   │   │   ├── hooks/       # useChat, useFileSystem, useTerminal
 │   │   │   ├── services/    # api.ts, websocket.ts
-│   │   │   └── contexts/    # SettingsContext
-│   │   ├── scripts/         # Build scripts
-│   │   └── dist/            # Build output
+│   │   │   ├── contexts/    # SettingsContext
+│   │   │   ├── i18n/       # translations.ts (internationalization)
+│   │   │   └── index.css   # Design system (CSS variables)
+│   │   ├── scripts/         # build-with-timestamp.cjs
+│   │   └── dist/           # Build output
 │   │
 │   ├── cli/                  # Standalone React web app
 │   │   └── src/
@@ -153,7 +161,8 @@ web-ai-ide/
 │   ├── server/               # Fastify backend
 │   │   ├── src/
 │   │   │   ├── routes/       # auth, chat, files, projects, sessions
-│   │   │   └── services/    # auth, project, session services
+│   │   │   ├── services/      # auth, project, session services
+│   │   │   └── utils/        # encryption, prisma
 │   │   └── prisma/           # Database schema
 │   │
 │   └── shared/               # Shared type definitions
@@ -162,6 +171,7 @@ web-ai-ide/
 ├── docs/                     # Design documents
 ├── docker-compose.yml         # Docker orchestration
 ├── debug.ps1                 # One-click startup script
+├── launch.bat                # Quick launch script (auto-generated)
 └── package.json
 ```
 
