@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
-import { CloseIcon, PlusIcon, TrashIcon, SparklesIcon, KeyIcon, DatabaseIcon, CodeIcon, GlobeIcon } from './Icons';
+import { CloseIcon, PlusIcon, TrashIcon, SparklesIcon, DatabaseIcon, CodeIcon, GlobeIcon, ChevronDownIcon } from './Icons';
 import { Language } from '../i18n/translations';
+import { providerPresets, createProviderFromPreset } from '../config/providerPresets';
 
-type Tab = 'ai' | 'api' | 'database' | 'editor' | 'language';
+type Tab = 'ai' | 'database' | 'editor' | 'language';
 
 interface SettingsProps {
   isOpen: boolean;
@@ -14,10 +15,20 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
   const { settings, t, setSelectedProvider, setSelectedModel, addProvider, removeProvider, updateProvider, addModel, removeModel, updateModel, setLanguage, updateSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<Tab>('ai');
   const [saved, setSaved] = useState(false);
+  const [showPresetDropdown, setShowPresetDropdown] = useState(false);
+
+  const handleAddProvider = (presetId: string) => {
+    const preset = providerPresets.find(p => p.id === presetId);
+    if (preset) {
+      const newProvider = createProviderFromPreset(preset);
+      addProvider(newProvider);
+      setSelectedProvider(newProvider.id);
+    }
+    setShowPresetDropdown(false);
+  };
 
   const tabs: { id: Tab; icon: React.ReactNode }[] = [
     { id: 'ai', icon: <SparklesIcon size={16} /> },
-    { id: 'api', icon: <KeyIcon size={16} /> },
     { id: 'database', icon: <DatabaseIcon size={16} /> },
     { id: 'editor', icon: <CodeIcon size={16} /> },
     { id: 'language', icon: <GlobeIcon size={16} /> },
@@ -82,13 +93,29 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-medium text-[var(--color-text-secondary)]">{t.settings.ai.providers}</h3>
-                  <button
-                    onClick={addProvider}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--color-accent)] bg-[var(--color-accent-subtle)] rounded-lg hover:bg-[var(--color-accent)]/20 transition-colors"
-                  >
-                    <PlusIcon size={14} />
-                    {t.settings.ai.addProvider}
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowPresetDropdown(!showPresetDropdown)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--color-accent)] bg-[var(--color-accent-subtle)] rounded-lg hover:bg-[var(--color-accent)]/20 transition-colors"
+                    >
+                      <PlusIcon size={14} />
+                      {t.settings.ai.addProvider}
+                      <ChevronDownIcon size={14} />
+                    </button>
+                    {showPresetDropdown && (
+                      <div className="absolute right-0 top-full mt-1 w-48 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg shadow-xl z-10 overflow-hidden">
+                        {providerPresets.filter(p => p.id !== 'custom').map(preset => (
+                          <button
+                            key={preset.id}
+                            onClick={() => handleAddProvider(preset.id)}
+                            className="w-full px-3 py-2 text-sm text-left text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+                          >
+                            {preset.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -208,22 +235,6 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
               >
                 {t.settings.actions.save}
               </button>
-            </div>
-          )}
-
-          {activeTab === 'api' && (
-            <div className="space-y-6">
-              <div className="p-4 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
-                <div className="flex items-center gap-3 mb-3">
-                  <KeyIcon size={20} className="text-[var(--color-accent)]" />
-                  <h3 className="text-sm font-medium text-[var(--color-text-primary)]">{t.settings.api.title}</h3>
-                </div>
-                <p className="text-sm text-[var(--color-text-tertiary)] mb-4">{t.settings.api.description}</p>
-                <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
-                  <span className="text-[var(--color-success)]">●</span>
-                  <span>{t.settings.api.localStorage}: {settings.aiProviders.length} {t.settings.api.providerCount}</span>
-                </div>
-              </div>
             </div>
           )}
 

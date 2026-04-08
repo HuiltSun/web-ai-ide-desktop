@@ -1,0 +1,71 @@
+[
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "apiEndpoint": "https://api.openai.com/v1",
+    "models": [
+      { "id": "gpt-4o", "name": "GPT-4o" },
+      { "id": "gpt-4o-mini", "name": "GPT-4o Mini" },
+      { "id": "gpt-4-turbo", "name": "GPT-4 Turbo" },
+      { "id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo" }
+    ]
+  },
+  {
+    "id": "qwen",
+    "name": "Qwen",
+    "apiEndpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "models": [
+      { "id": "qwen-plus", "name": "Qwen Plus" },
+      { "id": "qwen-turbo", "name": "Qwen Turbo" },
+      { "id": "qwen-max", "name": "Qwen Max" },
+      { "id": "qwen-long", "name": "Qwen Long" }
+    ]
+  },
+  {
+    "id": "anthropic",
+    "name": "Anthropic",
+    "apiEndpoint": "https://api.anthropic.com/v1",
+    "models": [
+      { "id": "claude-sonnet-4-20250514", "name": "Claude Sonnet 4" },
+      { "id": "claude-3-5-sonnet-20241022", "name": "Claude 3.5 Sonnet" },
+      { "id": "claude-3-5-haiku-20241022", "name": "Claude 3.5 Haiku" },
+      { "id": "claude-3-opus-20240229", "name": "Claude 3 Opus" }
+    ]
+  },
+  {
+    "id": "gemini",
+    "name": "Google Gemini",
+    "apiEndpoint": "https://generativelanguage.googleapis.com/v1beta",
+    "models": [
+      { "id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash" },
+      { "id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro" },
+      { "id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash" },
+      { "id": "gemini-pro", "name": "Gemini Pro" }
+    ]
+  },
+  {
+    "id": "deepseek",
+    "name": "DeepSeek",
+    "apiEndpoint": "https://api.deepseek.com/v1",
+    "models": [
+      { "id": "deepseek-chat", "name": "DeepSeek Chat" },
+      { "id": "deepseek-coder", "name": "DeepSeek Coder" }
+    ]
+  },
+  {
+    "id": "azure",
+    "name": "Azure OpenAI",
+    "apiEndpoint": "",
+    "models": [
+      { "id": "gpt-4o", "name": "GPT-4o" },
+      { "id": "gpt-4-turbo", "name": "GPT-4 Turbo" },
+      { "id": "gpt-35-turbo", "name": "GPT-3.5 Turbo" }
+    ]
+  },
+  {
+    "id": "custom",
+    "name": "Custom",
+    "apiEndpoint": "",
+    "models": []
+  }
+]

@@ -6,7 +6,6 @@ export interface Translations {
     subtitle: string;
     tabs: {
       ai: string;
-      api: string;
       database: string;
       editor: string;
       language: string;
@@ -23,12 +22,6 @@ export interface Translations {
       modelId: string;
       noModels: string;
       selectProvider: string;
-    };
-    api: {
-      title: string;
-      description: string;
-      localStorage: string;
-      providerCount: string;
     };
     database: {
       title: string;
@@ -131,7 +124,6 @@ export const translations: Record<Language, Translations> = {
       subtitle: 'Configure your AI IDE',
       tabs: {
         ai: 'AI Providers',
-        api: 'API Keys',
         database: 'Database',
         editor: 'Editor',
         language: 'Language',
@@ -148,12 +140,6 @@ export const translations: Record<Language, Translations> = {
         modelId: 'Model ID (e.g., gpt-4o)',
         noModels: 'No models configured. Click "Add Model" to add one.',
         selectProvider: 'Select a provider to configure',
-      },
-      api: {
-        title: 'API Keys',
-        description: 'Configure API keys in the AI Providers tab above. Keys are stored locally.',
-        localStorage: 'Local Storage',
-        providerCount: 'provider(s), keys stored in browser localStorage',
       },
       database: {
         title: 'Database Connection',
@@ -254,7 +240,6 @@ export const translations: Record<Language, Translations> = {
       subtitle: '配置您的 AI IDE',
       tabs: {
         ai: 'AI 提供商',
-        api: 'API 密钥',
         database: '数据库',
         editor: '编辑器',
         language: '语言',
@@ -271,12 +256,6 @@ export const translations: Record<Language, Translations> = {
         modelId: '模型 ID（例如：gpt-4o）',
         noModels: '尚未配置模型。点击"添加模型"进行添加。',
         selectProvider: '选择一个提供商进行配置',
-      },
-      api: {
-        title: 'API 密钥',
-        description: '请在上方的 AI 提供商标签页中配置 API 密钥。密钥存储在本地。',
-        localStorage: '本地存储',
-        providerCount: '个提供商，密钥存储在浏览器本地存储中',
       },
       database: {
         title: '数据库连接',
