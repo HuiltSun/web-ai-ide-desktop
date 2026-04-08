@@ -19,6 +19,7 @@ A browser-based + Electron desktop AI-assisted coding environment similar to Cla
 - 🐳 **Docker Deployment** - Quick deployment to any environment
 - 💻 **Desktop App** - Windows EXE native desktop application
 - 🌐 **Internationalization** - Supports English and Chinese interface switching
+- 📋 **Custom Menu Bar** - Custom dark-themed menu bar, unified with design system
 
 ---
 
