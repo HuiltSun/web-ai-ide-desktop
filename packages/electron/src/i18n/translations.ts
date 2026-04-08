@@ -59,6 +59,7 @@ export interface Translations {
   };
   login: {
     title: string;
+    name: string;
     email: string;
     password: string;
     login: string;
@@ -69,6 +70,9 @@ export interface Translations {
     passwordRequired: string;
     loginSuccess: string;
     registerSuccess: string;
+    loading: string;
+    passwordRequirementsNotMet: string;
+    namePlaceholder: string;
     passwordStrength: {
       weak: string;
       fair: string;
@@ -168,6 +172,7 @@ export const translations: Record<Language, Translations> = {
     },
     login: {
       title: 'Sign In',
+      name: 'Name',
       email: 'Email',
       password: 'Password',
       login: 'Sign In',
@@ -178,6 +183,9 @@ export const translations: Record<Language, Translations> = {
       passwordRequired: 'Password is required',
       loginSuccess: 'Login successful',
       registerSuccess: 'Registration successful',
+      loading: 'Please wait...',
+      passwordRequirementsNotMet: 'Please meet all password requirements',
+      namePlaceholder: 'Your name',
       passwordStrength: {
         weak: 'Weak',
         fair: 'Fair',
@@ -275,6 +283,7 @@ export const translations: Record<Language, Translations> = {
     },
     login: {
       title: '登录',
+      name: '名字',
       email: '邮箱',
       password: '密码',
       login: '登录',
@@ -285,6 +294,9 @@ export const translations: Record<Language, Translations> = {
       passwordRequired: '请输入密码',
       loginSuccess: '登录成功',
       registerSuccess: '注册成功',
+      loading: '请稍候...',
+      passwordRequirementsNotMet: '请满足所有密码要求',
+      namePlaceholder: '输入您的名字',
       passwordStrength: {
         weak: '弱',
         fair: '一般',

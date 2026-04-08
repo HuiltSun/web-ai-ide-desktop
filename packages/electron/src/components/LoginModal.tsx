@@ -53,7 +53,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
     setLoading(true);
 
     if (mode === 'register' && requirementsMet < PASSWORD_REQUIREMENTS.length) {
-      setError('Please meet all password requirements');
+      setError(t.login.passwordRequirementsNotMet);
       setLoading(false);
       return;
     }
@@ -98,13 +98,13 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
           {mode === 'register' && (
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Name
+                {t.login.name}
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
+                placeholder={t.login.namePlaceholder}
                 className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all"
               />
             </div>
@@ -186,7 +186,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
             disabled={loading || (mode === 'register' && requirementsMet < PASSWORD_REQUIREMENTS.length)}
             className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50"
           >
-            {loading ? 'Please wait...' : mode === 'login' ? t.login.login : t.login.register}
+            {loading ? t.login.loading : mode === 'login' ? t.login.login : t.login.register}
           </button>
 
           <div className="text-center">
