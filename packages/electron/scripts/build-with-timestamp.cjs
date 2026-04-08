@@ -48,8 +48,35 @@ try {
     }
   }
 
+  const latestBuildDir = path.join(rootDir, 'release', 'latest');
+  if (fs.existsSync(latestBuildDir)) {
+    fs.rmSync(latestBuildDir, { recursive: true, force: true });
+  }
+  fs.symlinkSync(outputDir, latestBuildDir, 'junction');
+  console.log(`  Created symlink: ${latestBuildDir} -> ${outputDir}`);
+
+  const exeFiles = fs.readdirSync(outputDir).filter(f => f.endsWith('.exe'));
+  const latestExe = exeFiles.length > 0 ? path.join(outputDir, exeFiles[0]) : null;
+
+  const launchBatPath = path.join(rootDir, 'launch.bat');
+  if (latestExe) {
+    const launchBatContent = `@echo off
+chcp 65001 > nul
+echo Starting Web AI IDE...
+echo.
+"${latestExe}"
+`;
+    fs.writeFileSync(launchBatPath, launchBatContent, 'utf8');
+    console.log(`  Created launch script: ${launchBatPath}`);
+  }
+
+  const buildInfoPath = path.join(rootDir, 'release', 'latest-build.txt');
+  fs.writeFileSync(buildInfoPath, `${timestamp}\n${outputDir}\n${latestExe || 'N/A'}`, 'utf8');
+  console.log(`  Updated build info: ${buildInfoPath}`);
+
   console.log(`\n✓ Build completed!`);
   console.log(`  Output: ${outputDir}`);
+  console.log(`  Latest: ${latestBuildDir}`);
 } catch (error) {
   console.error('\n✗ Build failed:', error.message);
   if (error.stderr) {

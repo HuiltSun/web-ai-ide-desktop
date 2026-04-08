@@ -96,9 +96,9 @@ export function MenuBar({ menus, onMenuClick }: MenuBarProps) {
       className="flex items-center h-9 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] select-none relative z-50"
       style={{ fontFamily: 'var(--font-sans)' }}
     >
-      <div className="flex items-center h-full flex-1 px-2" style={{ WebkitAppRegion: 'drag' as unknown as React.CSSProperties['WebkitAppRegion'] }}>
+      <div className="flex items-center h-full flex-1 px-2" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
         {menus.map((menu, index) => (
-          <div key={menu.label} className="relative" style={{ WebkitAppRegion: 'no-drag' as unknown as React.CSSProperties['WebkitAppRegion'] }}>
+          <div key={menu.label} className="relative" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
             <button
               onClick={() => handleMenuClick(index)}
               onMouseEnter={() => handleMouseEnter(index)}
@@ -161,7 +161,7 @@ export function MenuBar({ menus, onMenuClick }: MenuBarProps) {
         <div className="flex-1" />
       </div>
 
-      <div className="flex items-center gap-1 mr-1" style={{ WebkitAppRegion: 'no-drag' as unknown as React.CSSProperties['WebkitAppRegion'] }}>
+      <div className="flex items-center gap-1 mr-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <button
           onClick={() => window.electronAPI?.window.minimize()}
           onMouseEnter={() => setHoveredBtn('minimize')}
