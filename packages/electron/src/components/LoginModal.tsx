@@ -162,7 +162,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
                     passwordStrength.level === 2 ? 'text-yellow-400' :
                     passwordStrength.level === 3 ? 'text-blue-400' : 'text-green-400'
                   }`}>
-                    {passwordStrength.textKey} password
+                    {t.login.passwordStrength[passwordStrength.textKey as keyof typeof t.login.passwordStrength]}
                   </p>
                 )}
                 <div className="text-xs text-slate-500">
@@ -173,7 +173,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onRegister }: LoginModalP
                         req.test(password) ? 'text-green-400' : 'text-slate-500'
                       }`}
                     >
-                      {req.test(password) ? '✓' : '○'} {req.labelKey}
+                      {req.test(password) ? '✓' : '○'} {t.login.passwordRequirements[req.labelKey]}
                     </div>
                   ))}
                 </div>

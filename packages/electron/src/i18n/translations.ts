@@ -69,6 +69,19 @@ export interface Translations {
     passwordRequired: string;
     loginSuccess: string;
     registerSuccess: string;
+    passwordStrength: {
+      weak: string;
+      fair: string;
+      good: string;
+      strong: string;
+    };
+    passwordRequirements: {
+      length: string;
+      uppercase: string;
+      lowercase: string;
+      number: string;
+      special: string;
+    };
   };
   header: {
     settings: string;
@@ -165,6 +178,19 @@ export const translations: Record<Language, Translations> = {
       passwordRequired: 'Password is required',
       loginSuccess: 'Login successful',
       registerSuccess: 'Registration successful',
+      passwordStrength: {
+        weak: 'Weak',
+        fair: 'Fair',
+        good: 'Good',
+        strong: 'Strong',
+      },
+      passwordRequirements: {
+        length: 'At least 8 characters',
+        uppercase: 'At least 1 uppercase letter',
+        lowercase: 'At least 1 lowercase letter',
+        number: 'At least 1 number',
+        special: 'At least 1 special character',
+      },
     },
     header: {
       settings: 'Settings',
@@ -259,6 +285,19 @@ export const translations: Record<Language, Translations> = {
       passwordRequired: '请输入密码',
       loginSuccess: '登录成功',
       registerSuccess: '注册成功',
+      passwordStrength: {
+        weak: '弱',
+        fair: '一般',
+        good: '良好',
+        strong: '强',
+      },
+      passwordRequirements: {
+        length: '至少 8 个字符',
+        uppercase: '至少 1 个大写字母',
+        lowercase: '至少 1 个小写字母',
+        number: '至少 1 个数字',
+        special: '至少 1 个特殊字符',
+      },
     },
     header: {
       settings: '设置',

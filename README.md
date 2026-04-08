@@ -18,6 +18,7 @@ A browser-based + Electron desktop AI-assisted coding environment similar to Cla
 - 🗄️ **Project Management** - Project persistence (PostgreSQL)
 - 🐳 **Docker Deployment** - Quick deployment to any environment
 - 💻 **Desktop App** - Windows EXE native desktop application
+- 🌐 **Internationalization** - Supports English and Chinese interface switching
 
 ---
 
