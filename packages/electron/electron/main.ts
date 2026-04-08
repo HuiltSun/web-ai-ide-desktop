@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'path';
 import log from 'electron-log';
 import Store from 'electron-store';
@@ -57,6 +57,8 @@ function createWindow() {
     height: 900,
     minWidth: 1000,
     minHeight: 700,
+    frame: false,
+    titleBarStyle: 'hidden',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -162,6 +164,30 @@ ipcMain.handle('settings:getAll', () => {
       language: 'en',
     };
   }
+});
+
+ipcMain.handle('window:minimize', () => {
+  mainWindow?.minimize();
+});
+
+ipcMain.handle('window:maximize', () => {
+  if (mainWindow?.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow?.maximize();
+  }
+});
+
+ipcMain.handle('window:close', () => {
+  mainWindow?.close();
+});
+
+ipcMain.handle('window:isMaximized', () => {
+  return mainWindow?.isMaximized() ?? false;
+});
+
+ipcMain.handle('shell:openExternal', (_event, url: string) => {
+  shell.openExternal(url);
 });
 
 process.on('uncaughtException', (error) => {

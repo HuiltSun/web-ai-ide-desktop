@@ -29,4 +29,30 @@ contextBridge.exposeInMainWorld('electronAPI', {
     set: (key: string, value: unknown) => ipcRenderer.invoke('settings:set', key, value),
     getAll: () => ipcRenderer.invoke('settings:getAll'),
   },
+  window: {
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+    close: () => ipcRenderer.invoke('window:close'),
+    isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+  },
+  shell: {
+    openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
+  },
+  onMenuEvent: (callback: (event: string) => void) => {
+    const listener = (event: Electron.IpcRendererEvent, eventName: string) => {
+      callback(eventName);
+    };
+    ipcRenderer.on('menu:new-project', listener);
+    ipcRenderer.on('menu:open-project', listener);
+    ipcRenderer.on('menu:save', listener);
+    ipcRenderer.on('menu:save-as', listener);
+    ipcRenderer.on('menu:about', listener);
+    return () => {
+      ipcRenderer.removeListener('menu:new-project', listener);
+      ipcRenderer.removeListener('menu:open-project', listener);
+      ipcRenderer.removeListener('menu:save', listener);
+      ipcRenderer.removeListener('menu:save-as', listener);
+      ipcRenderer.removeListener('menu:about', listener);
+    };
+  },
 });

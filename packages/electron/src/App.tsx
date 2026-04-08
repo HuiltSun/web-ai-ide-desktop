@@ -31,6 +31,38 @@ function App() {
       setUser(JSON.parse(savedUser));
     }
     loadProjects();
+
+    // Listen for menu events
+    if (window.electronAPI?.onMenuEvent) {
+      const unsubscribe = window.electronAPI.onMenuEvent((event) => {
+        switch (event) {
+          case 'menu:new-project':
+            // Handle new project
+            console.log('New project from menu');
+            break;
+          case 'menu:open-project':
+            // Handle open project
+            console.log('Open project from menu');
+            break;
+          case 'menu:save':
+            // Handle save
+            console.log('Save from menu');
+            break;
+          case 'menu:save-as':
+            // Handle save as
+            console.log('Save as from menu');
+            break;
+          case 'menu:about':
+            // Handle about
+            console.log('About from menu');
+            break;
+        }
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    }
   }, []);
 
   const loadProjects = async () => {

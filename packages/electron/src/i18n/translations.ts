@@ -105,6 +105,13 @@ export interface Translations {
     send: string;
     messagePlaceholder: string;
     pressEnter: string;
+    aiAssistant: string;
+    askMeAnything: string;
+    writeCode: string;
+    debugErrors: string;
+    explainLogic: string;
+    thinking: string;
+    disconnected: string;
   };
   welcome: {
     title: string;
@@ -114,6 +121,32 @@ export interface Translations {
     aiReady: string;
     selectOrCreate: string;
     loading: string;
+  };
+  menu: {
+    file: string;
+    newProject: string;
+    openProject: string;
+    save: string;
+    saveAs: string;
+    exit: string;
+    edit: string;
+    undo: string;
+    redo: string;
+    cut: string;
+    copy: string;
+    paste: string;
+    selectAll: string;
+    view: string;
+    reload: string;
+    toggleDeveloperTools: string;
+    toggleFullScreen: string;
+    window: string;
+    minimize: string;
+    maximize: string;
+    close: string;
+    help: string;
+    documentation: string;
+    about: string;
   };
 }
 
@@ -240,6 +273,32 @@ export const translations: Record<Language, Translations> = {
       selectOrCreate: 'Select a project or create a new one.',
       loading: 'Loading...',
     },
+    menu: {
+      file: 'File',
+      newProject: 'New Project',
+      openProject: 'Open Project',
+      save: 'Save',
+      saveAs: 'Save As...',
+      exit: 'Exit',
+      edit: 'Edit',
+      undo: 'Undo',
+      redo: 'Redo',
+      cut: 'Cut',
+      copy: 'Copy',
+      paste: 'Paste',
+      selectAll: 'Select All',
+      view: 'View',
+      reload: 'Reload',
+      toggleDeveloperTools: 'Toggle Developer Tools',
+      toggleFullScreen: 'Toggle Full Screen',
+      window: 'Window',
+      minimize: 'Minimize',
+      maximize: 'Maximize',
+      close: 'Close',
+      help: 'Help',
+      documentation: 'Documentation',
+      about: 'About',
+    },
   },
   zh: {
     settings: {
@@ -362,6 +421,32 @@ export const translations: Record<Language, Translations> = {
       aiReady: 'AI 就绪',
       selectOrCreate: '选择一个项目或创建一个新项目。',
       loading: '加载中...',
+    },
+    menu: {
+      file: '文件',
+      newProject: '新建项目',
+      openProject: '打开项目',
+      save: '保存',
+      saveAs: '另存为...',
+      exit: '退出',
+      edit: '编辑',
+      undo: '撤销',
+      redo: '重做',
+      cut: '剪切',
+      copy: '复制',
+      paste: '粘贴',
+      selectAll: '全选',
+      view: '视图',
+      reload: '重新加载',
+      toggleDeveloperTools: '切换开发者工具',
+      toggleFullScreen: '切换全屏',
+      window: '窗口',
+      minimize: '最小化',
+      maximize: '最大化',
+      close: '关闭',
+      help: '帮助',
+      documentation: '文档',
+      about: '关于',
     },
   },
 };

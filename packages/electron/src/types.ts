@@ -72,6 +72,16 @@ export interface ElectronAPI {
     set: (key: string, value: unknown) => Promise<boolean>;
     getAll: () => Promise<SettingsData>;
   };
+  window: {
+    minimize: () => Promise<void>;
+    maximize: () => Promise<void>;
+    close: () => Promise<void>;
+    isMaximized: () => Promise<boolean>;
+  };
+  shell: {
+    openExternal: (url: string) => Promise<void>;
+  };
+  onMenuEvent: (callback: (event: string) => void) => () => void;
 }
 
 declare global {
