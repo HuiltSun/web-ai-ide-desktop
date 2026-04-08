@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 
 interface MenuItem {
+  id?: string;
   label?: string;
   accelerator?: string;
   type?: 'separator' | 'normal';
@@ -15,6 +16,7 @@ interface Menu {
 
 interface MenuBarProps {
   menus: Menu[];
+  onMenuClick?: (event: string) => void;
 }
 
 function MinimizeIcon() {
@@ -41,7 +43,7 @@ function CloseIcon() {
   );
 }
 
-export function MenuBar({ menus }: MenuBarProps) {
+export function MenuBar({ menus, onMenuClick }: MenuBarProps) {
   const { t } = useSettings();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
@@ -74,7 +76,9 @@ export function MenuBar({ menus }: MenuBarProps) {
   };
 
   const handleItemClick = (item: MenuItem) => {
-    if (item.click) {
+    if (item.id && onMenuClick) {
+      onMenuClick(item.id);
+    } else if (item.click) {
       item.click();
     }
     setActiveIndex(null);

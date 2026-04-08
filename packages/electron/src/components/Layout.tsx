@@ -3,6 +3,7 @@ import { MenuBar } from './MenuBar';
 import { useSettings } from '../contexts/SettingsContext';
 
 interface MenuItem {
+  id?: string;
   label?: string;
   accelerator?: string;
   type?: 'separator' | 'normal';
@@ -18,9 +19,10 @@ interface LayoutProps {
   header: ReactNode;
   sidebar: ReactNode;
   children: ReactNode;
+  onMenuClick?: (event: string) => void;
 }
 
-export function Layout({ header, sidebar, children }: LayoutProps) {
+export function Layout({ header, sidebar, children, onMenuClick }: LayoutProps) {
   const { t } = useSettings();
 
   const menus: Menu[] = [
@@ -28,25 +30,25 @@ export function Layout({ header, sidebar, children }: LayoutProps) {
       label: t.menu.file,
       items: [
         {
+          id: 'new-project',
           label: t.menu.newProject,
           accelerator: 'Ctrl+N',
-          click: () => console.log('New Project'),
         },
         {
+          id: 'open-project',
           label: t.menu.openProject,
           accelerator: 'Ctrl+O',
-          click: () => console.log('Open Project'),
         },
         { type: 'separator' },
         {
+          id: 'save',
           label: t.menu.save,
           accelerator: 'Ctrl+S',
-          click: () => console.log('Save'),
         },
         {
+          id: 'save-as',
           label: t.menu.saveAs,
           accelerator: 'Ctrl+Shift+S',
-          click: () => console.log('Save As'),
         },
         { type: 'separator' },
         {
@@ -119,8 +121,8 @@ export function Layout({ header, sidebar, children }: LayoutProps) {
           click: () => window.electronAPI?.shell.openExternal('https://webaiide.com/docs'),
         },
         {
+          id: 'about',
           label: t.menu.about,
-          click: () => console.log('About'),
         },
       ],
     },
@@ -132,7 +134,7 @@ export function Layout({ header, sidebar, children }: LayoutProps) {
         <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-[#8b5cf6]/5 rounded-full blur-3xl" />
       </div>
 
-      <MenuBar menus={menus} />
+      <MenuBar menus={menus} onMenuClick={onMenuClick} />
 
       <header className="h-14 glass-panel border-b border-[var(--color-border)] flex items-center px-4 relative z-10">
         {header}

@@ -31,63 +31,68 @@ function App() {
       setUser(JSON.parse(savedUser));
     }
     loadProjects();
+  }, []);
 
-    if (window.electronAPI?.onMenuEvent) {
-      const unsubscribe = window.electronAPI.onMenuEvent((event) => {
-        switch (event) {
-          case 'menu:new-project':
-            if (!user) {
-              setLoginOpen(true);
-            } else {
-              const projectName = prompt(t.sidebar.projectName + ':');
-              if (projectName && projectName.trim()) {
-                handleCreateProject(projectName.trim());
+  const handleMenuClick = (event: string) => {
+    switch (event) {
+      case 'new-project':
+        if (!user) {
+          setLoginOpen(true);
+        } else {
+          const projectName = prompt(t.sidebar.projectName + ':');
+          if (projectName && projectName.trim()) {
+            handleCreateProject(projectName.trim());
+          }
+        }
+        break;
+      case 'open-project':
+        if (!user) {
+          setLoginOpen(true);
+        } else {
+          loadProjects();
+          if (projects.length > 0) {
+            const projectNames = projects.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
+            const choice = prompt(`Select project number:\n${projectNames}`);
+            if (choice) {
+              const index = parseInt(choice, 10) - 1;
+              if (index >= 0 && index < projects.length) {
+                handleSelectProject(projects[index].id);
               }
             }
-            break;
-          case 'menu:open-project':
-            if (projects.length > 0) {
-              const projectNames = projects.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
-              const choice = prompt(`Select project number:\n${projectNames}`);
-              if (choice) {
-                const index = parseInt(choice, 10) - 1;
-                if (index >= 0 && index < projects.length) {
-                  handleSelectProject(projects[index].id);
-                }
-              }
-            }
-            break;
-          case 'menu:save':
-            if (selectedProjectId) {
-              console.log('Saving project:', selectedProjectId);
-            } else {
-              console.log('No project selected to save');
-            }
-            break;
-          case 'menu:save-as':
-            if (selectedProjectId && user) {
-              const newName = prompt('Enter new project name:');
-              if (newName && newName.trim()) {
-                console.log('Save as:', newName.trim());
-              }
-            }
-            break;
-          case 'menu:about':
-            alert(`Web AI IDE
+          } else {
+            alert('No projects found. Create a new project first.');
+          }
+        }
+        break;
+      case 'save':
+        if (selectedProjectId) {
+          alert('Save functionality: Uses api.writeFile(projectId, path, content)\nThis feature requires active file editing context.');
+        } else {
+          alert('No project selected. Please open a project first.');
+        }
+        break;
+      case 'save-as':
+        if (selectedProjectId && user) {
+          const newName = prompt('Enter new project name for "Save As":');
+          if (newName && newName.trim()) {
+            handleCreateProject(newName.trim());
+          }
+        } else if (!user) {
+          setLoginOpen(true);
+        } else {
+          alert('No project selected. Please open a project first.');
+        }
+        break;
+      case 'about':
+        alert(`Web AI IDE
 Version 1.0.0
 
 Your intelligent coding companion.
 
 © 2024 Web AI IDE`);
-            break;
-        }
-      });
-
-      return () => {
-        unsubscribe();
-      };
+        break;
     }
-  }, []);
+  };
 
   const loadProjects = async () => {
     try {
@@ -231,6 +236,7 @@ Your intelligent coding companion.
   return (
     <ErrorBoundary>
       <Layout
+        onMenuClick={handleMenuClick}
         header={
           <Header
             projectId={selectedProject?.name || null}
