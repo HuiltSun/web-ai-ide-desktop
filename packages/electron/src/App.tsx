@@ -32,29 +32,53 @@ function App() {
     }
     loadProjects();
 
-    // Listen for menu events
     if (window.electronAPI?.onMenuEvent) {
       const unsubscribe = window.electronAPI.onMenuEvent((event) => {
         switch (event) {
           case 'menu:new-project':
-            // Handle new project
-            console.log('New project from menu');
+            if (!user) {
+              setLoginOpen(true);
+            } else {
+              const projectName = prompt(t.sidebar.projectName + ':');
+              if (projectName && projectName.trim()) {
+                handleCreateProject(projectName.trim());
+              }
+            }
             break;
           case 'menu:open-project':
-            // Handle open project
-            console.log('Open project from menu');
+            if (projects.length > 0) {
+              const projectNames = projects.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
+              const choice = prompt(`Select project number:\n${projectNames}`);
+              if (choice) {
+                const index = parseInt(choice, 10) - 1;
+                if (index >= 0 && index < projects.length) {
+                  handleSelectProject(projects[index].id);
+                }
+              }
+            }
             break;
           case 'menu:save':
-            // Handle save
-            console.log('Save from menu');
+            if (selectedProjectId) {
+              console.log('Saving project:', selectedProjectId);
+            } else {
+              console.log('No project selected to save');
+            }
             break;
           case 'menu:save-as':
-            // Handle save as
-            console.log('Save as from menu');
+            if (selectedProjectId && user) {
+              const newName = prompt('Enter new project name:');
+              if (newName && newName.trim()) {
+                console.log('Save as:', newName.trim());
+              }
+            }
             break;
           case 'menu:about':
-            // Handle about
-            console.log('About from menu');
+            alert(`Web AI IDE
+Version 1.0.0
+
+Your intelligent coding companion.
+
+© 2024 Web AI IDE`);
             break;
         }
       });
