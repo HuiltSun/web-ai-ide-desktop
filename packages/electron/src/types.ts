@@ -60,6 +60,7 @@ export interface SettingsData {
   selected_model?: string;
   fontSize?: number;
   tabSize?: number;
+  language?: string;
   [key: string]: unknown;
 }
 

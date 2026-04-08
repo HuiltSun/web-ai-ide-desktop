@@ -5,14 +5,29 @@
 $ReleaseDir = "E:\web\web-ai-ide\release"
 $ServerDir = "E:\web\web-ai-ide\packages\server"
 $DockerContainer = "webaiide-postgres"
+$EnvFile = "E:\web\web-ai-ide\.env"
 
 Write-Host "========================================"
 Write-Host "Web AI IDE 一键调试脚本"
 Write-Host "========================================"
 
-# 检查数据库配置
+# 读取 .env 文件
 Write-Host ""
-Write-Host "[0/5] 检查环境配置..."
+Write-Host "[1/6] 检查环境配置..."
+
+if (Test-Path $EnvFile) {
+    Write-Host "  读取 .env 文件..."
+    Get-Content $EnvFile | ForEach-Object {
+        if ($_ -match '^(.+?)=(.*)$') {
+            $key = $matches[1].Trim()
+            $value = $matches[2].Trim()
+            [Environment]::SetEnvironmentVariable($key, $value, 'Process')
+            Write-Host "    $key = ****"
+        }
+    }
+}
+
+# 检查数据库配置
 
 if (-not $env:POSTGRES_USER -or -not $env:POSTGRES_PASSWORD) {
     Write-Host ""
@@ -47,9 +62,32 @@ Write-Host "  用户名: $env:POSTGRES_USER"
 Write-Host "  数据库: $env:POSTGRES_DB"
 Write-Host "  加密: 已启用"
 
-# 1. 启动 PostgreSQL (Docker)
+# 1. 构建 packages
 Write-Host ""
-Write-Host "[1/5] 启动 PostgreSQL 数据库..."
+Write-Host "[2/6] 构建 packages..."
+
+$PackagesDir = "E:\web\web-ai-ide\packages"
+if (Test-Path "$PackagesDir\package.json") {
+    Push-Location $PackagesDir -ErrorAction SilentlyContinue
+    try {
+        Write-Host "  执行: npm run build"
+        npm run build 2>&1 | ForEach-Object { Write-Host "    $_" }
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  packages 构建完成"
+        } else {
+            Write-Host "  packages 构建失败"
+        }
+    } catch {
+        Write-Host "  构建失败: $_"
+    }
+    Pop-Location -ErrorAction SilentlyContinue
+} else {
+    Write-Host "  警告: 未找到 packages/package.json，跳过构建"
+}
+
+# 2. 启动 PostgreSQL (Docker)
+Write-Host ""
+Write-Host "[3/6] 启动 PostgreSQL 数据库..."
 
 try {
     $dockerRunning = docker ps 2>$null
@@ -81,16 +119,22 @@ try {
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  PostgreSQL 就绪 (localhost:5432)"
     } else {
-        Write-Host "  PostgreSQL 启动中..."
-        Start-Sleep -Seconds 3
+        Write-Host "  PostgreSQL 启动中，等待 5 秒..."
+        Start-Sleep -Seconds 5
+        $dbReady = docker exec $DockerContainer pg_isready -U $env:POSTGRES_USER -d $env:POSTGRES_DB 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  PostgreSQL 就绪 (localhost:5432)"
+        } else {
+            Write-Host "  警告: PostgreSQL 可能未就绪"
+        }
     }
 } catch {
     Write-Host "  Docker 操作失败: $_"
 }
 
-# 2. 初始化数据库
+# 3. 初始化数据库
 Write-Host ""
-Write-Host "[2/5] 初始化数据库..."
+Write-Host "[4/6] 初始化数据库..."
 
 if (Test-Path "$ServerDir\prisma\schema.prisma") {
     Push-Location $ServerDir -ErrorAction SilentlyContinue
@@ -108,9 +152,9 @@ if (Test-Path "$ServerDir\prisma\schema.prisma") {
     Write-Host "  警告: 未找到 prisma schema，跳过数据库初始化"
 }
 
-# 3. 启动后端服务器（新窗口）
+# 4. 启动后端服务器（新窗口）
 Write-Host ""
-Write-Host "[3/5] 启动后端服务器 (http://localhost:3001)..."
+Write-Host "[5/6] 启动后端服务器 (http://localhost:3001)..."
 # 先关闭可能正在运行的后端进程
 Write-Host "  检查并关闭已存在的后端进程..."
 $existingNodeProcesses = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object {
@@ -158,9 +202,9 @@ if (-not (Test-Path "$ServerDir\package.json")) {
     }
 }
 
-# 4. 查找并启动桌面应用
+# 5. 查找并启动桌面应用
 Write-Host ""
-Write-Host "[4/5] 启动桌面应用..."
+Write-Host "[6/6] 启动桌面应用..."
 
 if (-not (Test-Path $ReleaseDir)) {
     Write-Host "  错误: release 目录不存在: $ReleaseDir"
@@ -186,6 +230,7 @@ if (-not (Test-Path $ReleaseDir)) {
 Write-Host ""
 Write-Host "========================================"
 Write-Host "所有服务已启动:"
+Write-Host "  - packages:   构建完成"
 Write-Host "  - PostgreSQL: localhost:5432"
 Write-Host "  - 后端 API:   http://localhost:3001"
 Write-Host "  - 桌面应用:   已启动"

@@ -1,0 +1,15 @@
+{
+  "name": "@web-ai-ide/packages",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "cli",
+    "core",
+    "electron",
+    "shared",
+    "worker"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present"
+  }
+}

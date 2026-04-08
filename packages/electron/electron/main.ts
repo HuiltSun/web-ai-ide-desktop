@@ -141,6 +141,7 @@ ipcMain.handle('settings:getAll', () => {
       selected_model: store.get('selected_model'),
       fontSize: store.get('fontSize'),
       tabSize: store.get('tabSize'),
+      language: store.get('language'),
     };
   } catch (error) {
     log.error('Failed to get all settings:', error);
@@ -158,6 +159,7 @@ ipcMain.handle('settings:getAll', () => {
       selected_model: 'gpt-4o',
       fontSize: 14,
       tabSize: 2,
+      language: 'en',
     };
   }
 });
