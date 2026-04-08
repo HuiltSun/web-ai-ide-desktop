@@ -75,7 +75,7 @@ function App() {
         if (selectedProjectId && user) {
           const newName = prompt('Enter new project name for "Save As":');
           if (newName && newName.trim()) {
-            handleCreateProject(newName.trim());
+            handleDuplicateProject(selectedProjectId, newName.trim());
           }
         } else if (!user) {
           setLoginOpen(true);
@@ -184,6 +184,40 @@ Your intelligent coding companion.
       setSelectedSessionId(newProjectWithSession.session.id);
     } catch (error) {
       console.error('Failed to create project:', error);
+    }
+  };
+
+  const handleDuplicateProject = async (sourceProjectId: string, newName: string) => {
+    if (!user) {
+      setLoginOpen(true);
+      return;
+    }
+    try {
+      const files = await api.getProjectFiles(sourceProjectId);
+
+      const newProjectPath = `./projects/${newName.toLowerCase().replace(/\s+/g, '-')}`;
+      const newProjectWithSession = await api.createProject(newName, newProjectPath, user.id);
+      setProjects((prev) => [newProjectWithSession.project, ...prev]);
+      setSelectedProjectId(newProjectWithSession.project.id);
+      setSelectedSessionId(newProjectWithSession.session.id);
+
+      const duplicateFile = async (node: { name: string; path: string; isDirectory: boolean; children?: { name: string; path: string; isDirectory: boolean; children?: { name: string; path: string; isDirectory: boolean; children?: { name: string; path: string; isDirectory: boolean; children?: { name: string; path: string; isDirectory: boolean }[] }[] }[] }[] }, targetProjectId: string, basePath: string) => {
+        if (node.isDirectory && node.children) {
+          for (const child of node.children) {
+            await duplicateFile(child, targetProjectId, basePath);
+          }
+        } else {
+          const relativePath = node.path.replace(basePath, '').replace(/^\//, '');
+          const content = await api.readFile(sourceProjectId, relativePath);
+          await api.writeFile(targetProjectId, relativePath, content);
+        }
+      };
+
+      for (const file of files) {
+        await duplicateFile(file, newProjectWithSession.project.id, sourceProjectId);
+      }
+    } catch (error) {
+      console.error('Failed to duplicate project:', error);
     }
   };
 
