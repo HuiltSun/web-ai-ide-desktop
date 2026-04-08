@@ -76,9 +76,13 @@ if (Test-Path "$PackagesDir\package.json") {
             Write-Host "  packages 构建完成"
         } else {
             Write-Host "  packages 构建失败"
+            Pop-Location -ErrorAction SilentlyContinue
+            exit 1
         }
     } catch {
         Write-Host "  构建失败: $_"
+        Pop-Location -ErrorAction SilentlyContinue
+        exit 1
     }
     Pop-Location -ErrorAction SilentlyContinue
 } else {

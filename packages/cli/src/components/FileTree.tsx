@@ -1,5 +1,5 @@
 import { FileNode } from '../services/api';
-import { FolderIcon, FileIcon, ChevronRightIcon, ChevronDownIcon } from './Icons';
+import { FolderIcon, FileIcon, ChevronRightIcon } from './Icons';
 
 interface FileTreeProps {
   files: FileNode[];
