@@ -1,64 +1,102 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-
-export interface TerminalLine {
-  type: 'command' | 'output' | 'error';
-  content: string;
-  timestamp: Date;
-}
+import { useEffect, useRef, useCallback } from 'react';
+import { Terminal as XTerm } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { WebLinksAddon } from '@xterm/addon-web-links';
+import { useTerminal } from '../hooks/useTerminal.js';
 
 interface TerminalProps {
-  onCommand: (command: string) => void;
-  lines: TerminalLine[];
+  sessionId: string;
+  onExit?: (sessionId: string, exitCode: number) => void;
 }
 
-export function Terminal({ onCommand, lines }: TerminalProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [input, setInput] = useState('');
+const iosDarkTheme = {
+  background: '#1C1C1E',
+  foreground: '#FFFFFF',
+  cursor: '#64D2FF',
+  cursorAccent: '#1C1C1E',
+  selectionBackground: 'rgba(100, 210, 255, 0.3)',
+  black: '#000000',
+  red: '#FF453A',
+  green: '#30D158',
+  yellow: '#FF9F0A',
+  blue: '#64D2FF',
+  magenta: '#BF5AF2',
+  cyan: '#5AC8FA',
+  white: '#FFFFFF',
+  brightBlack: '#636366',
+  brightRed: '#FF6B6B',
+  brightGreen: '#4AE04A',
+  brightYellow: '#FFB84D',
+  brightBlue: '#85E0FF',
+  brightMagenta: '#D27AFF',
+  brightCyan: '#7FDBFF',
+  brightWhite: '#FFFFFF',
+};
+
+export function Terminal({ sessionId, onExit }: TerminalProps) {
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const xtermRef = useRef<XTerm | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+
+  const { resizeTerminal, writeToTerminal, onOutput } = useTerminal();
+
+  const handleResize = useCallback(() => {
+    if (fitAddonRef.current && xtermRef.current) {
+      fitAddonRef.current.fit();
+      const { cols, rows } = xtermRef.current;
+      resizeTerminal(sessionId, cols, rows);
+    }
+  }, [sessionId, resizeTerminal]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [lines]);
+    if (!terminalRef.current) return;
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      if (input.trim()) {
-        onCommand(input.trim());
-        setInput('');
-      }
-    },
-    [input, onCommand]
-  );
+    const xterm = new XTerm({
+      theme: iosDarkTheme,
+      fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
+      fontSize: 14,
+      lineHeight: 1.4,
+      cursorBlink: true,
+      cursorStyle: 'bar',
+    });
+
+    const fitAddon = new FitAddon();
+    const webLinksAddon = new WebLinksAddon();
+
+    xterm.loadAddon(fitAddon);
+    xterm.loadAddon(webLinksAddon);
+
+    xterm.open(terminalRef.current);
+    fitAddon.fit();
+
+    xtermRef.current = xterm;
+    fitAddonRef.current = fitAddon;
+
+    xterm.onData((data) => {
+      writeToTerminal(sessionId, data);
+    });
+
+    onOutput(sessionId, (data) => {
+      xterm.write(data);
+    });
+
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(terminalRef.current);
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleResize);
+      xterm.dispose();
+    };
+  }, [sessionId, writeToTerminal, onOutput, handleResize]);
 
   return (
-    <div className="h-full flex flex-col bg-gray-900 text-green-400 font-mono text-sm">
-      <div className="flex-1 overflow-y-auto p-2" ref={scrollRef}>
-        {lines.map((line, index) => (
-          <div
-            key={index}
-            className={`whitespace-pre-wrap ${
-              line.type === 'error' ? 'text-red-400' : ''
-            }`}
-          >
-            {line.type === 'command' && (
-              <span className="text-blue-400">$ </span>
-            )}
-            {line.content}
-          </div>
-        ))}
-      </div>
-      <form onSubmit={handleSubmit} className="border-t border-gray-700 p-2 flex items-center">
-        <span className="text-blue-400 mr-2">$</span>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          className="flex-1 bg-transparent outline-none text-green-400"
-          autoFocus
-        />
-      </form>
-    </div>
+    <div
+      ref={terminalRef}
+      className="h-full w-full terminal-xterm"
+      style={{ background: '#1C1C1E' }}
+    />
   );
 }
