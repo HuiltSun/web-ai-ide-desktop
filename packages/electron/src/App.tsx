@@ -7,10 +7,13 @@ import { Settings } from './components/Settings';
 import { LoginModal } from './components/LoginModal';
 import { AboutDialog } from './components/AboutDialog';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { SparklesIcon, CodeIcon, BotIcon } from './components/Icons';
+import { TerminalTabs } from './components/TerminalTabs';
+import { SparklesIcon, CodeIcon, BotIcon, TerminalIcon } from './components/Icons';
 import type { Project, ProjectWithSession } from './types';
 import { api } from './services/api';
 import { useSettings } from './contexts/SettingsContext';
+
+type PanelType = 'chat' | 'terminal' | 'editor';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -24,6 +27,7 @@ function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [activePanel, setActivePanel] = useState<PanelType>('chat');
 
   useEffect(() => {
     const savedToken = localStorage.getItem('auth_token');
@@ -288,40 +292,76 @@ function App() {
           />
         }
       >
-        {selectedSessionId ? (
-          <Chat sessionId={selectedSessionId} />
-        ) : (
-          <div className="h-full flex flex-col items-center justify-center p-8">
-            <div className="text-center max-w-lg">
-              <div className="relative inline-block mb-6">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-2xl shadow-indigo-500/30">
-                  <SparklesIcon className="text-white" size={36} />
-                </div>
-                <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg">
-                  <CodeIcon className="text-white" size={12} />
-                </div>
-              </div>
-              <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">
-                {t.welcome.title}
-              </h2>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                {user
-                  ? `${t.welcome.loggedIn}, ${user.email}. ${t.welcome.selectOrCreate}`
-                  : t.welcome.loggedOut}
-              </p>
-              <div className="mt-8 flex items-center justify-center gap-6">
-                <div className="flex items-center gap-2 text-slate-500">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="text-xs font-medium">{t.welcome.connected}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-500">
-                  <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                  <span className="text-xs font-medium">{t.welcome.aiReady}</span>
-                </div>
-              </div>
+        <div className="h-full flex flex-col">
+          {selectedSessionId && (
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)]">
+              <button
+                onClick={() => setActivePanel('chat')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all ${
+                  activePanel === 'chat'
+                    ? 'bg-[var(--color-bg-primary)] text-[var(--color-accent)] shadow-sm'
+                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'
+                }`}
+              >
+                <BotIcon size={14} />
+                <span>Chat</span>
+              </button>
+              <button
+                onClick={() => setActivePanel('terminal')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all ${
+                  activePanel === 'terminal'
+                    ? 'bg-[var(--color-bg-primary)] text-[var(--color-accent)] shadow-sm'
+                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'
+                }`}
+              >
+                <TerminalIcon size={14} />
+                <span>Terminal</span>
+              </button>
             </div>
+          )}
+          <div className="flex-1 overflow-hidden">
+            {selectedSessionId ? (
+              activePanel === 'chat' ? (
+                <Chat sessionId={selectedSessionId} />
+              ) : activePanel === 'terminal' ? (
+                <TerminalTabs />
+              ) : (
+                <Chat sessionId={selectedSessionId} />
+              )
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center p-8">
+                <div className="text-center max-w-lg">
+                  <div className="relative inline-block mb-6">
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-2xl shadow-indigo-500/30">
+                      <SparklesIcon className="text-white" size={36} />
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg">
+                      <CodeIcon className="text-white" size={12} />
+                    </div>
+                  </div>
+                  <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">
+                    {t.welcome.title}
+                  </h2>
+                  <p className="text-slate-400 text-sm leading-relaxed">
+                    {user
+                      ? `${t.welcome.loggedIn}, ${user.email}. ${t.welcome.selectOrCreate}`
+                      : t.welcome.loggedOut}
+                  </p>
+                  <div className="mt-8 flex items-center justify-center gap-6">
+                    <div className="flex items-center gap-2 text-slate-500">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span className="text-xs font-medium">{t.welcome.connected}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-500">
+                      <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                      <span className="text-xs font-medium">{t.welcome.aiReady}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </Layout>
       <ErrorBoundary>
         <Settings isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
