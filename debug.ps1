@@ -72,8 +72,8 @@ $PackagesDir = "$ProjectRoot\packages\electron\"
 if (Test-Path "$PackagesDir\package.json") {
     Push-Location $PackagesDir -ErrorAction SilentlyContinue
     try {
-        Write-Host "  执行: npm run build"
-        npm run build 2>&1 | ForEach-Object { Write-Host "    $_" }
+        Write-Host "  执行: npm install"
+        npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
         if ($LASTEXITCODE -eq 0) {
             Write-Host "  packages 构建完成"
         } else {

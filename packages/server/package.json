@@ -12,7 +12,7 @@
     "@fastify/jwt": "^8.0.0",
     "@fastify/websocket": "^10.0.0",
     "@prisma/client": "^5.14.0",
-    "@web-ai-ide/shared": "workspace:*",
+    "@web-ai-ide/shared": "file:../shared",
     "amqplib": "^0.10.4",
     "bcryptjs": "^3.0.3",
     "fastify": "^4.28.0",

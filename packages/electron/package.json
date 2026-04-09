@@ -7,13 +7,14 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/build-with-timestamp.cjs"
+    "build": "node scripts/build-with-timestamp.cjs",
+    "postinstall": "node scripts/copy-deps.js"
   },
   "dependencies": {
-    "@web-ai-ide/shared": "workspace:*",
-    "@xterm/xterm": "^5.5.0",
+    "@web-ai-ide/shared": "file:../shared",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/xterm": "^5.5.0",
     "electron-log": "^5.1.0",
     "electron-store": "^8.2.0"
   },
@@ -21,6 +22,7 @@
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
+    "7zip-bin": "^5.2.0",
     "autoprefixer": "^10.4.0",
     "electron": "^30.5.1",
     "electron-builder": "^24.13.0",
