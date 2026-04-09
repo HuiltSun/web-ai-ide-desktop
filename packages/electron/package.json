@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite",
     "build": "node scripts/build-with-timestamp.cjs",
-    "postinstall": "node scripts/copy-deps.js"
+    "postinstall": "node scripts/copy-deps.js || echo 'Dependency copy failed'"
   },
   "dependencies": {
     "@web-ai-ide/shared": "file:../shared",
