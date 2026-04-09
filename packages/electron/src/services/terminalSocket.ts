@@ -70,13 +70,24 @@ export class TerminalSocket {
     return () => this.handlers.delete(handler);
   }
 
-  createSession(payload: CreateSessionPayload): Promise<string> {
+  private off(handler: MessageHandler): void {
+    this.handlers.delete(handler);
+  }
+
+  createSession(payload: CreateSessionPayload, timeoutMs: number = 10000): Promise<string> {
     return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.off(handler);
+        reject(new Error('Session creation timed out'));
+      }, timeoutMs);
+
       const handler = (message: TerminalMessage) => {
         if (message.type === 'created' && message.sessionId) {
+          clearTimeout(timer);
           resolve(message.sessionId);
           this.off(handler);
         } else if (message.type === 'error') {
+          clearTimeout(timer);
           reject(new Error((message.payload as { error: string }).error));
           this.off(handler);
         }
