@@ -2,16 +2,16 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 为 web-ai-ide 添加 iOS 17/18 风格作为可选UI预设，同时保留现有默认主题
+**Goal:** 将 iOS 17/18 风格设为默认UI预设，同时保留现有深色主题作为可选的 Legacy 预设
 
 **Architecture:**
-- 保留现有默认深色主题（重命名为 "Default" 预设）
-- 新增 iOS 风格预设（iOS Light / iOS Dark）
+- iOS 17/18 风格作为新的默认预设
+- 现有深色主题保留为 "Legacy" 预设选项
 - 用户可在 Settings > Appearance 中选择 UI 预设风格
 - 选中的预设风格 + Light/Dark/System 颜色模式组合决定最终外观
-- 使用 CSS 变量前缀区分不同预设：`--default-*` 和 `--ios-*`
+- iOS 预设使用 `:root.ios` 和 `:root.ios.dark` 切换颜色
 
-**Tech Stack:** Tailwind CSS, CSS Variables with Prefixes, React Context
+**Tech Stack:** Tailwind CSS, CSS Variables, React Context
 
 ---
 
@@ -33,30 +33,30 @@
 ### CSS Variable Naming Convention
 
 ```css
-/* Default Preset (现有风格) */
-:root {
-  --default-bg-primary: #0a0a0d;
-  --default-bg-secondary: #0f0f14;
-  --default-text-primary: #f5f5f7;
-  --default-accent: #6366f1;
-  /* ... */
-}
-
-/* iOS Preset - Light */
+/* iOS Preset - Light (新默认) */
 :root.ios {
-  --ios-bg-primary: #FFFFFF;
-  --ios-bg-secondary: #F2F2F7;
-  --ios-text-primary: #000000;
-  --ios-accent: #007AFF;
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #F2F2F7;
+  --color-text-primary: #000000;
+  --color-accent: #007AFF;
   /* ... */
 }
 
 /* iOS Preset - Dark */
 :root.ios.dark {
-  --ios-bg-primary: #1C1C1E;
-  --ios-bg-secondary: #2C2C2E;
-  --ios-text-primary: #FFFFFF;
-  --ios-accent: #64D2FF;
+  --color-bg-primary: #1C1C1E;
+  --color-bg-secondary: #2C2C2E;
+  --color-text-primary: #FFFFFF;
+  --color-accent: #64D2FF;
+  /* ... */
+}
+
+/* Legacy Preset (现有深色风格 - 保持不变) */
+:root {
+  --color-bg-primary: #0a0a0d;
+  --color-bg-secondary: #0f0f14;
+  --color-text-primary: #f5f5f7;
+  --color-accent: #6366f1;
   /* ... */
 }
 ```
@@ -65,29 +65,27 @@
 
 ```
 User selects:
-  UI Style: Default | iOS
+  UI Style: iOS (默认) | Legacy
   Color Mode: Light | Dark | System
 
 Result:
-  If UI Style = Default → use --default-* variables
+  If UI Style = Legacy → use original CSS variables (no class change)
   If UI Style = iOS:
-    - If Color Mode = Light → use --ios-* variables (light values)
-    - If Color Mode = Dark → use --ios-* variables (dark values)
-    - If Color Mode = System → use system preference + --ios-* variables
+    - If Color Mode = Light → use :root.ios (no .dark class)
+    - If Color Mode = Dark → use :root.ios.dark
+    - If Color Mode = System → use system preference
 ```
 
 ---
 
 ## Tasks
 
-### Task 1: 扩展 electron/index.css 添加 iOS 风格变量
+### Task 1: 重组 electron/index.css - iOS 设为默认，Legacy 保留在 :root
 
 **Files:**
 - Modify: `packages/electron/src/index.css`
 
-- [ ] **Step 1: 在现有 CSS 变量前添加 default- 前缀，保持向后兼容**
-
-将现有 `:root` 块重命名为保留默认风格，同时添加新的 iOS 预设变量块：
+- [ ] **Step 1: 重写 CSS 变量结构 - iOS 默认在 :root.ios，Legacy 在 :root**
 
 ```css
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -97,73 +95,7 @@ Result:
 @tailwind utilities;
 
 /* ============================================
-   DEFAULT PRESET (现有风格 - 保持不变)
-   ============================================ */
-:root {
-  /* Default 背景层级 */
-  --color-bg-primary: #0a0a0d;
-  --color-bg-secondary: #0f0f14;
-  --color-bg-tertiary: #14141c;
-  --color-bg-elevated: #1a1a24;
-  --color-bg-hover: #1e1e2a;
-  --color-surface: rgba(15, 15, 20, 0.85);
-  --color-surface-hover: rgba(20, 20, 28, 0.9);
-
-  /* Default 边框 */
-  --color-border: rgba(255, 255, 255, 0.05);
-  --color-border-hover: rgba(255, 255, 255, 0.1);
-  --color-border-active: rgba(99, 102, 241, 0.3);
-
-  /* Default 文字层级 */
-  --color-text-primary: #f5f5f7;
-  --color-text-secondary: #9ca3af;
-  --color-text-tertiary: #6b7280;
-  --color-text-muted: #4b5563;
-
-  /* Default 强调色 */
-  --color-accent: #6366f1;
-  --color-accent-hover: #818cf8;
-  --color-accent-subtle: rgba(99, 102, 241, 0.1);
-  --color-accent-glow: rgba(99, 102, 241, 0.15);
-
-  /* Default 状态色 */
-  --color-success: #10b981;
-  --color-success-subtle: rgba(16, 185, 129, 0.1);
-  --color-warning: #f59e0b;
-  --color-warning-subtle: rgba(245, 158, 11, 0.1);
-  --color-error: #ef4444;
-  --color-error-subtle: rgba(239, 68, 68, 0.1);
-
-  /* 字体 */
-  --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-
-  /* 圆角系统 */
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-  --radius-full: 9999px;
-
-  /* 阴影 */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
-  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.7);
-  --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.2);
-
-  /* 过渡 */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* ============================================
-   iOS PRESET - SHARED VARIABLES
+   iOS PRESET (新默认 - 浅色)
    ============================================ */
 :root.ios {
   /* iOS 圆角系统 (更大) */
@@ -183,10 +115,8 @@ Result:
   --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
 
-/* iOS 浅色模式 */
-:root.ios {
+  /* iOS 浅色模式颜色 */
   --color-bg-primary: #FFFFFF;
   --color-bg-secondary: #F2F2F7;
   --color-bg-tertiary: #E5E5EA;
@@ -261,6 +191,72 @@ Result:
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
   --shadow-glow: 0 0 20px rgba(100, 210, 255, 0.25);
+}
+
+/* ============================================
+   LEGACY PRESET (现有深色风格 - 保持 :root 不变)
+   ============================================ */
+:root {
+  /* 圆角 */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* 字体 */
+  --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* 过渡 */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* 背景层级 */
+  --color-bg-primary: #0a0a0d;
+  --color-bg-secondary: #0f0f14;
+  --color-bg-tertiary: #14141c;
+  --color-bg-elevated: #1a1a24;
+  --color-bg-hover: #1e1e2a;
+  --color-surface: rgba(15, 15, 20, 0.85);
+  --color-surface-hover: rgba(20, 20, 28, 0.9);
+
+  /* 边框 */
+  --color-border: rgba(255, 255, 255, 0.05);
+  --color-border-hover: rgba(255, 255, 255, 0.1);
+  --color-border-active: rgba(99, 102, 241, 0.3);
+
+  /* 文字层级 */
+  --color-text-primary: #f5f5f7;
+  --color-text-secondary: #9ca3af;
+  --color-text-tertiary: #6b7280;
+  --color-text-muted: #4b5563;
+
+  /* 强调色 */
+  --color-accent: #6366f1;
+  --color-accent-hover: #818cf8;
+  --color-accent-subtle: rgba(99, 102, 241, 0.1);
+  --color-accent-glow: rgba(99, 102, 241, 0.15);
+
+  /* 状态色 */
+  --color-success: #10b981;
+  --color-success-subtle: rgba(16, 185, 129, 0.1);
+  --color-warning: #f59e0b;
+  --color-warning-subtle: rgba(245, 158, 11, 0.1);
+  --color-error: #ef4444;
+  --color-error-subtle: rgba(239, 68, 68, 0.1);
+
+  /* 阴影 */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.7);
+  --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.2);
 }
 
 /* ============================================
@@ -496,7 +492,7 @@ git commit -m "config: extend Tailwind with iOS preset tokens"
 - [ ] **Step 1: 添加新的类型定义**
 
 ```tsx
-type UIStyle = 'default' | 'ios';
+type UIStyle = 'ios' | 'legacy';
 type ThemeMode = 'light' | 'dark' | 'system';
 ```
 
@@ -517,7 +513,7 @@ interface Settings {
 ```tsx
 const defaultSettings: Settings = {
   // ... 其他保持不变
-  uiStyle: 'default',
+  uiStyle: 'ios',
   themeMode: 'dark',
 };
 ```
@@ -610,13 +606,13 @@ useEffect(() => {
 
 ```tsx
 // 应用保存的 UI Style 和 Theme Mode
-if (savedUIStyle && (savedUIStyle === 'default' || savedUIStyle === 'ios')) {
+if (savedUIStyle && (savedUIStyle === 'legacy' || savedUIStyle === 'ios')) {
   setSettings(prev => ({ ...prev, uiStyle: savedUIStyle as UIStyle }));
   applyUIStyle(savedUIStyle as UIStyle);
 }
 if (savedThemeMode && ['light', 'dark', 'system'].includes(savedThemeMode)) {
   setSettings(prev => ({ ...prev, themeMode: savedThemeMode as ThemeMode }));
-  applyThemeMode(savedThemeMode as ThemeMode, savedUIStyle as UIStyle || 'default');
+  applyThemeMode(savedThemeMode as ThemeMode, savedUIStyle as UIStyle || 'ios');
 }
 ```
 
@@ -734,27 +730,6 @@ const { settings, t, setSelectedProvider, setSelectedModel, addProvider, removeP
 
       <div className="grid grid-cols-2 gap-3">
         <button
-          onClick={() => setUIStyle('default')}
-          className={`p-4 rounded-lg border-2 transition-all ${
-            settings.uiStyle === 'default'
-              ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
-              : 'border-[var(--color-border)] hover:border-[var(--color-border-hover)]'
-          }`}
-        >
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-              <SparklesIcon size={18} className="text-indigo-400" />
-            </div>
-            <span className="text-sm font-medium text-[var(--color-text-primary)]">
-              {t.settings.appearance?.defaultStyle || 'Default'}
-            </span>
-            <span className="text-xs text-[var(--color-text-muted)]">
-              {t.settings.appearance?.defaultStyleDesc || 'Dark theme'}
-            </span>
-          </div>
-        </button>
-
-        <button
           onClick={() => setUIStyle('ios')}
           className={`p-4 rounded-lg border-2 transition-all ${
             settings.uiStyle === 'ios'
@@ -771,6 +746,27 @@ const { settings, t, setSelectedProvider, setSelectedModel, addProvider, removeP
             </span>
             <span className="text-xs text-[var(--color-text-muted)]">
               {t.settings.appearance?.iosStyleDesc || 'iOS 17 aesthetic'}
+            </span>
+          </div>
+        </button>
+
+        <button
+          onClick={() => setUIStyle('legacy')}
+          className={`p-4 rounded-lg border-2 transition-all ${
+            settings.uiStyle === 'legacy'
+              ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
+              : 'border-[var(--color-border)] hover:border-[var(--color-border-hover)]'
+          }`}
+        >
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+              <SparklesIcon size={18} className="text-indigo-400" />
+            </div>
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">
+              {t.settings.appearance?.legacyStyle || 'Legacy'}
+            </span>
+            <span className="text-xs text-[var(--color-text-muted)]">
+              {t.settings.appearance?.legacyStyleDesc || 'Dark theme'}
             </span>
           </div>
         </button>
@@ -871,10 +867,10 @@ git commit -m "feat(settings): add appearance tab with UI style and color mode s
 appearance: {
   uiStyleTitle: 'Interface Style',
   uiStyleDescription: 'Choose the visual style for the interface',
-  defaultStyle: 'Default',
-  defaultStyleDesc: 'Dark theme',
   iosStyle: 'iOS Style',
   iosStyleDesc: 'iOS 17 aesthetic',
+  legacyStyle: 'Legacy',
+  legacyStyleDesc: 'Dark theme',
   colorModeTitle: 'Color Mode',
   colorModeDescription: 'Choose light or dark appearance',
   light: 'Light',
@@ -887,10 +883,10 @@ appearance: {
 appearance: {
   uiStyleTitle: '界面风格',
   uiStyleDescription: '选择界面的视觉风格',
-  defaultStyle: '默认',
-  defaultStyleDesc: '深色主题',
   iosStyle: 'iOS 风格',
   iosStyleDesc: 'iOS 17 美学',
+  legacyStyle: '旧版',
+  legacyStyleDesc: '深色主题',
   colorModeTitle: '颜色模式',
   colorModeDescription: '选择浅色或深色外观',
   light: '浅色',
@@ -954,8 +950,8 @@ git commit -m "style: update App components to use CSS variable tokens"
 │ Choose the visual style             │
 │                                     │
 │ ┌─────────┐  ┌─────────┐            │
-│ │ Default │  │ iOS     │            │
-│ │ Dark    │  │ iOS 17  │            │
+│ │ iOS     │  │ Legacy  │            │
+│ │ iOS 17  │  │ Dark    │            │
 │ └─────────┘  └─────────┘            │
 │                                     │
 │ (当选择 iOS 时，显示 Color Mode)     │
