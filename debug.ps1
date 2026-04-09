@@ -2,10 +2,12 @@
 # 适用于 PowerShell 7+ 环境
 
 # 配置
-$ReleaseDir = "E:\web\web-ai-ide\release"
-$ServerDir = "E:\web\web-ai-ide\packages\server"
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectRoot = if ($ScriptDir) { $ScriptDir } else { $PWD }
+$ReleaseDir = "$ProjectRoot\release"
+$ServerDir = "$ProjectRoot\packages\server"
 $DockerContainer = "webaiide-postgres"
-$EnvFile = "E:\web\web-ai-ide\.env"
+$EnvFile = "$ProjectRoot\.env"
 
 Write-Host "========================================"
 Write-Host "Web AI IDE 一键调试脚本"
@@ -66,7 +68,7 @@ Write-Host "  加密: 已启用"
 Write-Host ""
 Write-Host "[2/6] 构建 packages..."
 
-$PackagesDir = "E:\web\web-ai-ide\packages\electron\"
+$PackagesDir = "$ProjectRoot\packages\electron\"
 if (Test-Path "$PackagesDir\package.json") {
     Push-Location $PackagesDir -ErrorAction SilentlyContinue
     try {
@@ -210,7 +212,7 @@ if (-not (Test-Path "$ServerDir\package.json")) {
 Write-Host ""
 Write-Host "[6/6] 启动桌面应用..."
 
-$launchBat = "E:\web\web-ai-ide\launch.bat"
+$launchBat = "$ProjectRoot\launch.bat"
 if (Test-Path $launchBat) {
     Write-Host "  使用 launch.bat 启动桌面应用..."
     Start-Process $launchBat
