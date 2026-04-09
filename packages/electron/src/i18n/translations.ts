@@ -8,6 +8,7 @@ export interface Translations {
       ai: string;
       database: string;
       editor: string;
+      appearance: string;
       language: string;
     };
     ai: {
@@ -36,6 +37,19 @@ export interface Translations {
       tabSize: string;
       spaces2: string;
       spaces4: string;
+    };
+    appearance?: {
+      uiStyleTitle: string;
+      uiStyleDescription: string;
+      iosStyle: string;
+      iosStyleDesc: string;
+      legacyStyle: string;
+      legacyStyleDesc: string;
+      colorModeTitle: string;
+      colorModeDescription: string;
+      light: string;
+      dark: string;
+      system: string;
     };
     language: {
       title: string;
@@ -159,6 +173,7 @@ export const translations: Record<Language, Translations> = {
         ai: 'AI Providers',
         database: 'Database',
         editor: 'Editor',
+        appearance: 'Appearance',
         language: 'Language',
       },
       ai: {
@@ -187,6 +202,19 @@ export const translations: Record<Language, Translations> = {
         tabSize: 'Tab Size',
         spaces2: '2 spaces',
         spaces4: '4 spaces',
+      },
+      appearance: {
+        uiStyleTitle: 'Interface Style',
+        uiStyleDescription: 'Choose the visual style for the interface',
+        iosStyle: 'iOS Style',
+        iosStyleDesc: 'iOS 17 aesthetic',
+        legacyStyle: 'Legacy',
+        legacyStyleDesc: 'Dark theme',
+        colorModeTitle: 'Color Mode',
+        colorModeDescription: 'Choose light or dark appearance',
+        light: 'Light',
+        dark: 'Dark',
+        system: 'System',
       },
       language: {
         title: 'Language Settings',
@@ -308,6 +336,7 @@ export const translations: Record<Language, Translations> = {
         ai: 'AI 提供商',
         database: '数据库',
         editor: '编辑器',
+        appearance: '外观',
         language: '语言',
       },
       ai: {
@@ -336,6 +365,19 @@ export const translations: Record<Language, Translations> = {
         tabSize: '制表符宽度',
         spaces2: '2 个空格',
         spaces4: '4 个空格',
+      },
+      appearance: {
+        uiStyleTitle: '界面风格',
+        uiStyleDescription: '选择界面的视觉风格',
+        iosStyle: 'iOS 风格',
+        iosStyleDesc: 'iOS 17 美学',
+        legacyStyle: '旧版',
+        legacyStyleDesc: '深色主题',
+        colorModeTitle: '颜色模式',
+        colorModeDescription: '选择浅色或深色外观',
+        light: '浅色',
+        dark: '深色',
+        system: '跟随系统',
       },
       language: {
         title: '语言设置',
