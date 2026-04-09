@@ -10,7 +10,11 @@ interface NewSessionModalProps {
 }
 
 function NewSessionModal({ isOpen, onClose, onCreate }: NewSessionModalProps) {
-  const [shell, setShell] = useState(process.platform === 'win32' ? 'powershell.exe' : 'bash');
+  const [shell, setShell] = useState(
+    typeof navigator !== 'undefined' && navigator.platform?.toLowerCase().includes('win')
+      ? 'powershell.exe'
+      : 'bash'
+  );
 
   if (!isOpen) return null;
 

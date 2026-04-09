@@ -75,7 +75,15 @@ if (Test-Path "$PackagesDir\package.json") {
         Write-Host "  执行: npm install"
         npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "  packages 构建完成"
+            Write-Host "  执行: npm run build"
+            npm run build 2>&1 | ForEach-Object { Write-Host "    $_" }
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "  packages 构建完成"
+            } else {
+                Write-Host "  packages 构建失败"
+                Pop-Location -ErrorAction SilentlyContinue
+                exit 1
+            }
         } else {
             Write-Host "  packages 构建失败"
             Pop-Location -ErrorAction SilentlyContinue
