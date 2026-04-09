@@ -2,11 +2,15 @@ import { createContext, useContext, useState, ReactNode, useCallback, useEffect 
 import type { AIProvider, AIModel } from '../types';
 import { Language, getTranslation, Translations } from '../i18n/translations';
 
+type UIStyle = 'ios' | 'legacy';
+type ThemeMode = 'light' | 'dark' | 'system';
+
 interface Settings {
   aiProviders: AIProvider[];
   selectedProvider: string;
   selectedModel: string;
-  theme: 'light' | 'dark';
+  uiStyle: UIStyle;
+  themeMode: ThemeMode;
   fontSize: number;
   tabSize: number;
   language: Language;
@@ -25,6 +29,8 @@ interface SettingsContextValue {
   setSelectedProvider: (id: string) => void;
   setSelectedModel: (id: string) => void;
   setLanguage: (lang: Language) => void;
+  setUIStyle: (style: UIStyle) => void;
+  setThemeMode: (mode: ThemeMode) => void;
   getSelectedProvider: () => AIProvider | undefined;
   getSelectedModel: () => AIModel | undefined;
 }
@@ -41,7 +47,8 @@ const defaultSettings: Settings = {
   ],
   selectedProvider: 'openai',
   selectedModel: 'gpt-4o',
-  theme: 'dark',
+  uiStyle: 'ios',
+  themeMode: 'dark',
   fontSize: 14,
   tabSize: 2,
   language: 'en',
@@ -56,6 +63,99 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setT(getTranslation(settings.language));
   }, [settings.language]);
+
+  const getSystemTheme = (): 'light' | 'dark' => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'dark';
+  };
+
+  const applyUIStyle = (style: UIStyle) => {
+    const root = document.documentElement;
+    if (style === 'ios') {
+      root.classList.add('ios');
+    } else {
+      root.classList.remove('ios');
+    }
+  };
+
+  const applyThemeMode = (mode: ThemeMode, uiStyle: UIStyle) => {
+    const root = document.documentElement;
+    if (uiStyle === 'legacy') return;
+
+    let isDark: boolean;
+    if (mode === 'system') {
+      isDark = getSystemTheme() === 'dark';
+    } else {
+      isDark = mode === 'dark';
+    }
+
+    if (isDark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  };
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      if (settings.themeMode === 'system' && settings.uiStyle === 'ios') {
+        applyThemeMode('system', 'ios');
+      }
+    };
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [settings.themeMode, settings.uiStyle]);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      let savedUIStyle: UIStyle | null = null;
+      let savedThemeMode: ThemeMode | null = null;
+
+      if (window.electronAPI?.settings) {
+        try {
+          const data = await window.electronAPI.settings.getAll() as {
+            ui_style?: string;
+            theme_mode?: string;
+          };
+          if (data.ui_style === 'ios' || data.ui_style === 'legacy') {
+            savedUIStyle = data.ui_style as UIStyle;
+          }
+          if (data.theme_mode === 'light' || data.theme_mode === 'dark' || data.theme_mode === 'system') {
+            savedThemeMode = data.theme_mode as ThemeMode;
+          }
+        } catch (err) {
+          console.error('Failed to load settings from electron:', err);
+        }
+      } else {
+        const saved = localStorage.getItem('ui_style');
+        if (saved === 'ios' || saved === 'legacy') {
+          savedUIStyle = saved as UIStyle;
+        }
+        const savedMode = localStorage.getItem('theme_mode');
+        if (savedMode === 'light' || savedMode === 'dark' || savedMode === 'system') {
+          savedThemeMode = savedMode as ThemeMode;
+        }
+      }
+
+      const initialUIStyle = savedUIStyle || 'ios';
+      const initialThemeMode = savedThemeMode || 'dark';
+
+      applyUIStyle(initialUIStyle);
+      applyThemeMode(initialThemeMode, initialUIStyle);
+
+      if (savedUIStyle || savedThemeMode) {
+        setSettings(prev => ({
+          ...prev,
+          uiStyle: initialUIStyle,
+          themeMode: initialThemeMode,
+        }));
+      }
+    };
+    loadSettings();
+  }, []);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -319,6 +419,35 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setT(getTranslation(lang));
   }, []);
 
+  const setUIStyle = useCallback((style: UIStyle) => {
+    setSettings(prev => {
+      applyUIStyle(style);
+      applyThemeMode(prev.themeMode, style);
+
+      if (window.electronAPI?.settings) {
+        window.electronAPI.settings.set('ui_style', style);
+      } else {
+        localStorage.setItem('ui_style', style);
+      }
+
+      return { ...prev, uiStyle: style };
+    });
+  }, []);
+
+  const setThemeMode = useCallback((mode: ThemeMode) => {
+    setSettings(prev => {
+      applyThemeMode(mode, prev.uiStyle);
+
+      if (window.electronAPI?.settings) {
+        window.electronAPI.settings.set('theme_mode', mode);
+      } else {
+        localStorage.setItem('theme_mode', mode);
+      }
+
+      return { ...prev, themeMode: mode };
+    });
+  }, []);
+
   const getSelectedProvider = useCallback(() => {
     return settings.aiProviders.find(p => p.id === settings.selectedProvider);
   }, [settings.aiProviders, settings.selectedProvider]);
@@ -343,6 +472,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setSelectedProvider,
         setSelectedModel,
         setLanguage,
+        setUIStyle,
+        setThemeMode,
         getSelectedProvider,
         getSelectedModel,
       }}
