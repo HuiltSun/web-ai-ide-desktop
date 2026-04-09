@@ -78,7 +78,11 @@ export function TerminalTabs() {
   const handleClose = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     if (confirm('Close this terminal?')) {
-      await killSession(sessionId);
+      try {
+        await killSession(sessionId);
+      } catch (error) {
+        console.error('Failed to kill session:', error);
+      }
     }
   };
 
