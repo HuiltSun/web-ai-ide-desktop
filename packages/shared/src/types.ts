@@ -53,3 +53,72 @@ export interface ChatStreamEvent {
   content?: string;
   toolCall?: ToolCall;
 }
+
+export type ShellType = 'local' | 'ssh' | 'webcontainer';
+
+export type TerminalMessageType =
+  | 'create'
+  | 'resize'
+  | 'input'
+  | 'output'
+  | 'exit'
+  | 'list'
+  | 'kill'
+  | 'error'
+  | 'created';
+
+export interface TerminalSession {
+  id: string;
+  name: string;
+  shellType: ShellType;
+  createdAt: Date;
+  lastActiveAt: Date;
+  cwd?: string;
+  env?: Record<string, string>;
+}
+
+export interface SSHSession extends TerminalSession {
+  shellType: 'ssh';
+  host: string;
+  port: number;
+  username: string;
+  authMethod: 'password' | 'privateKey';
+}
+
+export interface LocalSession extends TerminalSession {
+  shellType: 'local';
+  shell: string;
+}
+
+export interface TerminalMessage {
+  type: TerminalMessageType;
+  sessionId?: string;
+  payload?: unknown;
+}
+
+export interface CreateSessionPayload {
+  shellType: ShellType;
+  shell?: string;
+  host?: string;
+  port?: number;
+  username?: string;
+  authMethod?: 'password' | 'privateKey';
+  cols?: number;
+  rows?: number;
+}
+
+export interface ResizePayload {
+  sessionId: string;
+  cols: number;
+  rows: number;
+}
+
+export interface InputPayload {
+  sessionId: string;
+  data: string;
+}
+
+export interface OutputPayload {
+  sessionId: string;
+  data: string;
+}
