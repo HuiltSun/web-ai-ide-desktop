@@ -72,12 +72,17 @@ try {
 
   const launchBatPath = path.join(rootDir, 'launch.bat');
   if (latestExe) {
-    const relativeExePath = path.relative(rootDir, latestExe);
     const launchBatContent = `@echo off
 chcp 65001 > nul
 echo Starting Web AI IDE...
 echo.
-"%~dp0${relativeExePath}"
+set "EXE_PATH=%~dp0release\\latest\\win-unpacked\\Web AI IDE.exe"
+if not exist "%EXE_PATH%" (
+    echo Error: Executable not found at %EXE_PATH%
+    pause
+    exit /b 1
+)
+"%EXE_PATH%"
 `;
     fs.writeFileSync(launchBatPath, launchBatContent, 'utf8');
     console.log(`  Created launch script: ${launchBatPath}`);

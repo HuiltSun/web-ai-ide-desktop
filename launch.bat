@@ -2,4 +2,10 @@
 chcp 65001 > nul
 echo Starting Web AI IDE...
 echo.
-"%~dp0release\release-2026-04-09T03-07-22\win-unpacked\Web AI IDE.exe"
+set "EXE_PATH=%~dp0release\latest\win-unpacked\Web AI IDE.exe"
+if not exist "%EXE_PATH%" (
+    echo Error: Executable not found at %EXE_PATH%
+    pause
+    exit /b 1
+)
+"%EXE_PATH%"
