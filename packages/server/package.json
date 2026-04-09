@@ -12,10 +12,12 @@
     "@fastify/jwt": "^8.0.0",
     "@fastify/websocket": "^10.0.0",
     "@prisma/client": "^5.14.0",
+    "@web-ai-ide/shared": "workspace:*",
     "amqplib": "^0.10.4",
     "bcryptjs": "^3.0.3",
     "fastify": "^4.28.0",
     "ioredis": "^5.4.1",
+    "node-pty": "^1.0.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
