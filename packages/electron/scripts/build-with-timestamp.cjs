@@ -56,15 +56,28 @@ try {
   console.log(`  Created symlink: ${latestBuildDir} -> ${outputDir}`);
 
   const exeFiles = fs.readdirSync(outputDir).filter(f => f.endsWith('.exe'));
-  const latestExe = exeFiles.length > 0 ? path.join(outputDir, exeFiles[0]) : null;
+  let latestExe = null;
+
+  const winUnpackedDir = path.join(outputDir, 'win-unpacked');
+  if (fs.existsSync(winUnpackedDir)) {
+    const unpackedExe = path.join(winUnpackedDir, 'Web AI IDE.exe');
+    if (fs.existsSync(unpackedExe)) {
+      latestExe = unpackedExe;
+    }
+  }
+
+  if (!latestExe && exeFiles.length > 0) {
+    latestExe = path.join(outputDir, exeFiles[0]);
+  }
 
   const launchBatPath = path.join(rootDir, 'launch.bat');
   if (latestExe) {
+    const relativeExePath = path.relative(rootDir, latestExe);
     const launchBatContent = `@echo off
 chcp 65001 > nul
 echo Starting Web AI IDE...
 echo.
-"${latestExe}"
+"%~dp0${relativeExePath}"
 `;
     fs.writeFileSync(launchBatPath, launchBatContent, 'utf8');
     console.log(`  Created launch script: ${launchBatPath}`);
