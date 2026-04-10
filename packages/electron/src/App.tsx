@@ -7,13 +7,10 @@ import { Settings } from './components/Settings';
 import { LoginModal } from './components/LoginModal';
 import { AboutDialog } from './components/AboutDialog';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { TerminalTabs } from './components/TerminalTabs';
-import { SparklesIcon, CodeIcon, BotIcon, TerminalIcon } from './components/Icons';
+import { SparklesIcon, CodeIcon, BotIcon } from './components/Icons';
 import type { Project, ProjectWithSession } from './types';
 import { api } from './services/api';
 import { useSettings } from './contexts/SettingsContext';
-
-type PanelType = 'chat' | 'terminal' | 'editor';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -27,7 +24,6 @@ function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
-  const [activePanel, setActivePanel] = useState<PanelType>('chat');
 
   useEffect(() => {
     const savedToken = localStorage.getItem('auth_token');
@@ -293,41 +289,9 @@ function App() {
         }
       >
         <div className="h-full flex flex-col">
-          {selectedSessionId && (
-            <div className="flex items-center gap-1 px-2 py-1.5 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)]">
-              <button
-                onClick={() => setActivePanel('chat')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all ${
-                  activePanel === 'chat'
-                    ? 'bg-[var(--color-bg-primary)] text-[var(--color-accent)] shadow-sm'
-                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'
-                }`}
-              >
-                <BotIcon size={14} />
-                <span>Chat</span>
-              </button>
-              <button
-                onClick={() => setActivePanel('terminal')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all ${
-                  activePanel === 'terminal'
-                    ? 'bg-[var(--color-bg-primary)] text-[var(--color-accent)] shadow-sm'
-                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'
-                }`}
-              >
-                <TerminalIcon size={14} />
-                <span>Terminal</span>
-              </button>
-            </div>
-          )}
           <div className="flex-1 overflow-hidden">
             {selectedSessionId ? (
-              activePanel === 'chat' ? (
-                <Chat sessionId={selectedSessionId} />
-              ) : activePanel === 'terminal' ? (
-                <TerminalTabs />
-              ) : (
-                <Chat sessionId={selectedSessionId} />
-              )
+              <Chat sessionId={selectedSessionId} />
             ) : (
               <div className="h-full flex flex-col items-center justify-center p-8">
                 <div className="text-center max-w-lg">

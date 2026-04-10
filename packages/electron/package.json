@@ -11,6 +11,7 @@
     "postinstall": "node scripts/copy-deps.js || echo 'Dependency copy failed'"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
     "@web-ai-ide/shared": "file:../shared",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",

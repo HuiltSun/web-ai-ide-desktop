@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import MonacoEditor, { OnMount } from '@monaco-editor/react';
+import MonacoEditor from '@monaco-editor/react';
+import type { OnMount } from '@monaco-editor/react';
 import { EditorTabs } from './EditorTabs';
 
 export interface EditorFile {
@@ -16,8 +17,7 @@ export interface EditorProps {
 }
 
 export function Editor({ files, activeFile, onFileSelect, onFileChange }: EditorProps) {
-  const handleMount: OnMount = useCallback((_editor) => {
-    // Editor mounted, can be used for future extensions
+  const handleMount: OnMount = useCallback((_editor: Parameters<OnMount>[0]) => {
   }, []);
 
   const activeContent = files.find((f) => f.path === activeFile)?.content || '';
@@ -38,7 +38,7 @@ export function Editor({ files, activeFile, onFileSelect, onFileChange }: Editor
             height="100%"
             language={activeLanguage}
             value={activeContent}
-            onChange={(value) => onFileChange(activeFile, value || '')}
+            onChange={(value: string | undefined) => onFileChange(activeFile, value || '')}
             onMount={handleMount}
             options={{
               minimap: { enabled: true },

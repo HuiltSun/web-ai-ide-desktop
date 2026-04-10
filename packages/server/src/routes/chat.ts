@@ -18,6 +18,20 @@ interface ChatMessage {
   approved?: boolean;
 }
 
+interface UserConfirmMessage {
+  type: 'user_confirm';
+  promptId: string;
+  approved: boolean;
+}
+
+function isUserConfirmMessage(data: ChatMessage): data is UserConfirmMessage {
+  return (
+    data.type === 'user_confirm' &&
+    typeof data.promptId === 'string' &&
+    data.promptId.trim() !== ''
+  );
+}
+
 interface ChatStreamEvent {
   type: 'text' | 'tool_call' | 'done' | 'error';
   content?: string;
@@ -186,7 +200,7 @@ export async function chatRouter(fastify: FastifyInstance) {
             fastify.log.info(`Tool rejected: ${data.toolCallId}`);
             sessionManager.handleUserConfirm(data.toolCallId, false);
 
-          } else if (data.type === 'user_confirm' && data.promptId !== undefined && data.approved !== undefined) {
+          } else if (isUserConfirmMessage(data)) {
             sessionManager.handleUserConfirm(data.promptId, data.approved);
           }
         } catch (error) {

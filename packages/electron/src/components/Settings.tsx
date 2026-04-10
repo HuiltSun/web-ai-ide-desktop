@@ -12,7 +12,7 @@ interface SettingsProps {
 }
 
 export function Settings({ isOpen, onClose }: SettingsProps) {
-  const { settings, t, setSelectedProvider, setSelectedModel, addProvider, removeProvider, updateProvider, addModel, removeModel, updateModel, setLanguage, updateSettings, setUIStyle, setThemeMode } = useSettings();
+  const { settings, t, setSelectedProvider, setSelectedModel, addProvider, removeProvider, updateProvider, addModel, removeModel, setLanguage, updateSettings, setUIStyle, setThemeMode } = useSettings();
   const [activeTab, setActiveTab] = useState<Tab>('ai');
   const [saved, setSaved] = useState(false);
   const [showPresetDropdown, setShowPresetDropdown] = useState(false);

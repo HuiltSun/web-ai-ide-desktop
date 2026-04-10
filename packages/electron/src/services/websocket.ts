@@ -10,6 +10,19 @@ interface PendingConfirmation {
   toolCallId?: string;
 }
 
+interface MessageMessage {
+  type: 'message';
+  content: string;
+}
+
+interface UserConfirmMessage {
+  type: 'user_confirm';
+  promptId: string;
+  approved: boolean;
+}
+
+type OutgoingMessage = MessageMessage | UserConfirmMessage;
+
 class WebSocketService {
   private ws: WebSocket | null = null;
   private handlers: Set<MessageHandler> = new Set();
@@ -41,10 +54,10 @@ class WebSocketService {
         const data = JSON.parse(event.data);
         const chatEvent: ChatStreamEvent = data;
 
-        if (chatEvent.type === 'action_required' && 'promptId' in chatEvent && chatEvent.promptId) {
+        if (chatEvent.type === 'action_required' && chatEvent.promptId) {
           this.pendingConfirmation = {
             promptId: chatEvent.promptId,
-            toolCallId: 'toolCallId' in chatEvent ? chatEvent.toolCallId : undefined,
+            toolCallId: chatEvent.toolCallId,
           };
         }
 
@@ -64,7 +77,7 @@ class WebSocketService {
     };
   }
 
-  send(message: { type: string; content?: string; toolCallId?: string }) {
+  private send(message: OutgoingMessage) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
     }
@@ -75,23 +88,25 @@ class WebSocketService {
   }
 
   approveTool(_toolCallId: string) {
-    if (this.pendingConfirmation) {
-      this.send({
+    if (this.pendingConfirmation?.promptId) {
+      const confirmMessage: UserConfirmMessage = {
         type: 'user_confirm',
         promptId: this.pendingConfirmation.promptId,
         approved: true,
-      } as any);
+      };
+      this.send(confirmMessage);
       this.pendingConfirmation = null;
     }
   }
 
   rejectTool(_toolCallId: string) {
-    if (this.pendingConfirmation) {
-      this.send({
+    if (this.pendingConfirmation?.promptId) {
+      const confirmMessage: UserConfirmMessage = {
         type: 'user_confirm',
         promptId: this.pendingConfirmation.promptId,
         approved: false,
-      } as any);
+      };
+      this.send(confirmMessage);
       this.pendingConfirmation = null;
     }
   }
