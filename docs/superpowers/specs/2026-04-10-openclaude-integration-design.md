@@ -581,7 +581,19 @@ openclaude Agent
 
 ### 13.2 AgentProcessManager（进程管理器）
 
+**核心功能**：端口池管理、并发去重、try-catch 端口回收、waitForPort 重试逻辑。
+
 ```typescript
+import { spawn, ChildProcess } from 'child_process';
+import * as grpc from '@grpc/grpc-js';
+import * as protoLoader from '@grpc/proto-loader';
+import * as net from 'net';
+import path from 'path';
+
+const PROTO_PATH = path.join(__dirname, '../../openclaude/src/proto/openclaude.proto');
+const PORT_POOL_START = 50052;
+const PORT_POOL_SIZE = 100;
+
 interface AgentProcess {
   pid: number;
   port: number;
@@ -589,124 +601,230 @@ interface AgentProcess {
   sessionId: string;
   lastActivity: number;
   proc: ChildProcess;
+  client: any;
 }
 
 export class AgentProcessManager {
   private processes: Map<string, AgentProcess> = new Map();
-  private portCounter = 50052; // 起始端口
-  private readonly MAX_PROCESSES = 50; // 每个用户最大并发进程
+  private creating: Map<string, Promise<AgentProcess>> = new Map();  // 并发去重
+  private portPool: number[] = [];
+  private usedPorts: Set<number> = new Set();
+  private protoDescriptor: any;
+
+  constructor() {
+    for (let i = 0; i < PORT_POOL_SIZE; i++) {
+      this.portPool.push(PORT_POOL_START + i);
+    }
+
+    const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+      keepCase: true,
+      longs: String,
+      enums: String,
+      defaults: true,
+      oneofs: true,
+    });
+    this.protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+  }
+
+  private allocatePort(): number {
+    if (this.portPool.length === 0) {
+      throw new Error('Port pool exhausted');
+    }
+    const port = this.portPool.pop()!;
+    this.usedPorts.add(port);
+    return port;
+  }
+
+  private releasePort(port: number): void {
+    this.usedPorts.delete(port);
+    this.portPool.push(port);
+  }
+
+  private createGrpcClient(port: number): any {
+    return new this.protoDescriptor.openclaude.v1.Agent(
+      `localhost:${port}`,
+      grpc.credentials.createInsecure()
+    );
+  }
 
   async createProcess(userId: string, sessionId: string, provider: ProviderConfig): Promise<AgentProcess> {
-    const port = this.portCounter++;
-    const env = {
-      ...process.env,
-      ANTHROPIC_API_KEY: provider.apiKey,
-      ANTHROPIC_BASE_URL: provider.baseUrl,
-      ANTHROPIC_MODEL: provider.model,
-    };
+    const port = this.allocatePort();
+    let proc: ChildProcess | null = null;
 
-    const proc = spawn('node', ['dist/cli.mjs', 'dev:grpc'], {
-      cwd: path.join(__dirname, '../../openclaude'),
-      env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    try {
+      const env = {
+        ...process.env,
+        ...(provider.type === 'anthropic'
+          ? { ANTHROPIC_API_KEY: provider.apiKey, ANTHROPIC_BASE_URL: provider.baseUrl, ANTHROPIC_MODEL: provider.model }
+          : provider.type === 'openai'
+          ? { OPENAI_API_KEY: provider.apiKey, OPENAI_BASE_URL: provider.baseUrl, OPENAI_MODEL: provider.model }
+          : {}),
+        GRPC_PORT: String(port),
+      };
 
-    const process: AgentProcess = {
+      proc = spawn('node', ['dist/cli.mjs', 'dev:grpc'], {
+        cwd: path.join(__dirname, '../../openclaude'),
+        env,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      await this.waitForPort(port);
+    } catch (err) {
+      if (proc) proc.kill();
+      this.releasePort(port);
+      throw err;
+    }
+
+    const client = this.createGrpcClient(port);
+
+    const agentProcess: AgentProcess = {
       pid: proc.pid!,
       port,
       userId,
       sessionId,
       lastActivity: Date.now(),
       proc,
+      client,
     };
 
-    this.processes.set(`${userId}:${sessionId}`, process);
-    return process;
+    proc.on('exit', () => this.releasePort(port));
+    this.processes.set(`${userId}:${sessionId}`, agentProcess);
+    return agentProcess;
   }
 
   async getOrCreateProcess(userId: string, sessionId: string, provider: ProviderConfig): Promise<AgentProcess> {
     const key = `${userId}:${sessionId}`;
-    const existing = this.processes.get(key);
 
-    if (existing && existing.pid) {
+    if (this.processes.has(key)) {
+      const existing = this.processes.get(key)!;
+      existing.lastActivity = Date.now();
       return existing;
     }
 
-    return this.createProcess(userId, sessionId, provider);
+    if (this.creating.has(key)) {
+      return this.creating.get(key)!;
+    }
+
+    const promise = this.createProcess(userId, sessionId, provider)
+      .finally(() => this.creating.delete(key));
+    this.creating.set(key, promise);
+    return promise;
   }
 
   async destroyProcess(userId: string, sessionId: string): Promise<void> {
     const key = `${userId}:${sessionId}`;
-    const process = this.processes.get(key);
-
-    if (process) {
-      process.proc.kill();
+    const agentProcess = this.processes.get(key);
+    if (agentProcess) {
+      agentProcess.proc.kill();
+      agentProcess.client.close?.();
       this.processes.delete(key);
+      this.releasePort(agentProcess.port);
     }
   }
 
-  // 清理超时进程
   cleanup(): void {
     const TIMEOUT_MS = 30 * 60 * 1000;
     const now = Date.now();
 
-    for (const [key, proc] of this.processes) {
-      if (now - proc.lastActivity > TIMEOUT_MS) {
-        proc.proc.kill();
+    for (const [key, agentProcess] of this.processes) {
+      if (now - agentProcess.lastActivity > TIMEOUT_MS) {
+        agentProcess.proc.kill();
+        agentProcess.client.close?.();
         this.processes.delete(key);
+        this.releasePort(agentProcess.port);
       }
     }
+  }
+
+  private waitForPort(port: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const startTime = Date.now();
+      const timeout = 10000;
+
+      const check = () => {
+        const socket = new net.Socket();
+        socket.setTimeout(100);
+        socket.on('connect', () => { socket.destroy(); resolve(); });
+        socket.on('timeout', () => {
+          socket.destroy();
+          if (Date.now() - startTime < timeout) {
+            setTimeout(check, 100);
+          } else {
+            reject(new Error(`Port ${port} timed out`));
+          }
+        });
+        socket.on('error', () => {
+          if (Date.now() - startTime > timeout) {
+            reject(new Error(`Port ${port} timed out`));
+          } else {
+            setTimeout(check, 100);
+          }
+        });
+        socket.connect(port, 'localhost');
+      };
+
+      setTimeout(check, 100);
+    });
   }
 }
 ```
 
-### 13.3 命令白名单（通过 ActionRequired 拦截）
+### 13.3 命令白名单（通过 canUseTool 钩子）
 
-由于 openclaude 的 `canUseTool` 钩子会发送 `ActionRequired`，我们可以在**拦截层**实现白名单：
+**方案决策**：采用异步确认方案。危险命令触发 `action_required` 等待用户确认，超时自动拒绝。
 
 ```typescript
-// 在 gRPC server 启动时配置 canUseTool 钩子
-const canUseTool: CanUseToolFn = async (tool, input, context, assistantMsg, toolUseID) => {
-  // 1. 发送 tool_start 事件
-  call.write({
-    tool_start: {
-      tool_name: tool.name,
-      arguments_json: JSON.stringify(input),
-      tool_use_id: toolUseID
+const ALLOWED_TOOLS = new Set([
+  'Bash', 'Read', 'Write', 'Edit', 'Grep', 'Glob',
+  'Notebook', 'WebSearch', 'WebFetch', 'TodoWrite',
+]);
+
+const BLOCKED_PATTERNS = [
+  /sudo/, /su /, /chmod \d{4}/, /chown/,
+  /curl.*-T/, /wget.*-O.*\//, /nc .*-e/,
+];
+
+function createCanUseTool(call: any, pendingRequests: Map<string, (reply: string) => void>) {
+  return async function canUseTool(
+    toolName: string,
+    toolArgs: any
+  ): Promise<{ behavior: 'allow' | 'deny', reason?: string }> {
+    if (!ALLOWED_TOOLS.has(toolName)) {
+      return { behavior: 'deny', reason: `Tool '${toolName}' not in allowed list` };
     }
-  });
 
-  // 2. 白名单检查
-  if (!isCommandAllowed(tool.name, input)) {
-    // 直接拒绝，不发送 action_required
-    return { behavior: 'deny', reason: 'Command not in whitelist' };
-  }
+    if (toolName === 'Bash' && toolArgs.command) {
+      for (const pattern of BLOCKED_PATTERNS) {
+        if (pattern.test(toolArgs.command)) {
+          const promptId = `tool_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
-  // 3. 工作目录检查
-  if (input.cwd && !isPathAllowed(input.cwd)) {
-    return { behavior: 'deny', reason: 'Path outside workspace' };
-  }
+          const reply = await new Promise<string>((resolve) => {
+            pendingRequests.set(promptId, resolve);
+            call.write({
+              action_required: {
+                prompt_id: promptId,
+                question: `确认执行危险命令？\n\n\`${toolArgs.command}\``,
+                type: 'dangerous_command',
+              },
+            });
 
-  // 4. 发送 action_required 请求用户确认
-  const promptId = randomUUID();
-  call.write({
-    action_required: {
-      prompt_id: promptId,
-      question: `Approve ${tool.name}?`,
-      type: 'CONFIRM_COMMAND'
+            setTimeout(() => {
+              pendingRequests.delete(promptId);
+              resolve('no');
+            }, 60 * 1000);
+          });
+
+          if (reply === 'yes' || reply === 'approved') {
+            return { behavior: 'allow' };
+          }
+          return { behavior: 'deny', reason: reply === 'no' ? 'User denied' : 'Timed out' };
+        }
+      }
     }
-  });
 
-  // 5. 等待用户响应
-  return new Promise((resolve) => {
-    pendingRequests.set(promptId, (reply) => {
-      resolve(reply.toLowerCase() === 'yes' || reply.toLowerCase() === 'y'
-        ? { behavior: 'allow' }
-        : { behavior: 'deny', reason: 'User denied' }
-      );
-    });
-  });
-};
+    return { behavior: 'allow' };
+  };
+}
 ```
 
 ### 13.4 gRPC 事件到 WebSocket 协议转换（基于实际 proto）

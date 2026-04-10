@@ -42,21 +42,35 @@
 
 **步骤**：
 ```bash
-# 删除临时目录
-rm -rf packages/openclaude-temp
+# 1. Fork 上游仓库（web-ai-ide 组织下）
+#    https://github.com/Gitlawb/openclaude → https://github.com/web-ai-ide/openclaude
 
-# 添加 submodule
+# 2. 删除临时目录，添加 submodule 指向 fork
+rm -rf packages/openclaude-temp
 cd packages
-git submodule add git@github.com:Gitlawb/openclaude.git openclaude
+git submodule add git@github.com:web-ai-ide/openclaude.git openclaude
 cd openclaude
+git checkout -b web-ai-ide-modifications
+
+# 3. 安装依赖并构建
 npm install
 npm run build
 ```
 
-**说明**：`packages/openclaude-temp/` 已包含验证过的源码，可直接移动使用。
+**Submodule 维护策略**：
+
+| 场景 | 操作 |
+|------|------|
+| 首次集成 | Fork 上游 → Clone fork → 创建 `web-ai-ide-modifications` 分支 |
+| 修改源码 | 在 `web-ai-ide-modifications` 分支上修改 |
+| 同步上游 | `git checkout main && git pull origin main && git merge main` |
+| 冲突处理 | 保留我们的 `canUseTool` 钩子逻辑，解决其他冲突 |
+
+**重要**：所有源码修改都在 `web-ai-ide-modifications` 分支。Task 3.1 的 `canUseTool` 钩子修改必须在该分支上进行，不要直接修改 `main` 分支。
 
 **验证**：
-- [ ] submodule 正确克隆
+- [ ] submodule 指向 fork 仓库
+- [ ] 分支为 `web-ai-ide-modifications`
 - [ ] build 成功生成 dist/
 - [ ] `node dist/cli.mjs --version` 正常运行
 
@@ -96,6 +110,7 @@ export class AgentProcessManager {
   private creating: Map<string, Promise<AgentProcess>> = new Map();  // 并发去重
   private portPool: number[] = [];  // 可用端口池
   private usedPorts: Set<number> = new Set();  // 已用端口追踪
+  private protoDescriptor: any;  // gRPC proto descriptor
 
   constructor() {
     // 初始化端口池
@@ -137,22 +152,41 @@ export class AgentProcessManager {
 
   async createProcess(userId: string, sessionId: string, provider: ProviderConfig): Promise<AgentProcess> {
     const port = this.allocatePort();
-    const env = {
-      ...process.env,
-      ANTHROPIC_API_KEY: provider.apiKey,
-      ANTHROPIC_BASE_URL: provider.baseUrl,
-      ANTHROPIC_MODEL: provider.model,
-      GRPC_PORT: String(port),
-    };
 
-    const proc = spawn('node', ['dist/cli.mjs', 'dev:grpc'], {
-      cwd: path.join(__dirname, '../../openclaude'),
-      env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    let proc: ChildProcess | null = null;
+    try {
+      const env = {
+        ...process.env,
+        ...(provider.type === 'anthropic'
+          ? {
+              ANTHROPIC_API_KEY: provider.apiKey,
+              ANTHROPIC_BASE_URL: provider.baseUrl,
+              ANTHROPIC_MODEL: provider.model,
+            }
+          : provider.type === 'openai'
+          ? {
+              OPENAI_API_KEY: provider.apiKey,
+              OPENAI_BASE_URL: provider.baseUrl,
+              OPENAI_MODEL: provider.model,
+            }
+          : {}),
+        GRPC_PORT: String(port),
+      };
 
-    // 等待进程启动（使用轻量级 net 检测）
-    await this.waitForPort(port);
+      proc = spawn('node', ['dist/cli.mjs', 'dev:grpc'], {
+        cwd: path.join(__dirname, '../../openclaude'),
+        env,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      await this.waitForPort(port);
+    } catch (err) {
+      if (proc) {
+        proc.kill();
+      }
+      this.releasePort(port);
+      throw err;
+    }
 
     const client = this.createGrpcClient(port);
 
@@ -235,6 +269,11 @@ export class AgentProcessManager {
         });
         socket.on('timeout', () => {
           socket.destroy();
+          if (Date.now() - startTime < timeout) {
+            setTimeout(check, 100);
+          } else {
+            reject(new Error(`Port ${port} did not become available within ${timeout}ms`));
+          }
         });
         socket.on('error', () => {
           if (Date.now() - startTime > timeout) {
@@ -286,12 +325,10 @@ interface Session {
   call: grpc.ClientDuplexStream;
   lastActivity: number;
   userId: string;
-  pendingRequests: Map<string, (reply: string) => void>;
 }
 
 interface PendingRequest {
   sessionId: string;
-  timeout: NodeJS.Timeout;
 }
 
 export class AgentSessionManager {
@@ -311,8 +348,6 @@ export class AgentSessionManager {
     const agentProcess = await this.processManager.getOrCreateProcess(userId, sessionId, provider);
     const call = agentProcess.client.Chat();
 
-    const pendingRequests = new Map<string, (reply: string) => void>();
-
     call.on('data', (msg: any) => {
       this.updateActivity(sessionId);
       this.handleGrpcMessage(sessionId, msg, notifyFrontend);
@@ -326,7 +361,6 @@ export class AgentSessionManager {
       call,
       lastActivity: Date.now(),
       userId,
-      pendingRequests,
     });
 
     return sessionId;
@@ -340,21 +374,53 @@ export class AgentSessionManager {
     if (msg.action_required) {
       const { prompt_id, question, type } = msg.action_required;
 
-      const timeout = setTimeout(() => {
-        this.pendingRequests.delete(prompt_id);
-        const session = this.sessions.get(sessionId);
-        if (session) {
-          session.call.write({ user_confirm: { prompt_id, reply: 'timeout' } });
-        }
-      }, 60 * 1000);
-
-      this.pendingRequests.set(prompt_id, { sessionId, timeout });
+      this.pendingRequests.set(prompt_id, { sessionId });
 
       notifyFrontend('action_required', {
         promptId: prompt_id,
         question,
         actionType: type,
       });
+      return;
+    }
+
+    if (msg.text_chunk) {
+      notifyFrontend('text', { content: msg.text_chunk.text });
+      return;
+    }
+
+    if (msg.tool_start) {
+      notifyFrontend('tool_call', {
+        toolCallId: msg.tool_start.tool_use_id,
+        toolName: msg.tool_start.tool_name,
+        arguments: JSON.parse(msg.tool_start.arguments_json || '{}'),
+      });
+      return;
+    }
+
+    if (msg.tool_result) {
+      notifyFrontend('tool_result', {
+        toolCallId: msg.tool_result.tool_use_id,
+        result: {
+          success: !msg.tool_result.is_error,
+          output: msg.tool_result.output,
+          error: msg.tool_result.is_error ? msg.tool_result.output : undefined,
+        },
+      });
+      return;
+    }
+
+    if (msg.done) {
+      notifyFrontend('done', {});
+      return;
+    }
+
+    if (msg.error) {
+      notifyFrontend('error', {
+        content: msg.error.message,
+        code: msg.error.code,
+      });
+      return;
     }
   }
 
@@ -365,7 +431,6 @@ export class AgentSessionManager {
       return;
     }
 
-    clearTimeout(pending.timeout);
     this.pendingRequests.delete(promptId);
 
     const reply = approved ? 'approved' : 'denied';
@@ -648,31 +713,7 @@ export function translateToWebSocket(event: GrpcServerMessage, socket: any): voi
 
 **文件**：`packages/server/src/services/agent-process-manager.ts`
 
-**前置说明**：`createProcess` 方法已在 Task 1.2 实现，使用端口池分配端口。本 Task 补充 provider 类型判断逻辑。
-
-**实现内容**：根据 provider 类型设置对应的环境变量：
-
-```typescript
-// 在 Task 1.2 的 createProcess 中，env 构建逻辑补充：
-
-const env = {
-  ...process.env,
-  ...(provider.type === 'anthropic'
-    ? {
-        ANTHROPIC_API_KEY: provider.apiKey,
-        ANTHROPIC_BASE_URL: provider.baseUrl,
-        ANTHROPIC_MODEL: provider.model,
-      }
-    : provider.type === 'openai'
-    ? {
-        OPENAI_API_KEY: provider.apiKey,
-        OPENAI_BASE_URL: provider.baseUrl,
-        OPENAI_MODEL: provider.model,
-      }
-    : {}),
-  GRPC_PORT: String(port),
-};
-```
+**前置说明**：`createProcess` 方法已在 Task 1.2 实现，env 构建逻辑已包含 provider 类型条件判断（`anthropic` vs `openai`）。本 Task 确认多用户隔离机制。
 
 **多用户隔离机制**：
 - 每个用户的 sidecar 是独立进程（port 不同）
@@ -684,7 +725,7 @@ const env = {
 - [ ] OpenAI provider 正确设置环境变量
 - [ ] 多用户同时使用时 API Key 隔离正确
 
-**依赖**：Task 1.2, Task 2.1
+**依赖**：Task 1.2
 
 ---
 
@@ -705,7 +746,9 @@ const env = {
 
 **文件**：`packages/openclaude/src/grpc/server.ts`（修改 openclaude 源码）
 
-**方案确定**：根据设计文档 13.3，采用 `canUseTool` 钩子实现白名单控制。Spike 验证确认 openclaude 存在 `canUseTool` 钩子，可拦截工具调用。
+**方案决策**：采用**异步确认**方案。危险命令不静默拒绝，而是触发 `action_required` 等待用户确认后执行。
+
+**架构说明**：`canUseTool` 需要访问 gRPC stream 来发送 `action_required` 并等待回复。由于 `canUseTool` 是在 gRPC handler 内部调用的，stream 通过闭包共享。
 
 **实现内容**：
 
@@ -723,42 +766,76 @@ const BLOCKED_PATTERNS = [
   /curl.*-T/, /wget.*-O.*\//, /nc .*-e/,
 ];
 
-function canUseTool(toolName: string, toolArgs: any): { behavior: 'allow' | 'deny', reason?: string } {
-  if (!ALLOWED_TOOLS.has(toolName)) {
-    return { behavior: 'deny', reason: `Tool '${toolName}' is not in the allowed list` };
-  }
+function createCanUseTool(call: grpc.ClientDuplexStream, pendingRequests: Map<string, (reply: string) => void>) {
+  return async function canUseTool(
+    toolName: string,
+    toolArgs: any
+  ): Promise<{ behavior: 'allow' | 'deny', reason?: string }> {
+    if (!ALLOWED_TOOLS.has(toolName)) {
+      return { behavior: 'deny', reason: `Tool '${toolName}' is not in the allowed list` };
+    }
 
-  if (toolName === 'Bash' && toolArgs.command) {
-    for (const pattern of BLOCKED_PATTERNS) {
-      if (pattern.test(toolArgs.command)) {
-        return {
-          behavior: 'deny',
-          reason: `Command matches blocked pattern: ${pattern}`
-        };
+    if (toolName === 'Bash' && toolArgs.command) {
+      for (const pattern of BLOCKED_PATTERNS) {
+        if (pattern.test(toolArgs.command)) {
+          const promptId = `tool_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+          const reply = await new Promise<string>((resolve) => {
+            pendingRequests.set(promptId, resolve);
+
+            call.write({
+              action_required: {
+                prompt_id: promptId,
+                question: `确认执行危险命令？\n\n\`${toolArgs.command}\`\n\n匹配危险模式: ${pattern}`,
+                type: 'dangerous_command',
+              },
+            });
+
+            setTimeout(() => {
+              pendingRequests.delete(promptId);
+              resolve('no');
+            }, 60 * 1000);
+          });
+
+          if (reply === 'no') {
+            return { behavior: 'deny', reason: 'User denied dangerous command' };
+          }
+          return { behavior: 'allow' };
+        }
       }
     }
-  }
 
-  return { behavior: 'allow' };
+    return { behavior: 'allow' };
+  };
 }
 ```
 
-**配置到 gRPC 服务器**：
+**gRPC 服务器集成**：
 
 ```typescript
-// 在创建 Agent 服务时注入钩子
+const pendingRequests = new Map<string, (reply: string) => void>();
+
 const agent = new AgentService({
-  canUseTool,
-  // ... 其他配置
+  canUseTool: createCanUseTool(call, pendingRequests),
+});
+
+call.on('data', (msg) => {
+  if (msg.user_confirm) {
+    const { prompt_id, reply } = msg.user_confirm;
+    const resolve = pendingRequests.get(prompt_id);
+    if (resolve) {
+      pendingRequests.delete(prompt_id);
+      resolve(reply);
+    }
+  }
 });
 ```
 
-**危险命令处理**：当 `canUseTool` 返回 `deny` 时，openclaude 会通过 `action_required` 机制向用户请求确认。用户确认后可通过 `user_confirm` 回路继续执行。
-
 **验证**：
 - [ ] 非白名单工具被直接拒绝
-- [ ] 匹配危险模式的 Bash 命令触发 action_required
-- [ ] 用户拒绝后命令不执行
+- [ ] 危险 Bash 命令触发 action_required，等待用户确认
+- [ ] 用户确认后命令继续执行
+- [ ] 用户拒绝或超时后命令不执行
 
 **依赖**：Task 2.2
 
