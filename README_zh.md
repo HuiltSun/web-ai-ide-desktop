@@ -152,21 +152,27 @@ web-ai-ide/
 │   │       ├── services/     # api.ts, websocket.ts
 │   │       └── contexts/     # SettingsContext
 │   │
-│   ├── core/                  # AI 核心逻辑
+│   ├── core/                  # AI 核心逻辑 (AIGateway + Providers)
 │   │   └── src/
 │   │       ├── ai/           # gateway.ts + providers (openai, anthropic, qwen)
 │   │       ├── models/        # config.ts
-│   │       └── tools/        # edit, file-read, file-write, glob, grep, shell, registry
+│   │       └── tools/        # edit, file-read, file-write, glob, grep, registry
 │   │
-│   ├── server/               # Fastify 后端
+│   ├── openclaude-temp/       # AI Agent gRPC 服务
+│   │   └── src/
+│   │       ├── grpc/         # gRPC server (QueryEngine)
+│   │       ├── tools/        # Agent tools (Bash, Read, Write, Grep...)
+│   │       └── proto/        # openclaude.proto 定义
+│   │
+│   ├── server/               # Fastify 后端 API
 │   │   ├── src/
-│   │   │   ├── routes/       # auth, chat, files, projects, sessions
-│   │   │   ├── services/      # auth, project, session services
-│   │   │   └── utils/        # encryption, prisma
+│   │   │   ├── routes/       # auth, chat, files, projects, sessions, terminal
+│   │   │   ├── services/      # auth, project, session, tenant, pty, shellRegistry, agent-*
+│   │   │   └── utils/        # encryption, prisma, redis, rabbitmq
 │   │   └── prisma/           # 数据库 schema
 │   │
 │   └── shared/               # 共享类型定义
-│
+
 ├── release/                  # 构建输出 (release-{timestamp}/)
 ├── docs/                     # 设计文档
 ├── docker-compose.yml        # Docker 编排

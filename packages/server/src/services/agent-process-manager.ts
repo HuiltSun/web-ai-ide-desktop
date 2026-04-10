@@ -13,7 +13,7 @@ const PORT_POOL_START = 50052;
 const PORT_POOL_SIZE = 100;
 
 export interface ProviderConfig {
-  type: 'anthropic' | 'openai' | 'gemini' | 'github' | 'ollama';
+  type: 'anthropic' | 'openai' | 'gemini' | 'github' | 'ollama' | 'qwen';
   apiKey: string;
   baseUrl?: string;
   model?: string;
@@ -144,6 +144,10 @@ export class AgentProcessManager {
         env.GEMINI_API_KEY = provider.apiKey;
         if (provider.baseUrl) env.GEMINI_BASE_URL = provider.baseUrl;
         if (provider.model) env.GEMINI_MODEL = provider.model;
+      } else if (provider.type === 'qwen') {
+        env.OPENAI_API_KEY = provider.apiKey;
+        env.OPENAI_BASE_URL = provider.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+        if (provider.model) env.OPENAI_MODEL = provider.model;
       }
 
       env.GRPC_PORT = String(port);

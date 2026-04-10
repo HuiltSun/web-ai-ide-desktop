@@ -152,21 +152,27 @@ web-ai-ide/
 │   │       ├── services/     # api.ts, websocket.ts
 │   │       └── contexts/     # SettingsContext
 │   │
-│   ├── core/                  # AI core logic
+│   ├── core/                  # AI core logic (AIGateway + Providers)
 │   │   └── src/
 │   │       ├── ai/           # gateway.ts + providers (openai, anthropic, qwen)
 │   │       ├── models/        # config.ts
-│   │       └── tools/        # edit, file-read, file-write, glob, grep, shell, registry
+│   │       └── tools/        # edit, file-read, file-write, glob, grep, registry
 │   │
-│   ├── server/               # Fastify backend
+│   ├── openclaude-temp/       # AI Agent gRPC service
+│   │   └── src/
+│   │       ├── grpc/         # gRPC server (QueryEngine)
+│   │       ├── tools/        # Agent tools (Bash, Read, Write, Grep...)
+│   │       └── proto/        # openclaude.proto definition
+│   │
+│   ├── server/               # Fastify backend API
 │   │   ├── src/
-│   │   │   ├── routes/       # auth, chat, files, projects, sessions
-│   │   │   ├── services/      # auth, project, session services
-│   │   │   └── utils/        # encryption, prisma
+│   │   │   ├── routes/       # auth, chat, files, projects, sessions, terminal
+│   │   │   ├── services/      # auth, project, session, tenant, pty, shellRegistry, agent-*
+│   │   │   └── utils/        # encryption, prisma, redis, rabbitmq
 │   │   └── prisma/           # Database schema
 │   │
 │   └── shared/               # Shared type definitions
-│
+
 ├── release/                  # Build output (release-{timestamp}/)
 ├── docs/                     # Design documents
 ├── docker-compose.yml         # Docker orchestration

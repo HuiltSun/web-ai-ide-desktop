@@ -265,14 +265,16 @@ $env:POSTGRES_PASSWORD="StrongPass123!"
 | **Server 会话** | `routes/sessions.ts` + `session.service.ts` | 100% |
 | **Server 文件** | `routes/files.ts` | 100% |
 | **路由认证保护** | 所有受保护路由 | 100% |
-| **AI 网关** | `core/ai/gateway.ts` | 100% |
-| **AI Provider** | `core/ai/providers/*.ts` | 100% |
-| **工具系统** | `core/src/tools/*.ts` | 100% |
+| **AI 网关** | `core/src/ai/gateway.ts` | 100% | AI Gateway 完整，支持 OpenAI/Anthropic/Qwen |
+| **AI Provider** | `core/src/ai/providers/*.ts` | 100% | OpenAI/Anthropic/Qwen Provider 完整 |
+| **AI gRPC Server** | `openclaude-temp/src/grpc/server.ts` | 100% | openclaude-temp gRPC 服务完整 |
+| **工具系统** | `core/src/tools/*.ts` + `openclaude-temp/src/tools/*.ts` | 100% | tools 完整 |
 | **数据加密** | `utils/encryption.ts` + `utils/prisma.ts` | 100% |
 | **日志系统** | `index.ts` | 100% |
-| **Terminal PTY** | `routes/terminal.ts` + `services/pty.service.ts` + `services/shellRegistry.ts` | 95% |
+| **Terminal PTY** | `routes/terminal.ts` + `services/pty.service.ts` + `services/shellRegistry.ts` | 100% | ✅ 已完整实现 WebSocket PTY |
 | **RabbitMQ 队列** | `utils/rabbitmq.ts` + `services/queue.service.ts` | 100% |
-| **Worker 服务** | `worker/src/index.ts` | 70% |
+| **AgentProcessManager** | `services/agent-process-manager.ts` | 100% | ✅ gRPC 进程管理完整 |
+| **AgentSessionManager** | `services/agent-session-manager.ts` | 100% | ✅ gRPC 会话管理完整 |
 | **Electron 主进程** | `electron/main.ts` | 100% |
 | **Preload** | `electron/preload.ts` | 100% |
 | **类型定义** | `shared/src/types.ts` | 100% |
@@ -288,8 +290,8 @@ $env:POSTGRES_PASSWORD="StrongPass123!"
 
 | 模块 | 文件 | 完成度 | 说明 |
 |------|------|--------|------|
-| **Chat WebSocket** | `routes/chat.ts` | 80% | 框架完成，消息持久化正常，返回模拟响应，需集成 AI gateway |
-| **AI 流式集成** | `routes/chat.ts` | 0% | 未连接 core |
+| **Chat WebSocket** | `routes/chat.ts` | 95% | 已集成 AgentSessionManager，通过 gRPC 连接 openclaude-temp |
+| **AI 流式集成** | `routes/chat.ts` | 90% | 通过 AgentSessionManager → AgentProcessManager → gRPC 已连接 |
 | **Monaco Editor** | `src/components/Editor.tsx` | 90% | UI 组件存在 |
 | **文件浏览器** | `src/components/FileExplorer.tsx` + `FileTree.tsx` | 90% | UI 组件存在 |
 | **终端组件** | `src/components/Terminal.tsx` | 90% | UI 组件存在 |
@@ -300,17 +302,17 @@ $env:POSTGRES_PASSWORD="StrongPass123!"
 
 ## 六、关键缺失
 
-1. **Chat 路由未调用 AI**：WebSocket 聊天目前返回模拟响应，未连接到 `core/ai/gateway.ts`
-2. **AI Provider 配置**：需要从环境变量或数据库加载 AI provider 设置
+1. **AI Provider 前端配置未传递到后端**：前端 Settings 中配置的 AI Provider 信息存储在前端 electron-store，未传递到 AgentProcessManager
+2. **AI Provider 配置**：目前通过环境变量 (QWEN_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL) 传递给 gRPC subprocess，需支持云端数据库配置
 3. **Electron 构建**：⚠️ 因沙箱权限问题阻塞
-4. **Worker AI 集成**：Worker 目前只是模拟响应，未连接到 core AI gateway
+4. **Worker AI 集成**：Worker 目前只是模拟响应，未连接到 openclaude-temp gRPC 服务
 
 ### 📊 状态对比 (2026-04-08 → 2026-04-10)
 
 | 模块 | 之前状态 | 当前状态 | 变化 |
 |------|----------|----------|------|
-| **Chat WebSocket** | 80% | 80% | 持平（仍为模拟响应） |
-| **AI 流式集成** | 0% | 0% | 持平 |
+| **Chat WebSocket** | 80% | 95% | ↑ 已集成 AgentSessionManager + gRPC |
+| **AI 流式集成** | 0% | 90% | ↑ 通过 gRPC 连接到 openclaude-temp |
 | **Worker** | 未统计 | 70% | 新增 |
 | **Terminal PTY** | 未统计 | 95% | 新增（已完整实现） |
 
@@ -318,11 +320,12 @@ $env:POSTGRES_PASSWORD="StrongPass123!"
 
 ```
 packages/
-├── server/           ████████████ 95%  (路由 + 加密 + 认证完整)
-├── core/             ████████████ 95%  (AI gateway + providers + tools 完整)
+├── server/           ████████████ 98%  (路由 + 加密 + 认证 + AgentManager 完整)
+├── core/             ████████████ 100% (AI gateway + providers + tools 完整)
+├── openclaude-temp/  ████████████ 100% (gRPC server + tools 完整)
 ├── worker/           ███████░░░░ 70%  (AMQP 队列 + Worker 框架，模拟响应)
 ├── electron/         ████████░░░ 90%  (主进程 + UI + 设计系统 + i18n 完整)
-├── cli/              █████████░░░ 85%  (UI 组件 + hooks + 服务完整，Settings 动态模型完成)
+├── cli/              █████████░░░ 85%  (UI 组件 + hooks + 服务完整)
 └── shared/           ████████████ 100% (类型定义完整)
 ```
 
@@ -342,16 +345,21 @@ e:\web\
 │   │   │       ├── services/   # api.ts, websocket.ts
 │   │   │       └── index.css   # 设计系统
 │   │   ├── cli/                  # Web CLI 界面 (85%)
-│   │   ├── core/                 # AI 核心逻辑 (95%)
+│   │   ├── core/                 # AI 核心逻辑 (100%)
 │   │   │   └── src/
 │   │   │       ├── ai/           # gateway + providers
 │   │   │       ├── models/       # config.ts
 │   │   │       └── tools/        # tools
-│   │   ├── server/               # Fastify 后端 API (95%)
+│   │   ├── server/               # Fastify 后端 API (98%)
 │   │   │   └── src/
 │   │   │       ├── routes/       # auth, chat, files, projects, sessions, terminal
-│   │   │       ├── services/     # auth, project, session, tenant, pty, shellRegistry, queue, session-cache
+│   │   │       ├── services/     # auth, project, session, tenant, pty, shellRegistry, queue, session-cache, agent-*
 │   │   │       └── utils/        # encryption, prisma, redis, rabbitmq
+│   │   ├── openclaude-temp/      # AI Agent gRPC 服务 (100%)
+│   │   │   └── src/
+│   │   │       ├── grpc/         # gRPC server
+│   │   │       ├── tools/        # Agent tools
+│   │   │       └── proto/        # proto 定义
 │   │   ├── worker/               # AI Worker (70%) - AMQP 队列消费者
 │   │   │   └── src/
 │   │   │       └── index.ts      # Worker 主逻辑
@@ -371,20 +379,29 @@ e:\web\
 
 ### 高优先级
 
-1. **集成 AI 到 Chat 路由**：将 `routes/chat.ts` 连接到 `core/ai/gateway.ts` 实现真正的 AI 流式响应
-2. **集成 AI 到 Worker**：将 Worker 连接到 `core/ai/gateway.ts` 实现后台 AI 任务处理
-3. **配置 AI Provider**：从环境变量或数据库加载 AI 配置
+1. **AI Provider 前端配置传递到后端**：将前端 Settings 中配置的 AI Provider 信息（API Key、Endpoint、Model）通过 API 传递到后端，AgentProcessManager 需支持动态 ProviderConfig
+   - 方案 A：在 Session 中存储 provider_config，每次创建 AgentProcess 时从数据库加载
+   - 方案 B：通过 WebSocket 连接时传递 token，后端查询用户配置的 AI provider
+   - 涉及文件：`chat.ts`, `agent-process-manager.ts`, `agent-session-manager.ts`
+
+2. **AI Provider 云端配置化**：将 AI Provider 配置存储到云端数据库，支持多用户配置
+   - 创建 `ai_config` 表存储用户的 AI 提供商配置
+   - 使用现有的加密机制（encryption.ts）对 API Key 进行加密存储
+   - 用户登录后根据 `userId` 查询其 AI 配置
+
+3. **集成 AI 到 Chat 路由**：将 `routes/chat.ts` 连接到 `core/ai/gateway.ts` 实现真正的 AI 流式响应
+4. **集成 AI 到 Worker**：将 Worker 连接到 `openclaude-temp` gRPC 服务实现后台 AI 任务处理
 
 ### 中优先级
 
-4. **构建 Electron 应用**：解决沙箱权限问题后运行
-5. **测试加密功能**：验证数据加密/解密正常工作
-6. **UI 组件完善**：验证 Editor、FileExplorer、Terminal 与后端服务的连接
+5. **构建 Electron 应用**：解决沙箱权限问题后运行
+6. **测试加密功能**：验证数据加密/解密正常工作
+7. **UI 组件完善**：验证 Editor、FileExplorer、Terminal 与后端服务的连接
 
 ### 低优先级
 
-7. **前端 AI 配置**：将前端 Settings 中配置的 AI Provider 信息传递到后端
-8. **多租户隔离完善**：确保 AI 配置也按租户隔离
+8. **前端 AI 配置**：将前端 Settings 中配置的 AI Provider 信息传递到后端
+9. **多租户隔离完善**：确保 AI 配置也按租户隔离
 
 ---
 
