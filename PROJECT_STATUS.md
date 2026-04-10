@@ -270,6 +270,9 @@ $env:POSTGRES_PASSWORD="StrongPass123!"
 | **工具系统** | `core/src/tools/*.ts` | 100% |
 | **数据加密** | `utils/encryption.ts` + `utils/prisma.ts` | 100% |
 | **日志系统** | `index.ts` | 100% |
+| **Terminal PTY** | `routes/terminal.ts` + `services/pty.service.ts` + `services/shellRegistry.ts` | 95% |
+| **RabbitMQ 队列** | `utils/rabbitmq.ts` + `services/queue.service.ts` | 100% |
+| **Worker 服务** | `worker/src/index.ts` | 70% |
 | **Electron 主进程** | `electron/main.ts` | 100% |
 | **Preload** | `electron/preload.ts` | 100% |
 | **类型定义** | `shared/src/types.ts` | 100% |
@@ -293,26 +296,35 @@ $env:POSTGRES_PASSWORD="StrongPass123!"
 | **Settings UI** | `src/components/Settings.tsx` | 100% | ✅ 已完成动态模型配置 |
 | **登录弹窗** | `src/components/LoginModal.tsx` | 100% | 完整实现 |
 
-### 📁 各包完成度
+---
+
+## 六、关键缺失
+
+1. **Chat 路由未调用 AI**：WebSocket 聊天目前返回模拟响应，未连接到 `core/ai/gateway.ts`
+2. **AI Provider 配置**：需要从环境变量或数据库加载 AI provider 设置
+3. **Electron 构建**：⚠️ 因沙箱权限问题阻塞
+4. **Worker AI 集成**：Worker 目前只是模拟响应，未连接到 core AI gateway
+
+### 📊 状态对比 (2026-04-08 → 2026-04-10)
+
+| 模块 | 之前状态 | 当前状态 | 变化 |
+|------|----------|----------|------|
+| **Chat WebSocket** | 80% | 80% | 持平（仍为模拟响应） |
+| **AI 流式集成** | 0% | 0% | 持平 |
+| **Worker** | 未统计 | 70% | 新增 |
+| **Terminal PTY** | 未统计 | 95% | 新增（已完整实现） |
+
+## 六、各包完成度
 
 ```
 packages/
 ├── server/           ████████████ 95%  (路由 + 加密 + 认证完整)
 ├── core/             ████████████ 95%  (AI gateway + providers + tools 完整)
+├── worker/           ███████░░░░ 70%  (AMQP 队列 + Worker 框架，模拟响应)
 ├── electron/         ████████░░░ 90%  (主进程 + UI + 设计系统 + i18n 完整)
 ├── cli/              █████████░░░ 85%  (UI 组件 + hooks + 服务完整，Settings 动态模型完成)
 └── shared/           ████████████ 100% (类型定义完整)
 ```
-
----
-
-## 六、关键缺失
-
-1. **Chat 路由未调用 AI**：需要将 `routes/chat.ts` 连接到 `core/ai/gateway.ts`
-2. **AI Provider 配置**：需要从环境变量或数据库加载 AI provider 设置
-3. **Electron 构建**：⚠️ 因沙箱权限问题阻塞
-
----
 
 ## 七、项目结构
 
@@ -337,9 +349,12 @@ e:\web\
 │   │   │       └── tools/        # tools
 │   │   ├── server/               # Fastify 后端 API (95%)
 │   │   │   └── src/
-│   │   │       ├── routes/       # auth, chat, files, projects, sessions
-│   │   │       ├── services/     # auth, project, session
-│   │   │       └── utils/        # encryption, prisma
+│   │   │       ├── routes/       # auth, chat, files, projects, sessions, terminal
+│   │   │       ├── services/     # auth, project, session, tenant, pty, shellRegistry, queue, session-cache
+│   │   │       └── utils/        # encryption, prisma, redis, rabbitmq
+│   │   ├── worker/               # AI Worker (70%) - AMQP 队列消费者
+│   │   │   └── src/
+│   │   │       └── index.ts      # Worker 主逻辑
 │   │   └── shared/               # 共享类型 (100%)
 │   ├── release/                  # 构建输出
 │   ├── debug.ps1                 # 一键启动脚本
@@ -356,15 +371,21 @@ e:\web\
 
 ### 高优先级
 
-1. **集成 AI 到 Chat 路由**：将 `routes/chat.ts` 连接到 `core/ai/gateway.ts`
-2. **配置 AI Provider**：从环境变量或数据库加载 AI 配置
+1. **集成 AI 到 Chat 路由**：将 `routes/chat.ts` 连接到 `core/ai/gateway.ts` 实现真正的 AI 流式响应
+2. **集成 AI 到 Worker**：将 Worker 连接到 `core/ai/gateway.ts` 实现后台 AI 任务处理
+3. **配置 AI Provider**：从环境变量或数据库加载 AI 配置
 
 ### 中优先级
 
-3. **构建 Electron 应用**：解决沙箱权限问题后运行
-4. **测试加密功能**：验证数据加密/解密正常工作
-5. **UI 组件完善**：验证 Editor、FileExplorer、Terminal 与后端服务的连接
+4. **构建 Electron 应用**：解决沙箱权限问题后运行
+5. **测试加密功能**：验证数据加密/解密正常工作
+6. **UI 组件完善**：验证 Editor、FileExplorer、Terminal 与后端服务的连接
+
+### 低优先级
+
+7. **前端 AI 配置**：将前端 Settings 中配置的 AI Provider 信息传递到后端
+8. **多租户隔离完善**：确保 AI 配置也按租户隔离
 
 ---
 
-*最后更新时间：2026-04-08*
+*最后更新时间：2026-04-10*
