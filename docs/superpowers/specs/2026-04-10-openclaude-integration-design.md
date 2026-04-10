@@ -544,98 +544,273 @@ openclaude Agent
 
 ## 十三、修正后的架构设计
 
-### 13.1 推荐方案：gRPC 代理模式
+### 13.1 最终架构方案
+
+**核心问题**：openclaude 的 gRPC server 设计为**单用户进程**，使用进程级 `process.env` 配置 Provider，无法 per-request 隔离。
+
+**解决方案**：为每个用户启动**独立的 gRPC sidecar 进程**，实现真正的多用户隔离。
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  web-ai-ide Backend (server)                                     │
-│  ┌───────────────────────────────────────────────────────────┐ │
-│  │  chat.ts (WebSocket)                                       │ │
-│  │    - 处理前端消息                                            │ │
-│  │    - 转发到 openclaude gRPC (在同一进程或sidecar)           │ │
-│  │    - 转换协议：WebSocket ↔ gRPC streaming                   │ │
-│  └───────────────────────────────────────────────────────────┘ │
+│                                                                   │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │  AgentProcessManager                                          │ │
+│  │  - 为每个用户创建独立的 gRPC sidecar 进程                     │ │
+│  │  - 管理进程生命周期                                            │ │
+│  │  - 隔离环境变量                                               │ │
+│  └─────────────────────────────────────────────────────────────┘ │
 │                              │                                  │
-│  ┌───────────────────────────▼───────────────────────────────┐ │
-│  │  openclaude gRPC Server (内置 headless 模式)                │ │
-│  │    - 使用 QueryEngine 处理 AI 请求                          │ │
-│  │    - 使用原生工具系统                                        │ │
-│  │    - Provider 通过环境变量配置                               │ │
-│  └───────────────────────────────────────────────────────────┘ │
+│         ┌────────────────────┼────────────────────┐           │
+│         ▼                    ▼                    ▼           │
+│  ┌─────────────┐      ┌─────────────┐      ┌─────────────┐     │
+│  │ User A      │      │ User B      │      │ User C      │     │
+│  │ sidecar     │      │ sidecar     │      │ sidecar     │     │
+│  │ (port 50052)│      │ (port 50053)│      │ (port 50054)│     │
+│  └─────────────┘      └─────────────┘      └─────────────┘     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 13.2 工具安全边界设计
-
-由于使用 openclaude 原生工具，需要添加命令白名单限制：
+### 13.2 AgentProcessManager（进程管理器）
 
 ```typescript
-// 允许的工具命令白名单
-const ALLOWED_COMMANDS = [
-  // 文件操作 - 受限
-  'ls', 'find', 'grep', 'rg', 'cat', 'head', 'tail',
-  // Git 操作
-  'git', 'gh',
-  // 开发工具
-  'node', 'npm', 'pnpm', 'bun', 'python', 'pip',
-  // 其他安全命令
-  'echo', 'pwd', 'cd', 'mkdir', 'rm', 'cp', 'mv',
-];
+interface AgentProcess {
+  pid: number;
+  port: number;
+  userId: string;
+  sessionId: string;
+  lastActivity: number;
+  proc: ChildProcess;
+}
 
-// 禁止的命令模式
-const BLOCKED_PATTERNS = [
-  /sudo/, /chmod/, /chown/, /passwd/,
-  /curl.*-T/, /wget.*-O/,
-  /\|\s*sh/, /\|\s*bash/,
-];
+export class AgentProcessManager {
+  private processes: Map<string, AgentProcess> = new Map();
+  private portCounter = 50052; // 起始端口
+  private readonly MAX_PROCESSES = 50; // 每个用户最大并发进程
 
-// 工作目录限制
-const WORKSPACE_ROOT = process.env.WORKSPACE_ROOT || '/projects';
-```
+  async createProcess(userId: string, sessionId: string, provider: ProviderConfig): Promise<AgentProcess> {
+    const port = this.portCounter++;
+    const env = {
+      ...process.env,
+      ANTHROPIC_API_KEY: provider.apiKey,
+      ANTHROPIC_BASE_URL: provider.baseUrl,
+      ANTHROPIC_MODEL: provider.model,
+    };
 
-### 13.3 Agent 生命周期管理
-
-```typescript
-class AgentSessionManager {
-  private sessions: Map<string, {
-    grpcCall: grpc.ClientDuplexStream,
-    lastActivity: number,
-    userId: string,
-  }> = new Map();
-
-  // 创建 session
-  create(sessionId: string, userId: string): grpc.ClientDuplexStream {
-    const call = this.grpcClient.Chat();
-    this.sessions.set(sessionId, {
-      grpcCall: call,
-      lastActivity: Date.now(),
-      userId,
+    const proc = spawn('node', ['dist/cli.mjs', 'dev:grpc'], {
+      cwd: path.join(__dirname, '../../openclaude'),
+      env,
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
-    return call;
+
+    const process: AgentProcess = {
+      pid: proc.pid!,
+      port,
+      userId,
+      sessionId,
+      lastActivity: Date.now(),
+      proc,
+    };
+
+    this.processes.set(`${userId}:${sessionId}`, process);
+    return process;
   }
 
-  // 清理超时 session
-  cleanup(): void {
-    const TIMEOUT_MS = 30 * 60 * 1000; // 30 分钟
-    for (const [id, session] of this.sessions) {
-      if (Date.now() - session.lastActivity > TIMEOUT_MS) {
-        session.grpcCall.cancel();
-        this.sessions.delete(id);
-      }
+  async getOrCreateProcess(userId: string, sessionId: string, provider: ProviderConfig): Promise<AgentProcess> {
+    const key = `${userId}:${sessionId}`;
+    const existing = this.processes.get(key);
+
+    if (existing && existing.pid) {
+      return existing;
+    }
+
+    return this.createProcess(userId, sessionId, provider);
+  }
+
+  async destroyProcess(userId: string, sessionId: string): Promise<void> {
+    const key = `${userId}:${sessionId}`;
+    const process = this.processes.get(key);
+
+    if (process) {
+      process.proc.kill();
+      this.processes.delete(key);
     }
   }
 
-  // WebSocket 断开时清理
-  onDisconnect(sessionId: string): void {
-    const session = this.sessions.get(sessionId);
-    if (session) {
-      session.grpcCall.cancel();
-      this.sessions.delete(sessionId);
+  // 清理超时进程
+  cleanup(): void {
+    const TIMEOUT_MS = 30 * 60 * 1000;
+    const now = Date.now();
+
+    for (const [key, proc] of this.processes) {
+      if (now - proc.lastActivity > TIMEOUT_MS) {
+        proc.proc.kill();
+        this.processes.delete(key);
+      }
     }
   }
 }
 ```
 
+### 13.3 命令白名单（通过 ActionRequired 拦截）
+
+由于 openclaude 的 `canUseTool` 钩子会发送 `ActionRequired`，我们可以在**拦截层**实现白名单：
+
+```typescript
+// 在 gRPC server 启动时配置 canUseTool 钩子
+const canUseTool: CanUseToolFn = async (tool, input, context, assistantMsg, toolUseID) => {
+  // 1. 发送 tool_start 事件
+  call.write({
+    tool_start: {
+      tool_name: tool.name,
+      arguments_json: JSON.stringify(input),
+      tool_use_id: toolUseID
+    }
+  });
+
+  // 2. 白名单检查
+  if (!isCommandAllowed(tool.name, input)) {
+    // 直接拒绝，不发送 action_required
+    return { behavior: 'deny', reason: 'Command not in whitelist' };
+  }
+
+  // 3. 工作目录检查
+  if (input.cwd && !isPathAllowed(input.cwd)) {
+    return { behavior: 'deny', reason: 'Path outside workspace' };
+  }
+
+  // 4. 发送 action_required 请求用户确认
+  const promptId = randomUUID();
+  call.write({
+    action_required: {
+      prompt_id: promptId,
+      question: `Approve ${tool.name}?`,
+      type: 'CONFIRM_COMMAND'
+    }
+  });
+
+  // 5. 等待用户响应
+  return new Promise((resolve) => {
+    pendingRequests.set(promptId, (reply) => {
+      resolve(reply.toLowerCase() === 'yes' || reply.toLowerCase() === 'y'
+        ? { behavior: 'allow' }
+        : { behavior: 'deny', reason: 'User denied' }
+      );
+    });
+  });
+};
+```
+
+### 13.4 gRPC 事件到 WebSocket 协议转换（基于实际 proto）
+
+```typescript
+interface GrpcEvent {
+  text_chunk?: { text: string };
+  tool_start?: { tool_name: string; arguments_json: string; tool_use_id: string };
+  tool_result?: { tool_name: string; output: string; is_error: boolean; tool_use_id: string };
+  action_required?: { prompt_id: string; question: string; type: string };
+  done?: { full_text: string; prompt_tokens: number; completion_tokens: number };
+  error?: { message: string; code: string };
+}
+
+function translateToWebSocket(event: GrpcEvent, socket: any): void {
+  if (event.text_chunk) {
+    socket.send(JSON.stringify({ type: 'text', content: event.text_chunk.text }));
+  }
+
+  if (event.tool_start) {
+    socket.send(JSON.stringify({
+      type: 'tool_call',
+      toolCallId: event.tool_start.tool_use_id,
+      toolName: event.tool_start.tool_name,
+      arguments: JSON.parse(event.tool_start.arguments_json),
+    }));
+  }
+
+  if (event.tool_result) {
+    socket.send(JSON.stringify({
+      type: 'tool_result',
+      toolCallId: event.tool_result.tool_use_id,
+      result: {
+        success: !event.tool_result.is_error,
+        output: event.tool_result.output,
+        error: event.tool_result.is_error ? event.tool_result.output : undefined,
+      },
+    }));
+  }
+
+  if (event.action_required) {
+    socket.send(JSON.stringify({
+      type: 'action_required',
+      promptId: event.action_required.prompt_id,
+      question: event.action_required.question,
+      actionType: event.action_required.type,
+    }));
+  }
+
+  if (event.done) {
+    socket.send(JSON.stringify({ type: 'done', stats: event.done }));
+  }
+
+  if (event.error) {
+    socket.send(JSON.stringify({ type: 'error', content: event.error.message, code: event.error.code }));
+  }
+}
+```
+
+### 13.5 工具安全边界设计
+
+```typescript
+const ALLOWED_TOOLS = new Set([
+  'Bash', 'Read', 'Write', 'Edit', 'Grep', 'Glob',
+  'Notebook', 'WebSearch', 'WebFetch', 'TodoWrite',
+]);
+
+const BLOCKED_PATTERNS = [
+  /sudo/, /su /, /chmod \d{4}/, /chown/,
+  /curl.*-T/, /wget.*-O.*\//,
+  /nc .*-e/, /:\(.*:\|.*&\);:/, // Fork bomb
+];
+
+function isCommandAllowed(toolName: string, input: any): boolean {
+  // 工具名必须在白名单
+  if (!ALLOWED_TOOLS.has(toolName)) {
+    return false;
+  }
+
+  // 检查命令内容
+  if (toolName === 'Bash' && input.command) {
+    for (const pattern of BLOCKED_PATTERNS) {
+      if (pattern.test(input.command)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+const WORKSPACE_ROOT = '/tmp/web-ai-ide/workspaces';
+
+function isPathAllowed(targetPath: string): boolean {
+  // resolve 解析后会消除 ..，所以只需检查是否在 WORKSPACE_ROOT 内
+  return targetPath.startsWith(WORKSPACE_ROOT);
+}
+```
+
+### 13.6 WebSocket 消息协议（更新版）
+
+| 事件类型 | 方向 | 字段 | 说明 |
+|---------|------|------|------|
+| `message` | 前端→后端 | `{ type, content }` | 用户发送消息 |
+| `text` | 后端→前端 | `{ type, content }` | AI 文本响应 |
+| `tool_call` | 后端→前端 | `{ type, toolCallId, toolName, arguments }` | 工具调用请求 |
+| `tool_result` | 后端→前端 | `{ type, toolCallId, result }` | 工具执行结果 |
+| `action_required` | 后端→前端 | `{ type, promptId, question, actionType }` | 请求用户确认 |
+| `user_confirm` | 前端→后端 | `{ type, promptId, approved }` | 用户确认响应 |
+| `done` | 后端→前端 | `{ type, stats }` | AI 响应完成 |
+| `error` | 后端→前端 | `{ type, content, code }` | 错误信息 |
+
 ---
 
-*最后更新：2026-04-10（基于 Spike 验证结果重写）*
+*最后更新：2026-04-10（proto 验证 + 多用户架构修正）*
