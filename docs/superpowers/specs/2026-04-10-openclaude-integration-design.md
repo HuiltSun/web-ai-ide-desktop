@@ -180,19 +180,26 @@ export interface AgentConfig {
 export class AgentService {
   constructor(
     private toolAdapter: ToolAdapter,
-    private gateway: AIGateway
+    private gatewayFactory: (config: AIProviderConfig) => AIGateway
   );
+
+  // 获取或创建 agent 实例
+  getOrCreateAgent(sessionId: string, config: AgentConfig): OpenClaudeAgent;
 
   // 创建流式对话
   streamChat(sessionId: string, messages: ChatMessage[]): AsyncGenerator<AgentEvent>;
 
-  // 获取当前 session 的 agent 实例
-  getAgent(sessionId: string): OpenClaudeAgent | null;
-
   // 终止当前 agent
   kill(sessionId: string): void;
+
+  // 从 session 加载 provider 配置（内部使用）
+  private loadProviderConfig(sessionId: string): Promise<AIProviderConfig>;
 }
 ```
+
+**设计说明**：
+- 使用 `gatewayFactory` 工厂函数注入 AIGateway 创建逻辑，便于测试
+- `loadProviderConfig()` 为私有方法，负责从 session 解密加载配置
 
 ### 4.3 chat.ts 修改
 
@@ -269,21 +276,32 @@ openclaude Agent
 
 ```typescript
 // agent-service.ts
-private createGateway(sessionId: string): AIGateway {
+private async loadProviderConfig(sessionId: string): Promise<AIProviderConfig> {
   const session = await sessionService.getSession(sessionId);
   const encryptedKeys = session.project.user.apiKeys;
 
   // 解密获取 provider 配置
   const config = decryptProviderConfig(encryptedKeys);
 
-  return new AIGateway({
-    provider: config.provider,  // 'openai' | 'anthropic' | 'qwen'
+  return config.providers.find(p => p.id === config.currentProviderId);
+}
+
+private createGateway(sessionId: string): AIGateway {
+  // 注意：此方法为同步，loadProviderConfig 在调用前已完成
+  const config = this.loadProviderConfigSync(sessionId);
+  return this.gatewayFactory({
+    provider: config.type,  // 'openai' | 'anthropic' | 'qwen'
     apiKey: config.apiKey,
     baseUrl: config.baseUrl,
     model: config.model,
   });
 }
 ```
+
+**说明**：
+- `loadProviderConfig` 是 async 方法
+- `createGateway` 是同步方法，通过预先加载的配置创建 Gateway
+- 实际实现中可在 `getOrCreateAgent` 时先 await 加载配置
 
 ---
 
@@ -407,6 +425,8 @@ private createGateway(sessionId: string): AIGateway {
 
 ## 八、依赖关系
 
+### 8.1 数据流依赖
+
 ```
 packages/openclaude (submodule)
        ↓
@@ -419,9 +439,30 @@ packages/server/src/services/agent-service.ts
 packages/server/src/routes/chat.ts
        ↓
 packages/electron/src/components/Chat.tsx
-       ↓
-packages/electron/src/contexts/SettingsContext.tsx
 ```
+
+### 8.2 配置流向（独立）
+
+```
+SettingsContext.tsx (前端配置来源)
+        │
+        ▼ 保存到 electron-store
+        │
+        ▼ 登录时传递给后端
+session.apiKeys (加密存储)
+        │
+        ▼ AgentService.loadProviderConfig()
+openclaude Agent
+```
+
+**说明**：SettingsContext 是 AI Provider 配置的**来源**，通过 session 关联传递给后端 AgentService，与数据流依赖链独立。
+
+### 8.3 工具实现阶段
+
+| 阶段 | 工具 | 说明 |
+|------|------|------|
+| Phase 1 | bash, fileRead, fileWrite | 基础工具桥接 |
+| Phase 2 | fileEdit, grep, glob | 增强工具桥接 |
 
 ---
 

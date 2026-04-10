@@ -13,12 +13,14 @@
 
 **步骤**：
 ```bash
-cd e:\web\web-ai-ide
-git submodule add git@github.com:Gitlawb/openclaude.git packages/openclaude
-cd packages/openclaude
+cd packages
+git submodule add git@github.com:Gitlawb/openclaude.git openclaude
+cd openclaude
 npm install
 npm run build
 ```
+
+**说明**：本地开发环境执行，Windows/macOS/Linux 均适用。
 
 **验证**：
 - [ ] submodule 正确克隆
@@ -102,19 +104,18 @@ export class AgentService {
   private agents: Map<string, any> = new Map();
   private toolAdapter: ToolAdapter;
 
-  constructor() {
-    this.toolAdapter = new ToolAdapter(/* dependencies */);
+  constructor(
+    private gatewayFactory: (config: AIProviderConfig) => AIGateway,
+    ptyService: PTYService,
+    fileService: any
+  ) {
+    this.toolAdapter = new ToolAdapter(ptyService, fileService);
   }
 
   // 创建或获取 agent
   getOrCreateAgent(sessionId: string, config: AgentConfig): any {
     if (!this.agents.has(sessionId)) {
-      const gateway = new AIGateway({
-        provider: config.provider.type,
-        apiKey: config.provider.apiKey,
-        baseUrl: config.provider.baseUrl,
-        model: config.provider.model,
-      });
+      const gateway = this.gatewayFactory(config.provider);
       // 创建 openclaude agent 实例
       this.agents.set(sessionId, new OpenClaudeAgent(gateway, this.toolAdapter));
     }
@@ -139,6 +140,8 @@ export class AgentService {
 }
 ```
 
+**设计说明**：与设计文档保持一致，使用 `gatewayFactory` 依赖注入。
+
 **步骤**：
 1. 创建 `agent-service.ts`
 2. 初始化 ToolAdapter
@@ -157,15 +160,61 @@ export class AgentService {
 
 ## Phase 2：核心集成（第 3-4 周）
 
+### Task 2.0：WebSocket 消息协议文档（前置）
+
+**文件**：`docs/websocket-protocol.md`（新建）
+
+**协议定义**：
+
+| 事件类型 | 方向 | 字段 | 说明 |
+|---------|------|------|------|
+| `message` | 前端→后端 | `{ type, content }` | 用户发送消息 |
+| `text` | 后端→前端 | `{ type, content }` | AI 文本响应 |
+| `tool_call` | 后端→前端 | `{ type, toolCallId, toolName, arguments }` | 工具调用请求 |
+| `tool_result` | 后端→前端 | `{ type, toolCallId, success, output?, error? }` | 工具执行结果 |
+| `done` | 后端→前端 | `{ type }` | AI 响应完成 |
+| `error` | 后端→前端 | `{ type, content, code? }` | 错误信息 |
+
+**tool_call 事件参数示例**：
+```json
+{
+  "type": "tool_call",
+  "toolCallId": "tool_123",
+  "toolName": "bash",
+  "arguments": { "command": "ls -la", "cwd": "/home/user" }
+}
+```
+
+**tool_result 事件参数示例**：
+```json
+{
+  "type": "tool_result",
+  "toolCallId": "tool_123",
+  "success": true,
+  "output": "total 128\ndrwxr-xr-x  12 user  staff   384 Apr 10 12:00 ..."
+}
+```
+
+**验证**：
+- [ ] 协议文档创建完成
+- [ ] 前后端字段定义一致
+
+**依赖**：无
+
+---
+
 ### Task 2.1：修改 chat.ts 集成 AgentService
 
 **文件**：`packages/server/src/routes/chat.ts`
+
+**前置条件**：Task 2.2 (Provider 配置桥接) 应先完成或使用占位符
 
 **修改内容**：
 
 1. 导入 AgentService
 2. 初始化 AgentService 实例
 3. 修改 WebSocket 消息处理
+4. 添加错误处理
 
 **代码变更**：
 
@@ -173,72 +222,86 @@ export class AgentService {
 // 添加导入
 import { AgentService } from '../services/agent-service.js';
 
-// 初始化
-const agentService = new AgentService();
+// 初始化（Task 2.2 完成后，providerLoader 应替换为实际实现）
+const agentService = new AgentService(
+  (config) => new AIGateway(config),  // gatewayFactory
+  getShellRegistry().getPTYService(),  // ptyService
+  null  // fileService (后续注入)
+);
 
 // 修改消息处理
 socket.on('message', async (message: Buffer) => {
-  const data = JSON.parse(message.toString());
+  try {
+    const data = JSON.parse(message.toString());
 
-  if (data.type === 'message' && data.content) {
-    // 1. 保存用户消息
-    await sessionService.addMessage({
-      sessionId: activeSessionId,
-      role: 'user',
-      content: data.content,
-    });
+    if (data.type === 'message' && data.content) {
+      // 1. 保存用户消息
+      await sessionService.addMessage({
+        sessionId: activeSessionId,
+        role: 'user',
+        content: data.content,
+      });
 
-    // 2. 获取或创建 agent
-    const agent = agentService.getOrCreateAgent(activeSessionId, {
-      provider: getProviderFromSession(activeSessionId),
-    });
+      // 2. 获取或创建 agent（占位：Task 2.2 完成后替换 providerLoader）
+      const providerConfig = await loadProviderConfigFromSession(activeSessionId); // TODO: 实现
+      const agent = agentService.getOrCreateAgent(activeSessionId, {
+        provider: providerConfig,
+      });
 
-    // 3. 获取历史消息
-    const history = await sessionService.getMessages(activeSessionId);
+      // 3. 获取历史消息
+      const history = await sessionService.getMessages(activeSessionId);
 
-    // 4. 流式处理
-    for await (const event of agent.streamChat(history)) {
-      switch (event.type) {
-        case 'text':
-          socket.send(JSON.stringify({ type: 'text', content: event.content }));
-          break;
-        case 'tool_call':
-          socket.send(JSON.stringify({
-            type: 'tool_call',
-            toolCallId: event.toolCallId,
-            toolName: event.name,
-            arguments: event.arguments,
-          }));
-          break;
-        case 'tool_result':
-          socket.send(JSON.stringify({
-            type: 'tool_result',
-            toolCallId: event.toolCallId,
-            result: event.result,
-          }));
-          break;
-        case 'done':
-          socket.send(JSON.stringify({ type: 'done' }));
-          break;
+      // 4. 流式处理
+      for await (const event of agent.streamChat(history)) {
+        switch (event.type) {
+          case 'text':
+            socket.send(JSON.stringify({ type: 'text', content: event.content }));
+            break;
+          case 'tool_call':
+            socket.send(JSON.stringify({
+              type: 'tool_call',
+              toolCallId: event.toolCallId,
+              toolName: event.name,
+              arguments: event.arguments,
+            }));
+            break;
+          case 'tool_result':
+            socket.send(JSON.stringify({
+              type: 'tool_result',
+              toolCallId: event.toolCallId,
+              result: event.result,
+            }));
+            break;
+          case 'done':
+            socket.send(JSON.stringify({ type: 'done' }));
+            break;
+        }
       }
     }
+  } catch (error) {
+    // 错误处理：发送 error 类型事件
+    socket.send(JSON.stringify({
+      type: 'error',
+      content: error instanceof Error ? error.message : 'Unknown error',
+    }));
   }
 });
 ```
 
 **步骤**：
 1. 添加 AgentService 导入
-2. 创建 AgentService 单例
+2. 创建 AgentService 实例（使用占位 providerLoader）
 3. 修改 `message` 类型处理
 4. 实现完整的 streaming 事件处理
-5. 添加错误处理
+5. 添加 try-catch 错误处理
 
 **验证**：
 - [ ] WebSocket 连接成功
 - [ ] 发送消息收到 AI 响应
 - [ ] 工具调用事件正确发送
+- [ ] 异常时发送 `error` 类型事件
 
-**依赖**：Task 1.3
+**依赖**：Task 1.3, Task 2.2
 
 ---
 
@@ -271,22 +334,77 @@ private async loadProviderConfig(sessionId: string): Promise<AIProviderConfig> {
 - [ ] Agent 使用正确的 provider
 - [ ] 配置变更时 agent 重新创建
 
+**依赖**：无（可与 Task 2.1 并行）
+
+---
+
+### Task 2.3：WebSocket 错误处理与超时机制
+
+**文件**：`packages/server/src/routes/chat.ts`
+
+**实现内容**：
+
+1. **Agent 调用超时控制**
+   ```typescript
+   const TIMEOUT_MS = 120000; // 2分钟
+
+   const timeoutPromise = new Promise((_, reject) => {
+     setTimeout(() => reject(new Error('Agent timeout')), TIMEOUT_MS);
+   });
+
+   try {
+     await Promise.race([
+       agent.streamChat(history),
+       timeoutPromise
+     ]);
+   } catch (error) {
+     socket.send(JSON.stringify({ type: 'error', content: error.message }));
+   }
+   ```
+
+2. **工具执行超时 abort**
+   ```typescript
+   // 在 ToolAdapter 中添加
+   async bash(command: string, cwd?: string, timeoutMs = 30000): Promise<ToolResult> {
+     const controller = new AbortController();
+     const timeout = setTimeout(() => controller.abort(), timeoutMs);
+     try {
+       // 执行逻辑
+     } finally {
+       clearTimeout(timeout);
+     }
+   }
+   ```
+
+3. **WebSocket 错误事件**
+   - AI 调用失败 → `type: 'error'`
+   - 工具执行超时 → `type: 'tool_result' { success: false }`
+   - 连接异常 → `type: 'error' { code: 'CONNECTION_ERROR' }`
+
+**验证**：
+- [ ] Agent 超时正确抛出异常
+- [ ] 工具执行超时正确 abort
+- [ ] 前端正确显示错误状态
+
 **依赖**：Task 2.1
 
 ---
 
-### Task 2.3：测试多轮对话
+### Task 2.4：测试多轮对话
 
 **验证内容**：
 - [ ] 消息历史正确传递
 - [ ] 多轮对话上下文保持
 - [ ] Streaming 输出连续
+- [ ] 错误恢复机制工作
 
-**依赖**：Task 2.1, Task 2.2
+**依赖**：Task 2.1, Task 2.2, Task 2.3
 
 ---
 
 ## Phase 3：UI 优化（第 5-6 周）
+
+本阶段重点关注前端交互体验优化，包括流式响应展示、工具调用卡片渲染和消息组件样式改进。
 
 ### Task 3.1：修改 Chat.tsx 流式显示
 
@@ -431,35 +549,54 @@ const outputStyle: React.CSSProperties = {
 
 ## 任务依赖图
 
+```mermaid
+graph LR
+    subgraph Phase_1["Phase 1: 基础设施"]
+        A1["Task 1.1<br/>Submodule"]
+        A2["Task 1.2<br/>ToolAdapter"]
+        A3["Task 1.3<br/>AgentService"]
+        A1 --> A2 --> A3
+    end
+
+    subgraph Phase_2["Phase 2: 核心集成"]
+        B0["Task 2.0<br/>协议文档"]
+        B1["Task 2.1<br/>chat.ts 集成"]
+        B2["Task 2.2<br/>Provider 配置"]
+        B3["Task 2.3<br/>错误处理"]
+        B4["Task 2.4<br/>多轮对话"]
+        B0 --> B1
+        A3 --> B1
+        A3 --> B2
+        B1 --> B3
+        B2 -->|并行| B1
+        B3 --> B4
+    end
+
+    subgraph Phase_3["Phase 3: UI 优化"]
+        C1["Task 3.1<br/>Chat.tsx"]
+        C2["Task 3.2<br/>ToolCallCard"]
+        C3["Task 3.3<br/>ChatMessage"]
+        B1 --> C1
+        B4 -->|可并行| C1
+        C1 --> C2
+        C1 --> C3
+    end
+
+    subgraph Phase_4["Phase 4: 测试"]
+        D1["Task 4.1<br/>E2E 测试"]
+        D2["Task 4.2<br/>性能优化"]
+        D3["Task 4.3<br/>文档完善"]
+        C1 --> D1
+        C2 --> D1
+        C3 --> D1
+        D1 --> D2 --> D3
+    end
 ```
-Phase 1
-├── Task 1.1: 添加 submodule ─────────────────┐
-│                                              │
-├── Task 1.2: ToolAdapter ─────────────────────┼──┐
-│                                              │  │
-└── Task 1.3: AgentService ────────────────────┘  │
-                                                   │
-Phase 2                                           ▼
-├── Task 2.1: 集成到 chat.ts ─────────────────────┼──┐
-│                                                       │
-├── Task 2.2: Provider 配置桥接 ───────────────────────┼──┤
-│                                                           │
-└── Task 2.3: 多轮对话测试 ─────────────────────────────────┼──┐
-                                                                │
-Phase 3                                                         ▼
-├── Task 3.1: Chat.tsx 流式显示 ────────────────────────────────┼──┐
-│                                                                   │
-├── Task 3.2: ToolCallCard 样式 ──────────────────────────────────┼──┤
-│                                                                   │
-└── Task 3.3: ChatMessage 组件 ────────────────────────────────────┘
-                                                                       │
-Phase 4                                                             ▼
-├── Task 4.1: 端到端测试 ────────────────────────────────────────────┼──┐
-│                                                                       │
-├── Task 4.2: 性能优化 ────────────────────────────────────────────────┼──┤
-│                                                                       │
-└── Task 4.3: 文档完善 ────────────────────────────────────────────────┘
-```
+
+**说明**：
+- 箭头表示依赖关系
+- Phase 2 中 Task 2.1 和 Task 2.2 可并行开发
+- Phase 3 的任务可与 Phase 2 部分并行
 
 ---
 
