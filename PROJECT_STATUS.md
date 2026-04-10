@@ -267,7 +267,7 @@ $env:POSTGRES_PASSWORD="StrongPass123!"
 | **路由认证保护** | 所有受保护路由 | 100% |
 | **AI 网关** | `core/src/ai/gateway.ts` | 100% | AI Gateway 完整，支持 OpenAI/Anthropic/Qwen |
 | **AI Provider** | `core/src/ai/providers/*.ts` | 100% | OpenAI/Anthropic/Qwen Provider 完整 |
-| **AI gRPC Server** | `openclaude-temp/src/grpc/server.ts` | 100% | openclaude-temp gRPC 服务完整 |
+| **AI gRPC Server** | `openclaude-temp/src/grpc/server.ts` | 100% | openclaude-temp gRPC 服务完整，已添加 qwen-plus/qwen3.5-plus 模型支持 |
 | **工具系统** | `core/src/tools/*.ts` + `openclaude-temp/src/tools/*.ts` | 100% | tools 完整 |
 | **数据加密** | `utils/encryption.ts` + `utils/prisma.ts` | 100% |
 | **日志系统** | `index.ts` | 100% |

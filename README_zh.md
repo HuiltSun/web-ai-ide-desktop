@@ -126,6 +126,32 @@ cd packages/electron
 npm run dev
 ```
 
+### 方式四：gRPC 服务开发测试
+
+openclaude-temp 包含一个 gRPC 服务器，用于 AI Agent 服务。
+
+**启动 gRPC 服务器：**
+```bash
+cd packages/openclaude-temp
+bun install
+bun run build
+bun run dev:grpc
+```
+
+**使用 gRPC CLI 测试：**
+```bash
+cd packages/openclaude-temp
+bun run dev:grpc:cli
+```
+
+**环境变量配置：**
+```bash
+export CLAUDE_CODE_USE_OPENAI=1
+export OPENAI_API_KEY="your-api-key"
+export OPENAI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"  # for qwen
+export OPENAI_MODEL="qwen3.5-plus"
+```
+
 ---
 
 ## 项目结构

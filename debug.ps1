@@ -240,7 +240,7 @@ if (-not (Test-Path "$OpenClaudeDir\package.json")) {
         $portCheck = Test-NetConnection -ComputerName "localhost" -Port 50051 -WarningAction SilentlyContinue
         if ($portCheck.TcpTestSucceeded) {
             $grpcReady = $true
-            Write-Host "  OpenClaude gRPC 服务器就绪 (localhost:50052)"
+            Write-Host "  OpenClaude gRPC 服务器就绪 (localhost:50051)"
             break
         } else {
             Write-Host "    检查中... ($($i + 1)/10)"
