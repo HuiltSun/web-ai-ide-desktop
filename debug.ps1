@@ -6,6 +6,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = if ($ScriptDir) { $ScriptDir } else { $PWD }
 $ReleaseDir = "$ProjectRoot\release"
 $ServerDir = "$ProjectRoot\packages\server"
+$OpenClaudeDir = "$ProjectRoot\packages\openclaude-temp"
 $DockerContainer = "webaiide-postgres"
 $EnvFile = "$ProjectRoot\.env"
 
@@ -15,7 +16,7 @@ Write-Host "========================================"
 
 # 读取 .env 文件
 Write-Host ""
-Write-Host "[1/6] 检查环境配置..."
+Write-Host "[1/7] 检查环境配置..."
 
 if (Test-Path $EnvFile) {
     Write-Host "  读取 .env 文件..."
@@ -66,7 +67,7 @@ Write-Host "  加密: 已启用"
 
 # 1. 构建 packages
 Write-Host ""
-Write-Host "[2/6] 构建 packages..."
+Write-Host "[2/7] 构建 packages..."
 
 $PackagesDir = "$ProjectRoot\packages\electron\"
 if (Test-Path "$PackagesDir\package.json") {
@@ -101,7 +102,7 @@ if (Test-Path "$PackagesDir\package.json") {
 
 # 2. 启动 PostgreSQL (Docker)
 Write-Host ""
-Write-Host "[3/6] 启动 PostgreSQL 数据库..."
+Write-Host "[3/7] 启动 PostgreSQL 数据库..."
 
 try {
     $dockerRunning = docker ps 2>$null
@@ -148,7 +149,7 @@ try {
 
 # 3. 初始化数据库
 Write-Host ""
-Write-Host "[4/6] 初始化数据库..."
+Write-Host "[4/7] 初始化数据库..."
 
 if (Test-Path "$ServerDir\prisma\schema.prisma") {
     Push-Location $ServerDir -ErrorAction SilentlyContinue
@@ -168,7 +169,7 @@ if (Test-Path "$ServerDir\prisma\schema.prisma") {
 
 # 4. 启动后端服务器（新窗口）
 Write-Host ""
-Write-Host "[5/6] 启动后端服务器 (http://localhost:3001)..."
+Write-Host "[5/7] 启动后端服务器 (http://localhost:3001)..."
 # 先关闭可能正在运行的后端进程
 Write-Host "  检查并关闭已存在的后端进程..."
 $existingNodeProcesses = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object {
@@ -216,9 +217,44 @@ if (-not (Test-Path "$ServerDir\package.json")) {
     }
 }
 
-# 5. 启动桌面应用
+# 5. 启动 OpenClaude gRPC 服务器（新窗口）
 Write-Host ""
-Write-Host "[6/6] 启动桌面应用..."
+Write-Host "[6/7] 启动 OpenClaude gRPC 服务器 (localhost:50051)..."
+
+if (-not (Test-Path "$OpenClaudeDir\package.json")) {
+    Write-Host "  警告: 未找到 openclaude-temp package.json，跳过 gRPC 服务器启动"
+} else {
+    Write-Host "  启动命令: bun run dev:grpc"
+    Write-Host "  工作目录: $OpenClaudeDir"
+
+    # 在新窗口启动 openclaude gRPC 服务器
+    Start-Process cmd.exe -ArgumentList "/k cd /d `"$OpenClaudeDir`" && bun run dev:grpc"
+
+    Write-Host "  OpenClaude gRPC 服务器已在新窗口启动"
+    Write-Host "  等待 gRPC 服务器就绪..."
+
+    # 等待 gRPC 服务器启动，最多 20 秒
+    $grpcReady = $false
+    for ($i = 0; $i -lt 10; $i++) {
+        Start-Sleep -Seconds 2
+        $portCheck = Test-NetConnection -ComputerName "localhost" -Port 50051 -WarningAction SilentlyContinue
+        if ($portCheck.TcpTestSucceeded) {
+            $grpcReady = $true
+            Write-Host "  OpenClaude gRPC 服务器就绪 (localhost:50052)"
+            break
+        } else {
+            Write-Host "    检查中... ($($i + 1)/10)"
+        }
+    }
+
+    if (-not $grpcReady) {
+        Write-Host "  OpenClaude gRPC 服务器启动中（可能需要几秒钟）"
+    }
+}
+
+# 6. 启动桌面应用
+Write-Host ""
+Write-Host "[7/7] 启动桌面应用..."
 
 $launchBat = "$ProjectRoot\launch.bat"
 if (Test-Path $launchBat) {
@@ -233,11 +269,12 @@ if (Test-Path $launchBat) {
 Write-Host ""
 Write-Host "========================================"
 Write-Host "所有服务已启动:"
-Write-Host "  - packages:   构建完成"
-Write-Host "  - PostgreSQL: localhost:5432"
-Write-Host "  - 后端 API:   http://localhost:3001"
-Write-Host "  - 桌面应用:   已启动"
+Write-Host "  - packages:      构建完成"
+Write-Host "  - PostgreSQL:     localhost:5432"
+Write-Host "  - 后端 API:      http://localhost:3001"
+Write-Host "  - OpenClaude gRPC: localhost:50051"
+Write-Host "  - 桌面应用:      已启动"
 Write-Host "========================================"
 Write-Host ""
-Write-Host "提示: 关闭后端服务器窗口即可停止服务"
+Write-Host "提示: 关闭后端服务器和 gRPC 服务器窗口即可停止服务"
 Write-Host "========================================"
