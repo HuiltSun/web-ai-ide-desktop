@@ -30,13 +30,6 @@ call.on('data', async (serverMessage: any) => {
   } else if (serverMessage.tool_start) {
     console.log(`\n[Tool Call] ${serverMessage.tool_start.tool_name}`)
     console.log(`Arguments: ${serverMessage.tool_start.arguments_json}`)
-    console.log('Auto-replying with "yes"...')
-    call.write({
-      input: {
-        prompt_id: serverMessage.action_required?.prompt_id,
-        reply: 'yes'
-      }
-    })
   } else if (serverMessage.action_required) {
     console.log(`\n[Action Required] ${serverMessage.action_required.question}`)
     console.log('Auto-replying with "yes"...')

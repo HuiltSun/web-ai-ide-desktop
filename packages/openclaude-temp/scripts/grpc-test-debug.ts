@@ -33,15 +33,10 @@ call.on('data', async (serverMessage: any) => {
     process.stdout.write(`[TEXT CHUNK]: ${serverMessage.text_chunk.text}`)
   } else if (serverMessage.tool_start) {
     console.log(`[Tool Call] ${serverMessage.tool_start.tool_name}`)
-    console.log('Auto-replying with "yes"...')
-    call.write({
-      input: {
-        prompt_id: serverMessage.action_required?.prompt_id,
-        reply: 'yes'
-      }
-    })
+    console.log(`[Tool ID] ${serverMessage.tool_start.tool_use_id}`)
   } else if (serverMessage.action_required) {
     console.log(`[Action Required] ${serverMessage.action_required.question}`)
+    console.log('[Action ID] ' + serverMessage.action_required.prompt_id)
     console.log('Auto-replying with "yes"...')
     call.write({
       input: {
