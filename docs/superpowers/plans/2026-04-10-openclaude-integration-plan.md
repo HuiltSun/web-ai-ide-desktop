@@ -433,7 +433,7 @@ export class AgentSessionManager {
 
     this.pendingRequests.delete(promptId);
 
-    const reply = approved ? 'approved' : 'denied';
+    const reply = approved ? 'yes' : 'no';
     const session = this.sessions.get(pending.sessionId);
 
     if (session) {
@@ -547,7 +547,7 @@ export class AgentSessionManager {
    后端自动发送 { user_confirm: { prompt_id: 'xxx', reply: 'no' } }
 
 4. 后端将确认结果通过 gRPC 发送给 openclaude sidecar
-   { user_confirm: { prompt_id: 'xxx', reply: 'approved' | 'denied' | 'no' } }
+   { user_confirm: { prompt_id: 'xxx', reply: 'yes' | 'no' } }
 
 5. openclaude 根据用户选择继续或终止操作
 ```

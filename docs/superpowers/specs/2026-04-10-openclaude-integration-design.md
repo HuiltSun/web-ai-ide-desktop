@@ -933,7 +933,7 @@ function isPathAllowed(targetPath: string): boolean {
 | `tool_call` | 后端→前端 | `{ type, toolCallId, toolName, arguments }` | 工具调用请求 |
 | `tool_result` | 后端→前端 | `{ type, toolCallId, result }` | 工具执行结果 |
 | `action_required` | 后端→前端 | `{ type, promptId, question, actionType }` | 请求用户确认 |
-| `user_confirm` | 前端→后端 | `{ type, promptId, approved }` | 用户确认响应 |
+| `user_confirm` | 前端→后端 | `{ type, promptId, approved }` | 用户确认响应（approved=true→yes/y，approved=false→拒绝） |
 | `done` | 后端→前端 | `{ type, stats }` | AI 响应完成 |
 | `error` | 后端→前端 | `{ type, content, code }` | 错误信息 |
 
