@@ -74,9 +74,12 @@ npm run build
 import { spawn, ChildProcess } from 'child_process';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
+import * as net from 'net';
 import path from 'path';
 
 const PROTO_PATH = path.join(__dirname, '../../openclaude/src/proto/openclaude.proto');
+const PORT_POOL_START = 50052;
+const PORT_POOL_SIZE = 100;  // 端口池大小
 
 interface AgentProcess {
   pid: number;
@@ -90,19 +93,38 @@ interface AgentProcess {
 
 export class AgentProcessManager {
   private processes: Map<string, AgentProcess> = new Map();
-  private portCounter = 50052;
-  private packageDefinition: any;
-  private protoDescriptor: any;
+  private creating: Map<string, Promise<AgentProcess>> = new Map();  // 并发去重
+  private portPool: number[] = [];  // 可用端口池
+  private usedPorts: Set<number> = new Set();  // 已用端口追踪
 
   constructor() {
-    this.packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+    // 初始化端口池
+    for (let i = 0; i < PORT_POOL_SIZE; i++) {
+      this.portPool.push(PORT_POOL_START + i);
+    }
+
+    const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
       keepCase: true,
       longs: String,
       enums: String,
       defaults: true,
       oneofs: true,
     });
-    this.protoDescriptor = grpc.loadPackageDefinition(this.packageDefinition);
+    this.protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+  }
+
+  private allocatePort(): number {
+    if (this.portPool.length === 0) {
+      throw new Error('Port pool exhausted');
+    }
+    const port = this.portPool.pop()!;
+    this.usedPorts.add(port);
+    return port;
+  }
+
+  private releasePort(port: number): void {
+    this.usedPorts.delete(port);
+    this.portPool.push(port);
   }
 
   private createGrpcClient(port: number): any {
@@ -114,7 +136,7 @@ export class AgentProcessManager {
   }
 
   async createProcess(userId: string, sessionId: string, provider: ProviderConfig): Promise<AgentProcess> {
-    const port = this.portCounter++;
+    const port = this.allocatePort();
     const env = {
       ...process.env,
       ANTHROPIC_API_KEY: provider.apiKey,
@@ -129,12 +151,12 @@ export class AgentProcessManager {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
-    // 等待进程启动
+    // 等待进程启动（使用轻量级 net 检测）
     await this.waitForPort(port);
 
     const client = this.createGrpcClient(port);
 
-    const process: AgentProcess = {
+    const agentProcess: AgentProcess = {
       pid: proc.pid!,
       port,
       userId,
@@ -144,56 +166,43 @@ export class AgentProcessManager {
       client,
     };
 
-    this.processes.set(`${userId}:${sessionId}`, process);
-    return process;
-  }
-
-  private waitForPort(port: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const startTime = Date.now();
-      const timeout = 10000; // 10秒超时
-
-      const check = () => {
-        const client = new this.protoDescriptor.openclaude.v1.Agent(
-          `localhost:${port}`,
-          grpc.credentials.createInsecure()
-        );
-
-        // 尝试连接检测端口是否可用
-        const deadline = new Date(Date.now() + 1000);
-        client.waitForReady(deadline, (err: any) => {
-          if (!err) {
-            resolve();
-          } else if (Date.now() - startTime > timeout) {
-            reject(new Error(`Port ${port} did not become available in time`));
-          } else {
-            setTimeout(check, 100);
-          }
-        });
-      };
-
-      setTimeout(check, 100);
+    proc.on('exit', () => {
+      this.releasePort(port);
     });
+
+    this.processes.set(`${userId}:${sessionId}`, agentProcess);
+    return agentProcess;
   }
 
   async getOrCreateProcess(userId: string, sessionId: string, provider: ProviderConfig): Promise<AgentProcess> {
     const key = `${userId}:${sessionId}`;
-    const existing = this.processes.get(key);
 
-    if (existing && existing.pid) {
+    if (this.processes.has(key)) {
+      const existing = this.processes.get(key)!;
+      existing.lastActivity = Date.now();
       return existing;
     }
 
-    return this.createProcess(userId, sessionId, provider);
+    if (this.creating.has(key)) {
+      return this.creating.get(key)!;
+    }
+
+    const promise = this.createProcess(userId, sessionId, provider)
+      .finally(() => this.creating.delete(key));
+
+    this.creating.set(key, promise);
+    return promise;
   }
 
   async destroyProcess(userId: string, sessionId: string): Promise<void> {
     const key = `${userId}:${sessionId}`;
-    const process = this.processes.get(key);
+    const agentProcess = this.processes.get(key);
 
-    if (process) {
-      process.proc.kill();
+    if (agentProcess) {
+      agentProcess.proc.kill();
+      agentProcess.client.close?.();
       this.processes.delete(key);
+      this.releasePort(agentProcess.port);
     }
   }
 
@@ -201,21 +210,64 @@ export class AgentProcessManager {
     const TIMEOUT_MS = 30 * 60 * 1000;
     const now = Date.now();
 
-    for (const [key, proc] of this.processes) {
-      if (now - proc.lastActivity > TIMEOUT_MS) {
-        proc.proc.kill();
+    for (const [key, agentProcess] of this.processes) {
+      if (now - agentProcess.lastActivity > TIMEOUT_MS) {
+        agentProcess.proc.kill();
+        agentProcess.client.close?.();
         this.processes.delete(key);
+        this.releasePort(agentProcess.port);
       }
     }
   }
+
+  private waitForPort(port: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const startTime = Date.now();
+      const timeout = 10000;
+
+      const check = () => {
+        const socket = new net.Socket();
+
+        socket.setTimeout(100);
+        socket.on('connect', () => {
+          socket.destroy();
+          resolve();
+        });
+        socket.on('timeout', () => {
+          socket.destroy();
+        });
+        socket.on('error', () => {
+          if (Date.now() - startTime > timeout) {
+            reject(new Error(`Port ${port} did not become available within ${timeout}ms`));
+          } else {
+            setTimeout(check, 100);
+          }
+        });
+
+        socket.connect(port, 'localhost');
+      };
+
+      setTimeout(check, 100);
+    });
+  }
 }
 ```
+
+**关键修复**：
+1. **端口池**：使用 `portPool` + `usedPorts` 追踪，进程退出时调用 `releasePort()` 归还端口
+2. **并发去重**：`creating` Map 追踪正在创建中的 Promise，避免重复启动进程
+3. **变量命名**：`process` 改为 `agentProcess`，避免遮蔽全局对象
+4. **轻量检测**：`waitForPort` 改用 `net.Socket` 而非 gRPC 客户端，避免资源泄漏
 
 **验证**：
 - [ ] AgentProcessManager 正确初始化
 - [ ] 为每个用户创建独立的 sidecar 进程
 - [ ] gRPC 客户端正确连接
 - [ ] 进程生命周期正确管理
+- [ ] 端口池正确分配（allocatePort）和回收（releasePort）
+- [ ] 并发去重：多个同时请求同一用户 session 只会创建一个进程
+- [ ] waitForPort 使用 net.Socket 不泄漏 gRPC 客户端
+- [ ] 变量命名不遮蔽全局对象（agentProcess 而非 process）
 
 **依赖**：Task 1.1
 
@@ -237,28 +289,33 @@ interface Session {
   pendingRequests: Map<string, (reply: string) => void>;
 }
 
+interface PendingRequest {
+  sessionId: string;
+  timeout: NodeJS.Timeout;
+}
+
 export class AgentSessionManager {
   private sessions: Map<string, Session> = new Map();
+  private pendingRequests: Map<string, PendingRequest> = new Map();  // promptId → { resolve, timeout }
 
   constructor(private processManager: AgentProcessManager) {
-    // 定时清理
     setInterval(() => this.processManager.cleanup(), 5 * 60 * 1000);
   }
 
   async createSession(
     userId: string,
     sessionId: string,
-    provider: ProviderConfig
+    provider: ProviderConfig,
+    notifyFrontend: (type: string, data: any) => void
   ): Promise<string> {
-    // 通过 processManager 获取 gRPC 客户端
-    const process = await this.processManager.getOrCreateProcess(userId, sessionId, provider);
-    const call = process.client.Chat();
+    const agentProcess = await this.processManager.getOrCreateProcess(userId, sessionId, provider);
+    const call = agentProcess.client.Chat();
 
     const pendingRequests = new Map<string, (reply: string) => void>();
 
     call.on('data', (msg: any) => {
       this.updateActivity(sessionId);
-      // 处理来自 gRPC 的消息
+      this.handleGrpcMessage(sessionId, msg, notifyFrontend);
     });
 
     call.on('end', () => {
@@ -273,6 +330,54 @@ export class AgentSessionManager {
     });
 
     return sessionId;
+  }
+
+  private handleGrpcMessage(
+    sessionId: string,
+    msg: any,
+    notifyFrontend: (type: string, data: any) => void
+  ): void {
+    if (msg.action_required) {
+      const { prompt_id, question, type } = msg.action_required;
+
+      const timeout = setTimeout(() => {
+        this.pendingRequests.delete(prompt_id);
+        const session = this.sessions.get(sessionId);
+        if (session) {
+          session.call.write({ user_confirm: { prompt_id, reply: 'timeout' } });
+        }
+      }, 60 * 1000);
+
+      this.pendingRequests.set(prompt_id, { sessionId, timeout });
+
+      notifyFrontend('action_required', {
+        promptId: prompt_id,
+        question,
+        actionType: type,
+      });
+    }
+  }
+
+  async handleUserConfirm(promptId: string, approved: boolean): Promise<void> {
+    const pending = this.pendingRequests.get(promptId);
+    if (!pending) {
+      console.warn(`[AgentSessionManager] No pending request for promptId: ${promptId}`);
+      return;
+    }
+
+    clearTimeout(pending.timeout);
+    this.pendingRequests.delete(promptId);
+
+    const reply = approved ? 'approved' : 'denied';
+    const session = this.sessions.get(pending.sessionId);
+
+    if (session) {
+      session.call.write({ user_confirm: { prompt_id: promptId, reply } });
+    }
+  }
+
+  hasSession(sessionId: string): boolean {
+    return this.sessions.has(sessionId);
   }
 
   send(sessionId: string, message: any): boolean {
@@ -306,10 +411,35 @@ export class AgentSessionManager {
 }
 ```
 
+**user_confirm 回路流程**：
+
+```
+1. gRPC stream 收到 action_required 消息
+   → handleGrpcMessage() 检测到 msg.action_required
+   → 创建 60s 超时定时器
+   → { sessionId, timeout } 存入 pendingRequests（prompt_id 为 key）
+   → 通过 notifyFrontend 发送 { type: 'action_required', ... } 到前端
+
+2. 前端发送 user_confirm 消息
+   → chat.ts 收到 { type: 'user_confirm', promptId, approved }
+   → 调用 sessionManager.handleUserConfirm(promptId, approved)
+
+3. handleUserConfirm() 执行
+   → 从 pendingRequests 取出 { sessionId, timeout }
+   → 清除超时定时器
+   → 根据 approved 决定 reply = 'approved' 或 'denied'
+   → 通过 session.call.write({ user_confirm: { prompt_id, reply } }) 发送到 gRPC
+
+4. gRPC 客户端收到回复，继续处理
+```
+
 **验证**：
 - [ ] Session 创建和删除正确
 - [ ] gRPC 流正确管理
 - [ ] WebSocket 断开时正确清理
+- [ ] action_required 触发后 pendingRequests 正确存储
+- [ ] user_confirm 到达时正确唤醒等待的 Promise
+- [ ] 超时后 pendingRequests 正确清理
 
 **依赖**：Task 1.2
 
@@ -329,8 +459,33 @@ export class AgentSessionManager {
 | `text` | 后端→前端 | `{ type, content }` | AI 文本响应 |
 | `tool_call` | 后端→前端 | `{ type, toolCallId, toolName, arguments }` | 工具调用请求 |
 | `tool_result` | 后端→前端 | `{ type, toolCallId, result }` | 工具执行结果 |
+| `action_required` | 后端→前端 | `{ type, promptId, question, actionType }` | 需用户确认的危险操作 |
+| `user_confirm` | 前端→后端 | `{ type, promptId, approved }` | 用户确认/拒绝危险操作 |
 | `done` | 后端→前端 | `{ type }` | AI 响应完成 |
 | `error` | 后端→前端 | `{ type, content, code? }` | 错误信息 |
+
+**user_confirm 回路流程**：
+
+```
+1. 后端→前端：发送 action_required 事件
+   { type: 'action_required', promptId: 'xxx', question: '确认执行 rm -rf /?', actionType: 'dangerous_command' }
+
+2. 前端弹出确认对话框
+
+3. 前端→后端：用户点击后发送 user_confirm
+   { type: 'user_confirm', promptId: 'xxx', approved: true }
+
+   或用户拒绝：
+   { type: 'user_confirm', promptId: 'xxx', approved: false }
+
+   或超时（60s）：
+   后端自动发送 { user_confirm: { prompt_id: 'xxx', reply: 'no' } }
+
+4. 后端将确认结果通过 gRPC 发送给 openclaude sidecar
+   { user_confirm: { prompt_id: 'xxx', reply: 'approved' | 'denied' | 'no' } }
+
+5. openclaude 根据用户选择继续或终止操作
+```
 
 **依赖**：无
 
@@ -354,18 +509,21 @@ socket.on('message', async (message: Buffer) => {
     const data = JSON.parse(message.toString());
 
     if (data.type === 'message' && data.content) {
-      // 1. 保存用户消息
       await sessionService.addMessage({
         sessionId: activeSessionId,
         role: 'user',
         content: data.content,
       });
 
-      // 2. 获取或创建 session（每个用户有独立的 sidecar 进程）
       const providerConfig = await loadProviderConfigFromSession(activeSessionId);
-      await sessionManager.createSession(userId, activeSessionId, providerConfig);
 
-      // 3. 发送消息到 gRPC
+      if (!sessionManager.hasSession(activeSessionId)) {
+        const notifyFrontend = (type: string, payload: any) => {
+          socket.send(JSON.stringify({ type, ...payload }));
+        };
+        await sessionManager.createSession(userId, activeSessionId, providerConfig, notifyFrontend);
+      }
+
       sessionManager.send(activeSessionId, {
         request: {
           session_id: activeSessionId,
@@ -376,8 +534,7 @@ socket.on('message', async (message: Buffer) => {
     }
 
     if (data.type === 'user_confirm') {
-      // 处理用户确认
-      sessionManager.sendConfirm(activeSessionId, data.promptId, data.approved);
+      sessionManager.handleUserConfirm(data.promptId, data.approved);
     }
   } catch (error) {
     socket.send(JSON.stringify({
@@ -491,31 +648,30 @@ export function translateToWebSocket(event: GrpcServerMessage, socket: any): voi
 
 **文件**：`packages/server/src/services/agent-process-manager.ts`
 
-**实现内容**：每个用户有独立的 sidecar 进程，Provider 配置通过进程环境变量隔离。
+**前置说明**：`createProcess` 方法已在 Task 1.2 实现，使用端口池分配端口。本 Task 补充 provider 类型判断逻辑。
+
+**实现内容**：根据 provider 类型设置对应的环境变量：
 
 ```typescript
-async createProcess(userId: string, sessionId: string, provider: ProviderConfig): Promise<AgentProcess> {
-  const port = this.portCounter++;
-  const env = {
-    ...process.env,
-    // 根据 provider 类型设置环境变量
-    // 由于每个用户有独立进程，环境变量天然隔离
-    ...(provider.type === 'anthropic'
-      ? {
-          ANTHROPIC_API_KEY: provider.apiKey,
-          ANTHROPIC_BASE_URL: provider.baseUrl,
-          ANTHROPIC_MODEL: provider.model,
-        }
-      : {
-          OPENAI_API_KEY: provider.apiKey,
-          OPENAI_BASE_URL: provider.baseUrl,
-          OPENAI_MODEL: provider.model,
-        }),
-    GRPC_PORT: String(port),
-  };
+// 在 Task 1.2 的 createProcess 中，env 构建逻辑补充：
 
-  // 启动独立进程...
-}
+const env = {
+  ...process.env,
+  ...(provider.type === 'anthropic'
+    ? {
+        ANTHROPIC_API_KEY: provider.apiKey,
+        ANTHROPIC_BASE_URL: provider.baseUrl,
+        ANTHROPIC_MODEL: provider.model,
+      }
+    : provider.type === 'openai'
+    ? {
+        OPENAI_API_KEY: provider.apiKey,
+        OPENAI_BASE_URL: provider.baseUrl,
+        OPENAI_MODEL: provider.model,
+      }
+    : {}),
+  GRPC_PORT: String(port),
+};
 ```
 
 **多用户隔离机制**：
@@ -528,7 +684,7 @@ async createProcess(userId: string, sessionId: string, provider: ProviderConfig)
 - [ ] OpenAI provider 正确设置环境变量
 - [ ] 多用户同时使用时 API Key 隔离正确
 
-**依赖**：Task 2.1
+**依赖**：Task 1.2, Task 2.1
 
 ---
 
@@ -545,21 +701,17 @@ async createProcess(userId: string, sessionId: string, provider: ProviderConfig)
 
 ## Phase 3：安全与工具限制（第 5-6 周）
 
-### Task 3.1：命令白名单（通过 openclaude 配置）
+### Task 3.1：命令白名单（通过 canUseTool 钩子）
 
-**文件**：`packages/openclaude/`（需修改 openclaude 源码）
+**文件**：`packages/openclaude/src/grpc/server.ts`（修改 openclaude 源码）
 
-**重要说明**：openclaude 的工具系统是内置的，无法从外部拦截。但可以通过以下方式实现白名单：
-
-1. **修改 openclaude 源码**：在 `getTools()` 中添加白名单过滤
-2. **使用 openclaude 的 `dangerouslyDisablePromptSecurity` 配置**（如适用）
-3. **通过 `action_required` 机制让用户确认危险命令**
+**方案确定**：根据设计文档 13.3，采用 `canUseTool` 钩子实现白名单控制。Spike 验证确认 openclaude 存在 `canUseTool` 钩子，可拦截工具调用。
 
 **实现内容**：
 
 ```typescript
-// 在 openclaude 源码中添加白名单过滤
-// packages/openclaude/src/tools/index.ts
+// 在 openclaude 源码中配置 canUseTool 钩子
+// packages/openclaude/src/grpc/server.ts
 
 const ALLOWED_TOOLS = new Set([
   'Bash', 'Read', 'Write', 'Edit', 'Grep', 'Glob',
@@ -571,55 +723,42 @@ const BLOCKED_PATTERNS = [
   /curl.*-T/, /wget.*-O.*\//, /nc .*-e/,
 ];
 
-export function getToolsFiltered(): Tool[] {
-  const tools = getTools();
-  return tools.filter(tool => {
-    // 只允许白名单工具
-    if (!ALLOWED_TOOLS.has(tool.name)) {
-      return false;
-    }
+function canUseTool(toolName: string, toolArgs: any): { behavior: 'allow' | 'deny', reason?: string } {
+  if (!ALLOWED_TOOLS.has(toolName)) {
+    return { behavior: 'deny', reason: `Tool '${toolName}' is not in the allowed list` };
+  }
 
-    // Bash 命令检查在运行时进行
-    return true;
-  });
+  if (toolName === 'Bash' && toolArgs.command) {
+    for (const pattern of BLOCKED_PATTERNS) {
+      if (pattern.test(toolArgs.command)) {
+        return {
+          behavior: 'deny',
+          reason: `Command matches blocked pattern: ${pattern}`
+        };
+      }
+    }
+  }
+
+  return { behavior: 'allow' };
 }
 ```
 
-**替代方案**：使用 `action_required` 机制
+**配置到 gRPC 服务器**：
 
 ```typescript
-// 通过 action_required 让用户确认危险命令
-// 前端收到 action_required 事件后显示确认对话框
-socket.on('message', (event) => {
-  const data = JSON.parse(event.data);
-
-  if (data.type === 'action_required') {
-    showConfirmDialog({
-      title: 'Command Confirmation',
-      message: data.question,
-      onConfirm: () => {
-        socket.send(JSON.stringify({
-          type: 'user_confirm',
-          promptId: data.promptId,
-          approved: true,
-        }));
-      },
-      onDeny: () => {
-        socket.send(JSON.stringify({
-          type: 'user_confirm',
-          promptId: data.promptId,
-          approved: false,
-        }));
-      },
-    });
-  }
+// 在创建 Agent 服务时注入钩子
+const agent = new AgentService({
+  canUseTool,
+  // ... 其他配置
 });
 ```
 
+**危险命令处理**：当 `canUseTool` 返回 `deny` 时，openclaude 会通过 `action_required` 机制向用户请求确认。用户确认后可通过 `user_confirm` 回路继续执行。
+
 **验证**：
-- [ ] 白名单工具过滤生效
-- [ ] 危险命令通过 action_required 请求确认
-- [ ] 用户拒绝时命令不执行
+- [ ] 非白名单工具被直接拒绝
+- [ ] 匹配危险模式的 Bash 命令触发 action_required
+- [ ] 用户拒绝后命令不执行
 
 **依赖**：Task 2.2
 
@@ -637,11 +776,11 @@ import path from 'path';
 const WORKSPACE_ROOT = process.env.WORKSPACE_ROOT || '/tmp/web-ai-ide/workspaces';
 
 export function isPathAllowed(targetPath: string): boolean {
-  // resolve 会解析路径，消除 .. 等特殊字符
+  // path.resolve() 会规范化路径，消除 .. 等特殊字符
   const resolved = path.resolve(targetPath);
 
-  // 检查是否在允许的工作目录内
-  return resolved.startsWith(WORKSPACE_ROOT) && !resolved.includes('..');
+  // 只检查是否在允许的工作目录内
+  return resolved.startsWith(WORKSPACE_ROOT);
 }
 
 export function sanitizeWorkingDirectory(sessionId: string): string {
