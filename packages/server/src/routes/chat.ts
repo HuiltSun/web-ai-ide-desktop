@@ -136,12 +136,11 @@ export async function chatRouter(fastify: FastifyInstance) {
       };
 
       const getProviderConfig = (): ProviderConfig => {
-        const apiKey = process.env.DEFAULT_ANTHROPIC_API_KEY || '';
         return {
-          type: 'anthropic',
-          apiKey,
-          baseUrl: process.env.ANTHROPIC_BASE_URL,
-          model: process.env.ANTHROPIC_MODEL,
+          type: 'qwen',
+          apiKey: process.env.QWEN_API_KEY || '',
+          baseUrl: process.env.OPENAI_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+          model: process.env.OPENAI_MODEL || 'qwen3.5-plus',
         };
       };
 
