@@ -2,11 +2,20 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import crypto from 'crypto';
 import { sessionService } from '../services/session.service.js';
 import { tenantService } from '../services/tenant.service.js';
+import { AgentProcessManager } from '../services/agent-process-manager.js';
+import { AgentSessionManager } from '../services/agent-session-manager.js';
+import type { ProviderConfig } from '../services/agent-process-manager.js';
+import { sanitizeWorkingDirectory } from '../services/tool-whitelist.js';
+
+const processManager = new AgentProcessManager();
+const sessionManager = new AgentSessionManager(processManager);
 
 interface ChatMessage {
-  type: 'message' | 'approve' | 'reject';
+  type: 'message' | 'approve' | 'reject' | 'user_confirm';
   content?: string;
   toolCallId?: string;
+  promptId?: string;
+  approved?: boolean;
 }
 
 interface ChatStreamEvent {
@@ -71,18 +80,21 @@ export async function chatRouter(fastify: FastifyInstance) {
       let streamingContent = '';
       let activeSessionId = sessionId;
       let sessionReady = false;
+      let userId = '';
 
       try {
         const existingSession = await sessionService.getSession(sessionId);
         if (existingSession) {
           activeSessionId = existingSession.id;
           sessionReady = true;
+          userId = (existingSession as any).userId || '';
           fastify.log.info(`Using existing session: ${activeSessionId}`);
         } else {
           const sessionByProject = await sessionService.getSessionByProject(sessionId);
           if (sessionByProject) {
             activeSessionId = sessionByProject.id;
             sessionReady = true;
+            userId = (sessionByProject as any).userId || '';
             fastify.log.info(`Found session ${activeSessionId} by projectId: ${sessionId}`);
           } else {
             fastify.log.warn(`Session not found for: ${sessionId}. Creating new session.`);
@@ -91,6 +103,7 @@ export async function chatRouter(fastify: FastifyInstance) {
             });
             activeSessionId = newSession.id;
             sessionReady = true;
+            userId = '';
             fastify.log.info(`Created new session: ${activeSessionId} for project: ${sessionId}`);
           }
         }
@@ -103,6 +116,20 @@ export async function chatRouter(fastify: FastifyInstance) {
         socket.close();
         return;
       }
+
+      const notifyFrontend = (type: string, payload: any) => {
+        socket.send(JSON.stringify({ type, ...payload }));
+      };
+
+      const getProviderConfig = (): ProviderConfig => {
+        const apiKey = process.env.DEFAULT_ANTHROPIC_API_KEY || '';
+        return {
+          type: 'anthropic',
+          apiKey,
+          baseUrl: process.env.ANTHROPIC_BASE_URL,
+          model: process.env.ANTHROPIC_MODEL,
+        };
+      };
 
       socket.on('message', async (message: Buffer) => {
         if (!sessionReady) {
@@ -134,31 +161,33 @@ export async function chatRouter(fastify: FastifyInstance) {
               return;
             }
 
-            socket.send(JSON.stringify({
-              type: 'text',
-              content: 'AI response simulation - Configure AI provider to enable real responses',
-            } as ChatStreamEvent));
+            if (!sessionManager.hasSession(activeSessionId)) {
+              await sessionManager.createSession(
+                userId || 'anonymous',
+                activeSessionId,
+                getProviderConfig(),
+                notifyFrontend
+              );
+            }
 
-            streamingContent += 'This is a simulated AI response. Configure your AI provider to enable real responses.\n\n';
-            streamingContent += 'You said: ' + data.content;
-
-            socket.send(JSON.stringify({
-              type: 'done',
-            } as ChatStreamEvent));
+            sessionManager.send(activeSessionId, {
+              request: {
+                session_id: activeSessionId,
+                message: data.content,
+                working_directory: sanitizeWorkingDirectory(activeSessionId),
+              },
+            });
 
           } else if (data.type === 'approve' && data.toolCallId) {
             fastify.log.info(`Tool approved: ${data.toolCallId}`);
-            socket.send(JSON.stringify({
-              type: 'text',
-              content: `Tool ${data.toolCallId} approved`,
-            } as ChatStreamEvent));
+            sessionManager.handleUserConfirm(data.toolCallId, true);
 
           } else if (data.type === 'reject' && data.toolCallId) {
             fastify.log.info(`Tool rejected: ${data.toolCallId}`);
-            socket.send(JSON.stringify({
-              type: 'text',
-              content: `Tool ${data.toolCallId} rejected`,
-            } as ChatStreamEvent));
+            sessionManager.handleUserConfirm(data.toolCallId, false);
+
+          } else if (data.type === 'user_confirm' && data.promptId !== undefined && data.approved !== undefined) {
+            sessionManager.handleUserConfirm(data.promptId, data.approved);
           }
         } catch (error) {
           fastify.log.error({ err: error }, 'Error processing message:');
@@ -170,6 +199,7 @@ export async function chatRouter(fastify: FastifyInstance) {
       });
 
       socket.on('close', () => {
+        sessionManager.remove(activeSessionId);
         fastify.log.info(`WebSocket disconnected for session: ${sessionId}`);
       });
 

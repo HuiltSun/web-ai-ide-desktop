@@ -36,9 +36,18 @@ export interface ChatMessage {
 }
 
 export interface ChatStreamEvent {
-  type: 'text' | 'tool_call' | 'done' | 'error';
+  type: 'text' | 'tool_call' | 'done' | 'error' | 'action_required' | 'tool_result';
   content?: string;
   toolCall?: ToolCall;
+  promptId?: string;
+  question?: string;
+  actionType?: string;
+  toolCallId?: string;
+  result?: {
+    success: boolean;
+    output?: string;
+    error?: string;
+  };
 }
 
 export interface AIModel {

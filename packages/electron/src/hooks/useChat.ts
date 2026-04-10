@@ -68,6 +68,30 @@ export function useChat(sessionId: string | null) {
             setStreamingContent('');
           }
           break;
+        case 'tool_result':
+          if (event.toolCallId && event.result) {
+            setPendingToolCall((prev) => {
+              if (prev && prev.id === event.toolCallId) {
+                return {
+                  ...prev,
+                  status: event.result!.success ? 'completed' : 'rejected',
+                  result: event.result!.output || event.result!.error,
+                };
+              }
+              return prev;
+            });
+          }
+          break;
+        case 'action_required':
+          if (event.promptId && event.question) {
+            setPendingToolCall({
+              id: event.promptId,
+              name: event.actionType || 'CONFIRM_COMMAND',
+              arguments: { question: event.question },
+              status: 'pending',
+            });
+          }
+          break;
         case 'done':
           if (streamingContentRef.current) {
             setMessages((prev) => [

@@ -69,7 +69,7 @@ export async function terminalRoutes(fastify: FastifyInstance): Promise<void> {
     });
 
     socket.on('error', (error) => {
-      fastify.log.error('WebSocket error:', error);
+      fastify.log.error({ err: error }, 'WebSocket error');
     });
   });
 
