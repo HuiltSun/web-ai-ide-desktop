@@ -503,10 +503,139 @@ openclaude Agent
 
 ## 十一、待确定事项
 
-- [ ] openclaude 具体版本/ commit
+- [x] openclaude 具体版本/ commit - **已验证：v0.1.8，无导出类**
 - [ ] 是否需要支持 MCP (Model Context Protocol)
-- [ ] 是否需要保留 core/ai/gateway.ts 作为备用
+- [x] 是否需要保留 core/ai/gateway.ts 作为备用 - **建议保留，作为独立 AI 能力**
 
 ---
 
-*最后更新：2026-04-10*
+## 十二、Spike 验证结论（2026-04-10）
+
+### 验证方法
+克隆 openclaude v0.1.8，审查源码结构。
+
+### 关键发现
+
+1. **openclaude 不能作为库直接调用**
+   - `package.json` 只暴露 `bin/openclaude` CLI 入口
+   - 核心类（`runAgent.ts`、`QueryEngine.ts`）无导出
+   - `src/index.ts` 只导出工具函数，无 Agent 类
+
+2. **openclaude 有内置 gRPC 服务器**
+   - 位置：`src/grpc/server.ts`
+   - Service：`openclaude.v1.AgentService.Chat`
+   - 启动命令：`npm run dev:grpc`
+   - 支持 bidirectional streaming
+
+3. **gRPC 集成的限制**
+   - 工具系统仍使用 openclaude 原生 `getTools()`
+   - Provider 配置仍通过环境变量（CLI 方式）
+   - 无法直接注入 web-ai-ide 的 `AIGateway`
+
+### 集成方案调整
+
+| 原方案 | 问题 | 调整后方案 |
+|--------|------|------------|
+| `new OpenClaudeAgent(gateway, toolAdapter)` | 无此类可导出 | 使用 gRPC 服务器 |
+| 工具桥接到 PTY/File API | openclaude 工具内联 | 保留原生工具，限制命令白名单 |
+| 直接复用 web-ai-ide AI Provider | 不可注入 | 通过环境变量传递 API Key |
+
+---
+
+## 十三、修正后的架构设计
+
+### 13.1 推荐方案：gRPC 代理模式
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  web-ai-ide Backend (server)                                     │
+│  ┌───────────────────────────────────────────────────────────┐ │
+│  │  chat.ts (WebSocket)                                       │ │
+│  │    - 处理前端消息                                            │ │
+│  │    - 转发到 openclaude gRPC (在同一进程或sidecar)           │ │
+│  │    - 转换协议：WebSocket ↔ gRPC streaming                   │ │
+│  └───────────────────────────────────────────────────────────┘ │
+│                              │                                  │
+│  ┌───────────────────────────▼───────────────────────────────┐ │
+│  │  openclaude gRPC Server (内置 headless 模式)                │ │
+│  │    - 使用 QueryEngine 处理 AI 请求                          │ │
+│  │    - 使用原生工具系统                                        │ │
+│  │    - Provider 通过环境变量配置                               │ │
+│  └───────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 13.2 工具安全边界设计
+
+由于使用 openclaude 原生工具，需要添加命令白名单限制：
+
+```typescript
+// 允许的工具命令白名单
+const ALLOWED_COMMANDS = [
+  // 文件操作 - 受限
+  'ls', 'find', 'grep', 'rg', 'cat', 'head', 'tail',
+  // Git 操作
+  'git', 'gh',
+  // 开发工具
+  'node', 'npm', 'pnpm', 'bun', 'python', 'pip',
+  // 其他安全命令
+  'echo', 'pwd', 'cd', 'mkdir', 'rm', 'cp', 'mv',
+];
+
+// 禁止的命令模式
+const BLOCKED_PATTERNS = [
+  /sudo/, /chmod/, /chown/, /passwd/,
+  /curl.*-T/, /wget.*-O/,
+  /\|\s*sh/, /\|\s*bash/,
+];
+
+// 工作目录限制
+const WORKSPACE_ROOT = process.env.WORKSPACE_ROOT || '/projects';
+```
+
+### 13.3 Agent 生命周期管理
+
+```typescript
+class AgentSessionManager {
+  private sessions: Map<string, {
+    grpcCall: grpc.ClientDuplexStream,
+    lastActivity: number,
+    userId: string,
+  }> = new Map();
+
+  // 创建 session
+  create(sessionId: string, userId: string): grpc.ClientDuplexStream {
+    const call = this.grpcClient.Chat();
+    this.sessions.set(sessionId, {
+      grpcCall: call,
+      lastActivity: Date.now(),
+      userId,
+    });
+    return call;
+  }
+
+  // 清理超时 session
+  cleanup(): void {
+    const TIMEOUT_MS = 30 * 60 * 1000; // 30 分钟
+    for (const [id, session] of this.sessions) {
+      if (Date.now() - session.lastActivity > TIMEOUT_MS) {
+        session.grpcCall.cancel();
+        this.sessions.delete(id);
+      }
+    }
+  }
+
+  // WebSocket 断开时清理
+  onDisconnect(sessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      session.grpcCall.cancel();
+      this.sessions.delete(sessionId);
+    }
+  }
+}
+```
+
+---
+
+*最后更新：2026-04-10（基于 Spike 验证结果重写）*
