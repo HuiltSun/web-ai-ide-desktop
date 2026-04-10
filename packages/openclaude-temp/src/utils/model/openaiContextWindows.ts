@@ -74,6 +74,11 @@ const OPENAI_CONTEXT_WINDOWS: Record<string, number> = {
   'llama3.2:1b':              128_000,
   'qwen3:8b':                 128_000,
   'codestral':                 32_768,
+
+  // Alibaba Cloud Qwen (OpenAI-compatible via DashScope)
+  'qwen-plus':                32_768,
+  'qwen3.5-plus':             32_768,
+  'qwen3.5-coder:7b':         32_768,
 }
 
 /**
@@ -142,6 +147,11 @@ const OPENAI_MAX_OUTPUT_TOKENS: Record<string, number> = {
   'llama3.2:1b':                4_096,
   'qwen3:8b':                   8_192,
   'codestral':                   8_192,
+
+  // Alibaba Cloud Qwen (OpenAI-compatible via DashScope)
+  'qwen-plus':                   8_192,
+  'qwen3.5-plus':                8_192,
+  'qwen3.5-coder:7b':            8_192,
 }
 
 function lookupByModel<T>(table: Record<string, T>, model: string): T | undefined {
