@@ -464,6 +464,8 @@ openclaude Agent
 | Phase 1 | bash, fileRead, fileWrite | 基础工具桥接 |
 | Phase 2 | fileEdit, grep, glob | 增强工具桥接 |
 
+**实现策略**：Phase 1 先实现核心工具，确保基本流程跑通；Phase 2 补充高级工具，保持实现节奏。
+
 ---
 
 ## 九、风险与应对

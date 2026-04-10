@@ -81,6 +81,8 @@ export class ToolAdapter {
 - [ ] `fileRead('/path/to/file')` 返回文件内容
 - [ ] `fileWrite('/path/to/file', 'content')` 成功写入
 
+**分阶段说明**：grep/glob/fileEdit 在 Phase 2 补充实现，Phase 1 聚焦核心工具桥接。
+
 **依赖**：Task 1.1
 
 ---
@@ -171,7 +173,7 @@ export class AgentService {
 | `message` | 前端→后端 | `{ type, content }` | 用户发送消息 |
 | `text` | 后端→前端 | `{ type, content }` | AI 文本响应 |
 | `tool_call` | 后端→前端 | `{ type, toolCallId, toolName, arguments }` | 工具调用请求 |
-| `tool_result` | 后端→前端 | `{ type, toolCallId, success, output?, error? }` | 工具执行结果 |
+| `tool_result` | 后端→前端 | `{ type, toolCallId, result }` | 工具执行结果 |
 | `done` | 后端→前端 | `{ type }` | AI 响应完成 |
 | `error` | 后端→前端 | `{ type, content, code? }` | 错误信息 |
 
@@ -269,7 +271,11 @@ socket.on('message', async (message: Buffer) => {
             socket.send(JSON.stringify({
               type: 'tool_result',
               toolCallId: event.toolCallId,
-              result: event.result,
+              result: {
+                success: event.success,
+                output: event.output,
+                error: event.error,
+              },
             }));
             break;
           case 'done':
@@ -348,15 +354,19 @@ private async loadProviderConfig(sessionId: string): Promise<AIProviderConfig> {
    ```typescript
    const TIMEOUT_MS = 120000; // 2分钟
 
-   const timeoutPromise = new Promise((_, reject) => {
+   const timeoutPromise = new Promise<never>((_, reject) => {
      setTimeout(() => reject(new Error('Agent timeout')), TIMEOUT_MS);
    });
 
    try {
-     await Promise.race([
-       agent.streamChat(history),
-       timeoutPromise
-     ]);
+     // 将 AsyncGenerator 包装为 Promise
+     const streamPromise = (async () => {
+       for await (const event of agent.streamChat(history)) {
+         // 处理 event...
+       }
+     })();
+
+     await Promise.race([streamPromise, timeoutPromise]);
    } catch (error) {
      socket.send(JSON.stringify({ type: 'error', content: error.message }));
    }
@@ -422,6 +432,7 @@ private async loadProviderConfig(sessionId: string): Promise<AIProviderConfig> {
 // 状态
 const [streamingContent, setStreamingContent] = useState('');
 const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
+const [error, setError] = useState<string | null>(null);
 
 // WebSocket 消息处理
 socket.on('message', (event) => {
@@ -430,18 +441,35 @@ socket.on('message', (event) => {
   switch (data.type) {
     case 'text':
       setStreamingContent(prev => prev + data.content);
+      setError(null);
       break;
     case 'tool_call':
       setToolCalls(prev => [...prev, data]);
+      break;
+    case 'tool_result':
+      setToolCalls(prev =>
+        prev.map(tc =>
+          tc.toolCallId === data.toolCallId
+            ? { ...tc, success: data.result.success, output: data.result.output, error: data.result.error }
+            : tc
+        )
+      );
       break;
     case 'done':
       // 保存消息到历史
       saveMessage(streamingContent);
       setStreamingContent('');
       break;
+    case 'error':
+      // 显示错误信息
+      setError(data.content);
+      setStreamingContent('');
+      break;
   }
 });
 ```
+
+**错误展示**：添加错误提示组件，显示 `data.content` 错误信息。
 
 **步骤**：
 1. 添加 streaming 状态
@@ -451,9 +479,11 @@ socket.on('message', (event) => {
 **验证**：
 - [ ] 文本逐字显示
 - [ ] 工具卡片正确展示
+- [ ] tool_result 正确更新卡片状态
+- [ ] error 事件正确显示错误信息
 - [ ] 完成状态正确处理
 
-**依赖**：Task 2.1
+**依赖**：Task 2.0
 
 ---
 
