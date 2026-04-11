@@ -97,17 +97,18 @@ export function useChat(sessionId: string | null) {
             });
           }
           break;
-        case 'done':
-          if (streamingContentRef.current) {
-            setMessages((prev) => [
-              ...prev,
-              { role: 'assistant', content: streamingContentRef.current },
-            ]);
+        case 'done': {
+          const fromChunks = streamingContentRef.current.trim();
+          const fromServer = (typeof event.fullText === 'string' ? event.fullText : '').trim();
+          const assistantContent = fromChunks || fromServer;
+          if (assistantContent) {
+            setMessages((prev) => [...prev, { role: 'assistant', content: assistantContent }]);
           }
           streamingContentRef.current = '';
           setStreamingContent('');
           setPendingToolCall(null);
           break;
+        }
         case 'error':
           console.error('Chat error:', event.content);
           streamingContentRef.current = '';

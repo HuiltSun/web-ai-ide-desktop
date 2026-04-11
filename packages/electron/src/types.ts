@@ -38,6 +38,8 @@ export interface ChatMessage {
 export interface ChatStreamEvent {
   type: 'text' | 'tool_call' | 'done' | 'error' | 'action_required' | 'tool_result';
   content?: string;
+  /** 服务端在 gRPC done 时带回的完整文本（用于无增量 chunk 时仍能展示/与 DB 一致） */
+  fullText?: string;
   toolCall?: ToolCall;
   promptId?: string;
   question?: string;

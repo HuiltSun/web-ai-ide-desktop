@@ -27,14 +27,17 @@ export function useChat(sessionId: string | null) {
             setStreamingContent('');
           }
           break;
-        case 'done':
-          setMessages((prev) => [
-            ...prev,
-            { role: 'assistant', content: streamingContent },
-          ]);
+        case 'done': {
+          const fromServer = (typeof event.fullText === 'string' ? event.fullText : '').trim();
+          const fromChunks = streamingContent.trim();
+          const assistantContent = fromChunks || fromServer;
+          if (assistantContent) {
+            setMessages((prev) => [...prev, { role: 'assistant', content: assistantContent }]);
+          }
           setStreamingContent('');
           setPendingToolCall(null);
           break;
+        }
         case 'error':
           console.error('Chat error:', event.content);
           setStreamingContent('');

@@ -20,5 +20,6 @@ export interface ChatMessage {
 export interface ChatStreamEvent {
   type: 'text' | 'tool_call' | 'done' | 'error';
   content?: string;
+  fullText?: string;
   toolCall?: ToolCall;
 }

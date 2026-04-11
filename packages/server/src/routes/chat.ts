@@ -179,7 +179,22 @@ export async function chatRouter(fastify: FastifyInstance) {
                 userId || 'anonymous',
                 activeSessionId,
                 getProviderConfig(),
-                notifyFrontend
+                notifyFrontend,
+                async (sid, fullText) => {
+                  const content = fullText.trim();
+                  if (!content) return;
+                  try {
+                    await sessionService.addMessage({
+                      sessionId: sid,
+                      uuid: crypto.randomUUID(),
+                      type: 'assistant',
+                      role: 'assistant',
+                      content,
+                    });
+                  } catch (err) {
+                    fastify.log.error({ err }, 'Failed to persist assistant message');
+                  }
+                }
               );
             }
 

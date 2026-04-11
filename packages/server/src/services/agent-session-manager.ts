@@ -29,14 +29,15 @@ export class AgentSessionManager {
     userId: string,
     sessionId: string,
     provider: ProviderConfig,
-    notifyFrontend: WebSocketNotifyFn
+    notifyFrontend: WebSocketNotifyFn,
+    persistAssistant?: PersistAssistantFn
   ): Promise<string> {
     await this.processManager.getOrCreateProcess(userId, sessionId, provider);
     const call = await this.processManager.openChatBridge(userId, sessionId);
 
     call.on('data', (msg: any) => {
       this.updateActivity(sessionId);
-      this.handleGrpcMessage(sessionId, msg, notifyFrontend);
+      this.handleGrpcMessage(sessionId, msg, notifyFrontend, persistAssistant);
     });
 
     call.on('error', (err: any) => {
@@ -59,7 +60,8 @@ export class AgentSessionManager {
   private handleGrpcMessage(
     sessionId: string,
     msg: any,
-    notifyFrontend: WebSocketNotifyFn
+    notifyFrontend: WebSocketNotifyFn,
+    persistAssistant?: PersistAssistantFn
   ): void {
     if (msg.action_required) {
       const { prompt_id, question, type } = msg.action_required;
@@ -101,7 +103,13 @@ export class AgentSessionManager {
     }
 
     if (msg.done) {
-      notifyFrontend('done', {});
+      const fullText = typeof msg.done.full_text === 'string' ? msg.done.full_text : '';
+      notifyFrontend('done', { fullText });
+      if (persistAssistant && fullText.trim()) {
+        void persistAssistant(sessionId, fullText).catch((err) => {
+          console.error('[AgentSessionManager] persist assistant failed:', err);
+        });
+      }
       return;
     }
 
