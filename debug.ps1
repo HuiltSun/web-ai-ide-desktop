@@ -63,51 +63,43 @@ Write-Host "  用户名: $env:POSTGRES_USER"
 Write-Host "  数据库: $env:POSTGRES_DB"
 Write-Host "  加密: 已启用"
 
-# 1. 构建 packages
+# 1. 检查依赖安装
 Write-Host ""
-Write-Host "[2/8] 构建 packages..."
+Write-Host "[2/8] 检查依赖安装..."
 
-$PackagesDir = "$ProjectRoot\packages\electron\"
-if (Test-Path "$PackagesDir\package.json") {
-    Push-Location $PackagesDir -ErrorAction SilentlyContinue
-    try {
-        Write-Host "  清理缓存和旧构建..."
-        if (Test-Path "$PackagesDir\node_modules\.vite") {
-            Remove-Item -Recurse -Force "$PackagesDir\node_modules\.vite" -ErrorAction SilentlyContinue
-        }
-        if (Test-Path "$PackagesDir\dist") {
-            Remove-Item -Recurse -Force "$PackagesDir\dist" -ErrorAction SilentlyContinue
-        }
-        Write-Host "  执行: npm install"
+# 检查 CLI 包依赖
+$CLIPackagesDir = "$ProjectRoot\packages\cli\"
+if (Test-Path "$CLIPackagesDir\package.json") {
+    if (-not (Test-Path "$CLIPackagesDir\node_modules")) {
+        Write-Host "  安装 CLI 依赖..."
+        Push-Location $CLIPackagesDir -ErrorAction SilentlyContinue
         npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "  执行: npm run build"
-            npm run build 2>&1 | ForEach-Object { Write-Host "    $_" }
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "  packages 构建完成"
-            } else {
-                Write-Host "  packages 构建失败"
-                Pop-Location -ErrorAction SilentlyContinue
-                exit 1
-            }
-        } else {
-            Write-Host "  packages 构建失败"
-            Pop-Location -ErrorAction SilentlyContinue
-            exit 1
-        }
-    } catch {
-        Write-Host "  构建失败: $_"
         Pop-Location -ErrorAction SilentlyContinue
-        exit 1
+    } else {
+        Write-Host "  CLI 依赖已安装"
     }
-    Pop-Location -ErrorAction SilentlyContinue
-} else {
-    Write-Host "  警告: 未找到 packages/package.json，跳过构建"
 }
+
+# 检查 Electron 包依赖（可选）
+$ElectronPackagesDir = "$ProjectRoot\packages\electron\"
+if (Test-Path "$ElectronPackagesDir\package.json") {
+    if (-not (Test-Path "$ElectronPackagesDir\node_modules")) {
+        Write-Host "  安装 Electron 依赖..."
+        Push-Location $ElectronPackagesDir -ErrorAction SilentlyContinue
+        npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
+        Pop-Location -ErrorAction SilentlyContinue
+    } else {
+        Write-Host "  Electron 依赖已安装"
+    }
+}
+
+Write-Host "  依赖检查完成"
+Write-Host "  提示: 使用 CLI 包在浏览器中调试 (http://localhost:3000)"
+Write-Host "  提示: 使用 Electron 包在桌面应用中调试 (npm run dev)"
 
 # 2. 启动 PostgreSQL (Docker)
 Write-Host ""
-Write-Host "[3/8] 启动 PostgreSQL 数据库..."
+Write-Host "[3/7] 启动 PostgreSQL 数据库..."
 
 try {
     $dockerRunning = docker ps 2>$null
@@ -154,7 +146,7 @@ try {
 
 # 3. 初始化数据库
 Write-Host ""
-Write-Host "[4/8] 初始化数据库..."
+Write-Host "[4/7] 初始化数据库..."
 
 if (Test-Path "$ServerDir\prisma\schema.prisma") {
     Push-Location $ServerDir -ErrorAction SilentlyContinue
@@ -174,7 +166,7 @@ if (Test-Path "$ServerDir\prisma\schema.prisma") {
 
 # 4. 启动后端服务器（新窗口）
 Write-Host ""
-Write-Host "[5/8] 启动后端服务器 (http://localhost:3001)..."
+Write-Host "[5/7] 启动后端服务器 (http://localhost:3001)..."
 # 先关闭可能正在运行的后端进程
 Write-Host "  检查并关闭已存在的后端进程..."
 $existingNodeProcesses = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object {
@@ -224,7 +216,7 @@ if (-not (Test-Path "$ServerDir\package.json")) {
 
 # 5. 启动 OpenClaude gRPC 服务器（新窗口）
 Write-Host ""
-Write-Host "[6/8] 启动 OpenClaude gRPC 服务器 (localhost:50051)..."
+Write-Host "[6/7] 启动 OpenClaude gRPC 服务器 (localhost:50051)..."
 
 if (-not (Test-Path "$OpenClaudeDir\package.json")) {
     Write-Host "  警告: 未找到 openclaude-temp package.json，跳过 gRPC 服务器启动"
@@ -259,7 +251,7 @@ if (-not (Test-Path "$OpenClaudeDir\package.json")) {
 
 # 6. 启动 CLI Web 应用
 Write-Host ""
-Write-Host "[7/8] 启动 CLI Web 应用 (http://localhost:3000)..."
+Write-Host "[7/7] 启动 CLI Web 应用 (http://localhost:3000)..."
 
 if (-not (Test-Path "$CLIDir\package.json")) {
     Write-Host "  警告: 未找到 cli package.json，跳过 CLI 启动"
@@ -300,30 +292,26 @@ if (-not (Test-Path "$CLIDir\package.json")) {
     }
 }
 
-# 7. 启动桌面应用
-Write-Host ""
-Write-Host "[8/8] 启动桌面应用..."
-
-$launchBat = "$ProjectRoot\launch.bat"
-if (Test-Path $launchBat) {
-    Write-Host "  使用 launch.bat 启动桌面应用..."
-    Start-Process $launchBat
-} else {
-    Write-Host "  错误: launch.bat 不存在，请先构建应用"
-    Write-Host "  运行: cd packages\electron; npm run build"
-}
-
 # 完成信息
 Write-Host ""
 Write-Host "========================================"
 Write-Host "所有服务已启动:"
-Write-Host "  - packages:       构建完成"
 Write-Host "  - PostgreSQL:     localhost:5432"
 Write-Host "  - 后端 API:      http://localhost:3001"
 Write-Host "  - OpenClaude gRPC: localhost:50051"
 Write-Host "  - CLI Web:        http://localhost:3000"
-Write-Host "  - 桌面应用:      已启动"
 Write-Host "========================================"
+Write-Host ""
+Write-Host "浏览器访问:"
+Write-Host "  - CLI Web 应用:   http://localhost:3000"
+Write-Host ""
+Write-Host "桌面应用调试 (可选):"
+Write-Host "  - cd packages\electron"
+Write-Host "  - npm run dev"
+Write-Host ""
+Write-Host "生产构建 (可选):"
+Write-Host "  - cd packages\electron"
+Write-Host "  - npm run build"
 Write-Host ""
 Write-Host "提示: 关闭后端服务器和 gRPC 服务器窗口即可停止服务"
 Write-Host "========================================"

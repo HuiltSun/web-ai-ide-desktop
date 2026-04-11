@@ -36,6 +36,7 @@ export class AgentProcessManager {
   private usedPorts: Set<number> = new Set();
   private protoDescriptor: any = null;
   private initPromise: Promise<void>;
+  private sharedClient: any = null;
 
   constructor() {
     for (let i = 0; i < PORT_POOL_SIZE; i++) {
@@ -78,7 +79,7 @@ export class AgentProcessManager {
     if (!this.protoDescriptor) {
       throw new Error('Proto descriptor not initialized');
     }
-    const client = new this.protoDescriptor.openclaude.v1.Agent(
+    const client = new (this.protoDescriptor.openclaude.v1.AgentService as any)(
       `localhost:${port}`,
       grpc.credentials.createInsecure()
     );
@@ -124,6 +125,60 @@ export class AgentProcessManager {
   async createProcess(userId: string, sessionId: string, provider: ProviderConfig): Promise<AgentProcess> {
     await this.ensureInit();
 
+    // 首先尝试使用已有的 gRPC 服务器（端口 50051）
+    try {
+      console.log('Trying to connect to existing gRPC server on port 50051...');
+      if (!this.sharedClient) {
+        this.sharedClient = this.createGrpcClient(50051);
+      }
+      
+      // 测试连接是否正常
+      await new Promise((resolve, reject) => {
+        const testCall = this.sharedClient.Chat();
+        const timeout = setTimeout(() => {
+          testCall.cancel();
+          reject(new Error('Connection timeout'));
+        }, 2000);
+        
+        testCall.on('error', (err: any) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
+        
+        testCall.on('data', () => {
+          clearTimeout(timeout);
+          testCall.cancel();
+          resolve(undefined);
+        });
+        
+        // 1.5 秒后认为连接成功（即使没有收到数据）
+        setTimeout(() => {
+          clearTimeout(timeout);
+          testCall.cancel();
+          resolve(undefined);
+        }, 1500);
+      });
+      
+      console.log('Successfully connected to existing gRPC server on port 50051');
+      
+      // 创建一个虚拟的 AgentProcess，使用共享的客户端
+      const agentProcess: AgentProcess = {
+        pid: 0,
+        port: 50051,
+        userId,
+        sessionId,
+        lastActivity: Date.now(),
+        proc: null as any,
+        client: this.sharedClient,
+      };
+      
+      this.processes.set(`${userId}:${sessionId}`, agentProcess);
+      return agentProcess;
+    } catch (err) {
+      console.log('Failed to connect to existing gRPC server, will try to start new process:', err);
+    }
+
+    // 如果连接失败，尝试启动新进程
     const port = this.allocatePort();
 
     let agentProc: ChildProcess | null = null;
@@ -152,10 +207,37 @@ export class AgentProcessManager {
 
       env.GRPC_PORT = String(port);
 
-      agentProc = spawn('node', ['dist/cli.mjs', 'dev:grpc'], {
-        cwd: path.join(__dirname, '../../../openclaude-temp'),
+      const openClaudeDir = path.join(__dirname, '../../../openclaude-temp');
+      console.log(`Starting agent process in: ${openClaudeDir}`);
+      
+      const isWindows = process.platform === 'win32';
+      const bunCmd = isWindows ? 'bun' : 'bun';
+      const args = ['run', 'dev:grpc'];
+      
+      console.log(`Spawning: ${bunCmd} ${args.join(' ')}`);
+      
+      agentProc = spawn(bunCmd, args, {
+        cwd: openClaudeDir,
         env,
         stdio: ['ignore', 'pipe', 'pipe'],
+        shell: isWindows,
+      });
+      
+      // 监听输出以便调试
+      agentProc.stdout?.on('data', (data) => {
+        console.log(`Agent stdout: ${data}`);
+      });
+      
+      agentProc.stderr?.on('data', (data) => {
+        console.error(`Agent stderr: ${data}`);
+      });
+      
+      agentProc.on('error', (err) => {
+        console.error(`Agent process error:`, err);
+      });
+      
+      agentProc.on('exit', (code, signal) => {
+        console.log(`Agent process exited with code ${code}, signal ${signal}`);
       });
 
       await this.waitForPort(port);
@@ -212,10 +294,14 @@ export class AgentProcessManager {
     const agentProcess = this.processes.get(key);
 
     if (agentProcess) {
-      agentProcess.proc.kill();
+      if (agentProcess.proc) {
+        agentProcess.proc.kill();
+      }
       agentProcess.client.close?.();
       this.processes.delete(key);
-      this.releasePort(agentProcess.port);
+      if (agentProcess.port !== 50051) {
+        this.releasePort(agentProcess.port);
+      }
     }
   }
 
@@ -225,10 +311,14 @@ export class AgentProcessManager {
 
     for (const [key, agentProcess] of this.processes) {
       if (now - agentProcess.lastActivity > TIMEOUT_MS) {
-        agentProcess.proc.kill();
+        if (agentProcess.proc) {
+          agentProcess.proc.kill();
+        }
         agentProcess.client.close?.();
         this.processes.delete(key);
-        this.releasePort(agentProcess.port);
+        if (agentProcess.port !== 50051) {
+          this.releasePort(agentProcess.port);
+        }
       }
     }
   }
