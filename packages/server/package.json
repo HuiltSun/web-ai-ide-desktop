@@ -17,6 +17,7 @@
     "@web-ai-ide/shared": "file:../shared",
     "amqplib": "^0.10.4",
     "bcryptjs": "^3.0.3",
+    "cross-spawn": "^7.0.6",
     "fastify": "^4.28.0",
     "ioredis": "^5.4.1",
     "node-pty": "^1.0.0",

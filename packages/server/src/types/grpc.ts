@@ -16,7 +16,8 @@ export interface CancelSignal {
 
 export interface ClientMessage {
   request?: ChatRequest;
-  user_input?: UserInput;
+  /** proto 字段名 `input`（UserInput） */
+  input?: UserInput;
   cancel?: CancelSignal;
 }
 

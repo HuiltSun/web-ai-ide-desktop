@@ -48,8 +48,13 @@ export function useChat(sessionId: string | null) {
         }
       });
 
+    setIsConnected(false);
+    const unsubOpen = wsService.onOpen(() => {
+      if (!cancelled && sessionIdRef.current === sessionId) {
+        setIsConnected(true);
+      }
+    });
     wsService.connect(sessionId);
-    setIsConnected(true);
 
     const unsubscribe = wsService.onMessage((event: ChatStreamEvent) => {
       if (sessionIdRef.current !== sessionId) return;
@@ -113,6 +118,7 @@ export function useChat(sessionId: string | null) {
 
     return () => {
       cancelled = true;
+      unsubOpen();
       unsubscribe();
       wsService.disconnect();
       setIsConnected(false);

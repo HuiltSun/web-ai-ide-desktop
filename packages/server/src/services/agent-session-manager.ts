@@ -1,9 +1,8 @@
-import * as grpc from '@grpc/grpc-js';
 import { AgentProcessManager, type ProviderConfig } from './agent-process-manager.js';
-import type { ClientMessage, ServerMessage } from '../types/grpc.js';
+import type { BunGrpcChatBridge } from './bun-grpc-chat-bridge.js';
 
 interface Session {
-  call: grpc.ClientDuplexStream<ClientMessage, ServerMessage>;
+  call: BunGrpcChatBridge;
   lastActivity: number;
   userId: string;
 }
@@ -13,6 +12,8 @@ interface PendingRequest {
 }
 
 export type WebSocketNotifyFn = (type: string, data: any) => void;
+
+export type PersistAssistantFn = (sessionId: string, fullText: string) => Promise<void>;
 
 export class AgentSessionManager {
   private sessions: Map<string, Session> = new Map();
@@ -30,8 +31,8 @@ export class AgentSessionManager {
     provider: ProviderConfig,
     notifyFrontend: WebSocketNotifyFn
   ): Promise<string> {
-    const agentProcess = await this.processManager.getOrCreateProcess(userId, sessionId, provider);
-    const call = agentProcess.client.Chat();
+    await this.processManager.getOrCreateProcess(userId, sessionId, provider);
+    const call = await this.processManager.openChatBridge(userId, sessionId);
 
     call.on('data', (msg: any) => {
       this.updateActivity(sessionId);
@@ -126,7 +127,8 @@ export class AgentSessionManager {
     const session = this.sessions.get(pending.sessionId);
 
     if (session) {
-      session.call.write({ user_input: { prompt_id: promptId, reply } });
+      // proto: UserInput input = 3 — 须与 openclaude.proto 字段名一致，勿用 user_input
+      session.call.write({ input: { prompt_id: promptId, reply } });
     }
   }
 

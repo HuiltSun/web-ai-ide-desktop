@@ -194,10 +194,10 @@ ws://localhost:3001/api/chat/:sessionId/stream?token=<jwt_token>
    }
 
    或超时（60s）：
-   后端自动发送 { "user_input": { "prompt_id": "tool_xxx", "reply": "no" } }
+   由产品策略决定（当前未在 WebSocket 层实现自动拒绝）。
 
-4. 后端将确认结果通过 gRPC 发送给 openclaude sidecar
-   { "user_input": { "prompt_id": "tool_xxx", "reply": "yes" | "no" } }
+4. 后端将确认结果通过 gRPC `ClientMessage` 发给 openclaude（proto 字段名为 **`input`**，对应 `UserInput`）：
+   `{ "input": { "prompt_id": "<uuid>", "reply": "yes" | "no" } }`（与 `keepCase` 下的字段名一致）
 
 5. openclaude 根据用户选择继续或终止操作
 ```

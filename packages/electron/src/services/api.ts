@@ -36,6 +36,11 @@ export const api = {
     return { Authorization: `Bearer ${authToken}` };
   },
 
+  /** WebSocket `?token=` 等与 REST 共用，勿在日志中打印 */
+  getAuthToken(): string | null {
+    return authToken;
+  },
+
   async getProjectFiles(projectId: string): Promise<FileNode[]> {
     const response = await fetch(`${API_BASE}/projects/${projectId}/files`, {
       headers: this.getAuthHeaders(),

@@ -1,16 +1,24 @@
-import { spawn, ChildProcess } from 'child_process';
-import * as grpc from '@grpc/grpc-js';
-import * as protoLoader from '@grpc/proto-loader';
+import { ChildProcess } from 'child_process';
+import crossSpawn from 'cross-spawn';
 import * as net from 'net';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { BunGrpcChatBridge, resolveBunExecutable } from './bun-grpc-chat-bridge.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PROTO_PATH = path.join(__dirname, '../../../openclaude-temp/src/proto/openclaude.proto');
+const PROTO_PATH = path.resolve(
+  path.join(__dirname, '../../../openclaude-temp/src/proto/openclaude.proto')
+);
 const PORT_POOL_START = 50052;
 const PORT_POOL_SIZE = 100;
+
+/** 与子进程 `GRPC_HOST` 一致，避免 Windows 上 `localhost` 在 IPv4/IPv6 间解析不一致导致 TCP 探测与 gRPC 实际监听不在同一监听栈，从而出现 HTTP/2 Protocol error。 */
+const GRPC_LOOPBACK = '127.0.0.1';
+
+/** 子进程在 `bindAsync` 回调后极短窗口内首包 HTTP/2 可能尚未完全就绪，TCP 通后略等再建 gRPC 客户端。 */
+const GRPC_POST_TCP_SETTLE_MS = 800;
 
 export interface ProviderConfig {
   type: 'anthropic' | 'openai' | 'gemini' | 'github' | 'ollama' | 'qwen';
@@ -26,7 +34,6 @@ interface AgentProcess {
   sessionId: string;
   lastActivity: number;
   proc: ChildProcess;
-  client: any;
 }
 
 export class AgentProcessManager {
@@ -34,31 +41,11 @@ export class AgentProcessManager {
   private creating: Map<string, Promise<AgentProcess>> = new Map();
   private portPool: number[] = [];
   private usedPorts: Set<number> = new Set();
-  private protoDescriptor: any = null;
-  private initPromise: Promise<void>;
-  private sharedClient: any = null;
 
   constructor() {
     for (let i = 0; i < PORT_POOL_SIZE; i++) {
       this.portPool.push(PORT_POOL_START + i);
     }
-
-    this.initPromise = this.init();
-  }
-
-  private async init(): Promise<void> {
-    const packageDefinition = await protoLoader.load(PROTO_PATH, {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-    });
-    this.protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-  }
-
-  private async ensureInit(): Promise<void> {
-    await this.initPromise;
   }
 
   private allocatePort(): number {
@@ -73,17 +60,6 @@ export class AgentProcessManager {
   private releasePort(port: number): void {
     this.usedPorts.delete(port);
     this.portPool.push(port);
-  }
-
-  private createGrpcClient(port: number): any {
-    if (!this.protoDescriptor) {
-      throw new Error('Proto descriptor not initialized');
-    }
-    const client = new (this.protoDescriptor.openclaude.v1.AgentService as any)(
-      `localhost:${port}`,
-      grpc.credentials.createInsecure()
-    );
-    return client;
   }
 
   private async waitForPort(port: number): Promise<void> {
@@ -115,7 +91,7 @@ export class AgentProcessManager {
           }
         });
 
-        socket.connect(port, 'localhost');
+        socket.connect(port, GRPC_LOOPBACK);
       };
 
       setTimeout(check, 100);
@@ -123,8 +99,6 @@ export class AgentProcessManager {
   }
 
   async createProcess(userId: string, sessionId: string, provider: ProviderConfig): Promise<AgentProcess> {
-    await this.ensureInit();
-
     // 直接启动新进程，不使用共享服务器
     console.log('Starting new agent process...');
 
@@ -156,23 +130,26 @@ export class AgentProcessManager {
       }
 
       env.GRPC_PORT = String(port);
+      env.GRPC_HOST = GRPC_LOOPBACK;
 
       const openClaudeDir = path.join(__dirname, '../../../openclaude-temp');
       console.log(`Starting agent process in: ${openClaudeDir}`);
-      console.log(`GRPC_PORT: ${port}`);
+      console.log(`GRPC_HOST: ${GRPC_LOOPBACK} GRPC_PORT: ${port}`);
       
-      const isWindows = process.platform === 'win32';
-      const bunCmd = isWindows ? 'bun.cmd' : 'bun';
+      // openclaude-temp 大量依赖 `bun:bundle` 等 Bun 专有模块，不可用 Node+tsx 替代启动。
       const args = ['run', 'dev:grpc'];
-      
-      console.log(`Spawning: ${bunCmd} ${args.join(' ')}`);
-      
-      agentProc = spawn(bunCmd, args, {
+      const bunExe = resolveBunExecutable();
+      console.log(`Spawning: ${bunExe} ${args.join(' ')}`);
+
+      agentProc = crossSpawn(bunExe, args, {
         cwd: openClaudeDir,
         env,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
-      
+      if (!agentProc) {
+        throw new Error('Failed to spawn agent process (crossSpawn returned null)');
+      }
+
       // 监听输出以便调试
       agentProc.stdout?.on('data', (data) => {
         console.log(`Agent stdout: ${data}`);
@@ -191,9 +168,23 @@ export class AgentProcessManager {
       });
 
       await this.waitForPort(port);
-      
-      // 等待 gRPC 服务器完全初始化
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((r) => setTimeout(r, GRPC_POST_TCP_SETTLE_MS));
+
+      const agentProcess: AgentProcess = {
+        pid: agentProc.pid!,
+        port,
+        userId,
+        sessionId,
+        lastActivity: Date.now(),
+        proc: agentProc,
+      };
+
+      agentProc.on('exit', () => {
+        this.releasePort(port);
+      });
+
+      this.processes.set(`${userId}:${sessionId}`, agentProcess);
+      return agentProcess;
     } catch (err) {
       if (agentProc) {
         agentProc.kill();
@@ -201,25 +192,6 @@ export class AgentProcessManager {
       this.releasePort(port);
       throw err;
     }
-
-    const client = this.createGrpcClient(port);
-
-    const agentProcess: AgentProcess = {
-      pid: agentProc.pid!,
-      port,
-      userId,
-      sessionId,
-      lastActivity: Date.now(),
-      proc: agentProc,
-      client,
-    };
-
-    agentProc.on('exit', () => {
-      this.releasePort(port);
-    });
-
-    this.processes.set(`${userId}:${sessionId}`, agentProcess);
-    return agentProcess;
   }
 
   async getOrCreateProcess(userId: string, sessionId: string, provider: ProviderConfig): Promise<AgentProcess> {
@@ -242,6 +214,18 @@ export class AgentProcessManager {
     return promise;
   }
 
+  /**
+   * 在 Bun 侧车中打开 Chat 流（Node 直连 Bun gRPC 会触发 HTTP/2 Protocol error）。
+   */
+  async openChatBridge(userId: string, sessionId: string): Promise<BunGrpcChatBridge> {
+    const key = `${userId}:${sessionId}`;
+    const agent = this.processes.get(key);
+    if (!agent) {
+      throw new Error(`No agent process for ${key}`);
+    }
+    return BunGrpcChatBridge.connect(GRPC_LOOPBACK, agent.port, PROTO_PATH);
+  }
+
   async destroyProcess(userId: string, sessionId: string): Promise<void> {
     const key = `${userId}:${sessionId}`;
     const agentProcess = this.processes.get(key);
@@ -250,7 +234,6 @@ export class AgentProcessManager {
       if (agentProcess.proc) {
         agentProcess.proc.kill();
       }
-      agentProcess.client.close?.();
       this.processes.delete(key);
       if (agentProcess.port !== 50051) {
         this.releasePort(agentProcess.port);
@@ -267,7 +250,6 @@ export class AgentProcessManager {
         if (agentProcess.proc) {
           agentProcess.proc.kill();
         }
-        agentProcess.client.close?.();
         this.processes.delete(key);
         if (agentProcess.port !== 50051) {
           this.releasePort(agentProcess.port);

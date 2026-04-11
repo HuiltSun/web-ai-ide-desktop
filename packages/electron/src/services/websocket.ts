@@ -1,6 +1,22 @@
 import { ChatStreamEvent } from '../types';
+import { api } from './api';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+function httpApiBaseToWsOrigin(apiBase: string): string {
+  try {
+    const normalized = apiBase.replace(/\/$/, '');
+    const withScheme = /^https?:\/\//i.test(normalized) ? normalized : `http://${normalized}`;
+    const u = new URL(withScheme);
+    const wsProto = u.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${wsProto}//${u.host}`;
+  } catch {
+    return 'ws://localhost:3001';
+  }
+}
 
 type MessageHandler = (event: ChatStreamEvent) => void;
+type OpenHandler = () => void;
 
 interface MessageMessage {
   type: 'message';
@@ -22,6 +38,7 @@ type OutgoingMessage = MessageMessage | ApproveMessage | RejectMessage;
 class WebSocketService {
   private ws: WebSocket | null = null;
   private handlers: Set<MessageHandler> = new Set();
+  private openHandlers: Set<OpenHandler> = new Set();
   private sessionId: string | null = null;
 
   connect(sessionId: string) {
@@ -30,10 +47,14 @@ class WebSocketService {
     }
 
     this.sessionId = sessionId;
-    this.ws = new WebSocket(`ws://localhost:3001/api/chat/${sessionId}/stream`);
+    const origin = httpApiBaseToWsOrigin(API_BASE);
+    const token = api.getAuthToken();
+    const qs = token ? `?token=${encodeURIComponent(token)}` : '';
+    this.ws = new WebSocket(`${origin}/api/chat/${sessionId}/stream${qs}`);
 
     this.ws.onopen = () => {
       console.log('WebSocket connected');
+      this.openHandlers.forEach((h) => h());
     };
 
     this.ws.onmessage = (event) => {
@@ -78,11 +99,17 @@ class WebSocketService {
     return () => this.handlers.delete(handler);
   }
 
+  onOpen(handler: OpenHandler) {
+    this.openHandlers.add(handler);
+    return () => this.openHandlers.delete(handler);
+  }
+
   disconnect() {
     this.ws?.close();
     this.ws = null;
     this.sessionId = null;
     this.handlers.clear();
+    this.openHandlers.clear();
   }
 
   get isConnected() {
