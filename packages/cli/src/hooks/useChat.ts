@@ -11,18 +11,15 @@ export function useChat(sessionId: string | null) {
   const [generatingElapsed, setGeneratingElapsed] = useState(0);
 
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    if (isGenerating) {
+    if (!isGenerating) {
       setGeneratingElapsed(0);
-      interval = setInterval(() => {
-        setGeneratingElapsed((prev) => prev + 1);
-      }, 1000);
-    } else {
-      setGeneratingElapsed(0);
+      return;
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    setGeneratingElapsed(0);
+    const interval = setInterval(() => {
+      setGeneratingElapsed((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
   }, [isGenerating]);
 
   useEffect(() => {
