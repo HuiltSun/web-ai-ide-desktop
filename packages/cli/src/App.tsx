@@ -10,6 +10,8 @@ function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [terminalOpen, setTerminalOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [terminalHeight, setTerminalHeight] = useState(320);
 
   const handleCreateProject = (name: string) => {
     const newProject: Project = {
@@ -47,6 +49,10 @@ function App() {
         />
       }
       terminal={terminalOpen ? <PTYTerminal onClose={() => setTerminalOpen(false)} /> : null}
+      sidebarWidth={sidebarWidth}
+      terminalHeight={terminalHeight}
+      onSidebarWidthChange={setSidebarWidth}
+      onTerminalHeightChange={setTerminalHeight}
     >
       <div className="h-full flex flex-col items-center justify-center p-8 relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">

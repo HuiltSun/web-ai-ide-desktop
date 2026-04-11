@@ -321,3 +321,61 @@ body {
 .stagger-6 { animation-delay: 0.3s; }
 .stagger-7 { animation-delay: 0.35s; }
 .stagger-8 { animation-delay: 0.4s; }
+
+/* Resize Handles */
+.resize-handle {
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast);
+}
+
+.resize-handle.horizontal {
+  height: 4px;
+  width: 100%;
+  cursor: row-resize;
+  background: transparent;
+}
+
+.resize-handle.horizontal::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  transition: background-color var(--transition-fast);
+}
+
+.resize-handle.horizontal:hover::after,
+.resize-handle.horizontal.active::after {
+  background: var(--color-accent);
+}
+
+.resize-handle.vertical {
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+}
+
+.resize-handle.vertical::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 48px;
+  background: var(--color-border);
+  border-radius: 2px;
+  transition: background-color var(--transition-fast);
+}
+
+.resize-handle.vertical:hover::after,
+.resize-handle.vertical.active::after {
+  background: var(--color-accent);
+}
