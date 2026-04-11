@@ -6,7 +6,7 @@ export interface UsePTYOptions {
   rows?: number;
 }
 
-export function usePTY(options: UsePTYOptions = {}) {
+export function usePTY() {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
