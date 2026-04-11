@@ -125,6 +125,7 @@ export interface Translations {
     debugErrors: string;
     explainLogic: string;
     thinking: string;
+    generating: string;
     disconnected: string;
   };
   welcome: {
@@ -290,6 +291,7 @@ export const translations: Record<Language, Translations> = {
       debugErrors: 'Debug errors',
       explainLogic: 'Explain logic',
       thinking: 'Thinking...',
+      generating: 'Generating response...',
       disconnected: 'Disconnected. Reconnecting...',
     },
     welcome: {
@@ -453,6 +455,7 @@ export const translations: Record<Language, Translations> = {
       debugErrors: '调试错误',
       explainLogic: '解释逻辑',
       thinking: '思考中...',
+      generating: '正在生成回复...',
       disconnected: '连接已断开，正在重新连接...',
     },
     welcome: {

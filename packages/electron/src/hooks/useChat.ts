@@ -17,6 +17,7 @@ export function useChat(sessionId: string | null) {
   const [pendingToolCall, setPendingToolCall] = useState<ToolCall | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const streamingContentRef = useRef('');
   const sessionIdRef = useRef(sessionId);
 
@@ -62,12 +63,14 @@ export function useChat(sessionId: string | null) {
       switch (event.type) {
         case 'text':
           if (event.content) {
+            setIsGenerating(false);
             streamingContentRef.current += event.content;
             setStreamingContent(streamingContentRef.current);
           }
           break;
         case 'tool_call':
           if (event.toolCall) {
+            setIsGenerating(false);
             setPendingToolCall(event.toolCall);
             streamingContentRef.current = '';
             setStreamingContent('');
@@ -107,12 +110,14 @@ export function useChat(sessionId: string | null) {
           streamingContentRef.current = '';
           setStreamingContent('');
           setPendingToolCall(null);
+          setIsGenerating(false);
           break;
         }
         case 'error':
           console.error('Chat error:', event.content);
           streamingContentRef.current = '';
           setStreamingContent('');
+          setIsGenerating(false);
           break;
       }
     });
@@ -130,6 +135,7 @@ export function useChat(sessionId: string | null) {
   const sendMessage = useCallback((content: string) => {
     const userMessage: ChatMessage = { role: 'user', content };
     setMessages((prev) => [...prev, userMessage]);
+    setIsGenerating(true);
     wsService.sendMessage(content);
   }, []);
 
@@ -147,6 +153,7 @@ export function useChat(sessionId: string | null) {
     pendingToolCall,
     isConnected,
     isLoading,
+    isGenerating,
     sendMessage,
     approveTool,
     rejectTool,

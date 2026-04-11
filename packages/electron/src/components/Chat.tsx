@@ -18,6 +18,7 @@ export function Chat({ sessionId }: ChatProps) {
     pendingToolCall,
     isConnected,
     isLoading,
+    isGenerating,
     sendMessage,
     approveTool,
     rejectTool,
@@ -78,6 +79,17 @@ export function Chat({ sessionId }: ChatProps) {
         {messages.map((message, index) => (
           <ChatMessage key={index} message={message} />
         ))}
+
+        {isGenerating && !streamingContent && (
+          <div className="flex justify-start">
+            <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-gradient-to-br from-slate-800 to-slate-800/80 border border-slate-700/50 shadow-lg">
+              <div className="flex items-center gap-2 text-slate-400">
+                <SparklesIcon size={14} className="text-indigo-400 animate-pulse" />
+                <span className="text-xs">{t.chat.generating}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {streamingContent?.trim() && (
           <div className="flex justify-start">

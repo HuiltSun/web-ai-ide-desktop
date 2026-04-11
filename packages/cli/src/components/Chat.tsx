@@ -14,6 +14,7 @@ export function Chat({ sessionId }: ChatProps) {
     streamingContent,
     pendingToolCall,
     isConnected,
+    isGenerating,
     sendMessage,
     approveTool,
     rejectTool,
@@ -49,6 +50,17 @@ export function Chat({ sessionId }: ChatProps) {
         {messages.map((message, index) => (
           <ChatMessage key={index} message={message} />
         ))}
+
+        {isGenerating && !streamingContent && (
+          <div className="flex justify-start">
+            <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
+              <div className="flex items-center gap-2 text-slate-400">
+                <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                <span className="text-xs">Generating response...</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {streamingContent && (
           <ChatMessage message={{ role: 'assistant', content: streamingContent + '...' }} isStreaming />
