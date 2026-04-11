@@ -19,6 +19,7 @@ export function useChat(sessionId: string | null) {
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingElapsed, setGeneratingElapsed] = useState(0);
+  const [waitingForFirstResponse, setWaitingForFirstResponse] = useState(false);
   const streamingContentRef = useRef('');
   const sessionIdRef = useRef(sessionId);
 
@@ -79,14 +80,12 @@ export function useChat(sessionId: string | null) {
       switch (event.type) {
         case 'text':
           if (event.content) {
-            setIsGenerating(false);
             streamingContentRef.current += event.content;
             setStreamingContent(streamingContentRef.current);
           }
           break;
         case 'tool_call':
           if (event.toolCall) {
-            setIsGenerating(false);
             setPendingToolCall(event.toolCall);
             streamingContentRef.current = '';
             setStreamingContent('');
