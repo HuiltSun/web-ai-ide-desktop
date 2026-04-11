@@ -85,9 +85,7 @@ export function PTYTerminal({ onClose }: PTYTerminalProps) {
     terminal.onResize(handleTerminalResize);
 
     const unsubscribe = onOutput((data) => {
-      if (terminalInstanceRef.current) {
-        terminalInstanceRef.current.write(data);
-      }
+      terminal.write(data);
     });
 
     terminal.onData(handleData);

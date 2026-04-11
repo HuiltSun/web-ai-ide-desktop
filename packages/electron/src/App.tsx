@@ -27,14 +27,36 @@ function App() {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [terminalOpen, setTerminalOpen] = useState(true);
 
-  useEffect(() => {
-    const savedToken = localStorage.getItem('auth_token');
-    const savedUser = localStorage.getItem('user');
-    if (savedToken && savedUser) {
-      api.setAuthToken(savedToken);
-      setUser(JSON.parse(savedUser));
+  const verifyToken = async (token: string): Promise<{ id: string; email: string } | null> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.user;
+    } catch {
+      return null;
     }
-    loadProjects();
+  };
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const savedToken = localStorage.getItem('auth_token');
+      const savedUser = localStorage.getItem('user');
+      if (savedToken && savedUser) {
+        const validUser = await verifyToken(savedToken);
+        if (validUser) {
+          api.setAuthToken(savedToken);
+          setUser(validUser);
+        } else {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user');
+        }
+      }
+      loadProjects();
+    };
+    initAuth();
   }, []);
 
   const handleMenuClick = (event: string) => {
@@ -95,6 +117,12 @@ function App() {
 
   const loadProjects = async () => {
     try {
+      const savedToken = localStorage.getItem('auth_token');
+      if (!savedToken) {
+        setProjects([]);
+        setLoading(false);
+        return;
+      }
       const data = await api.listProjects();
       setProjects(data);
     } catch (error) {

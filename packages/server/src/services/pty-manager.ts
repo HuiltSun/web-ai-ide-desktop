@@ -23,10 +23,8 @@ export class PTYManager extends EventEmitter {
 
     try {
       const isWindows = process.platform === 'win32';
-      const shell = isWindows ? 'cmd.exe' : 'bun';
-      const args = isWindows
-        ? ['/c', 'bun', 'run', 'scripts/grpc-cli.ts']
-        : ['run', 'scripts/grpc-cli.ts'];
+      const bunPath = isWindows ? 'bun.cmd' : 'bun';
+      const args = ['run', 'scripts/grpc-cli.ts'];
       const openClaudeDir = join(process.cwd(), '../openclaude-temp');
 
       const mergedEnv: Record<string, string> = {
@@ -43,7 +41,7 @@ export class PTYManager extends EventEmitter {
       if (env.GRPC_HOST) mergedEnv.GRPC_HOST = env.GRPC_HOST;
       if (env.GRPC_PORT) mergedEnv.GRPC_PORT = env.GRPC_PORT;
 
-      const proc = pty.spawn(shell, args, {
+      const proc = pty.spawn(bunPath, args, {
         name: 'xterm-256color',
         cols,
         rows,
