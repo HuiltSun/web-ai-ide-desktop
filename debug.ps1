@@ -7,6 +7,7 @@ $ProjectRoot = if ($ScriptDir) { $ScriptDir } else { $PWD }
 $ReleaseDir = "$ProjectRoot\release"
 $ServerDir = "$ProjectRoot\packages\server"
 $OpenClaudeDir = "$ProjectRoot\packages\openclaude-temp"
+$CLIDir = "$ProjectRoot\packages\cli"
 $DockerContainer = "webaiide-postgres"
 $EnvFile = "$ProjectRoot\.env"
 
@@ -16,7 +17,7 @@ Write-Host "========================================"
 
 # 读取 .env 文件
 Write-Host ""
-Write-Host "[1/7] 检查环境配置..."
+Write-Host "[1/8] 检查环境配置..."
 
 if (Test-Path $EnvFile) {
     Write-Host "  读取 .env 文件..."
@@ -67,7 +68,7 @@ Write-Host "  加密: 已启用"
 
 # 1. 构建 packages
 Write-Host ""
-Write-Host "[2/7] 构建 packages..."
+Write-Host "[2/8] 构建 packages..."
 
 $PackagesDir = "$ProjectRoot\packages\electron\"
 if (Test-Path "$PackagesDir\package.json") {
@@ -102,7 +103,7 @@ if (Test-Path "$PackagesDir\package.json") {
 
 # 2. 启动 PostgreSQL (Docker)
 Write-Host ""
-Write-Host "[3/7] 启动 PostgreSQL 数据库..."
+Write-Host "[3/8] 启动 PostgreSQL 数据库..."
 
 try {
     $dockerRunning = docker ps 2>$null
@@ -149,7 +150,7 @@ try {
 
 # 3. 初始化数据库
 Write-Host ""
-Write-Host "[4/7] 初始化数据库..."
+Write-Host "[4/8] 初始化数据库..."
 
 if (Test-Path "$ServerDir\prisma\schema.prisma") {
     Push-Location $ServerDir -ErrorAction SilentlyContinue
@@ -169,7 +170,7 @@ if (Test-Path "$ServerDir\prisma\schema.prisma") {
 
 # 4. 启动后端服务器（新窗口）
 Write-Host ""
-Write-Host "[5/7] 启动后端服务器 (http://localhost:3001)..."
+Write-Host "[5/8] 启动后端服务器 (http://localhost:3001)..."
 # 先关闭可能正在运行的后端进程
 Write-Host "  检查并关闭已存在的后端进程..."
 $existingNodeProcesses = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object {
@@ -219,7 +220,7 @@ if (-not (Test-Path "$ServerDir\package.json")) {
 
 # 5. 启动 OpenClaude gRPC 服务器（新窗口）
 Write-Host ""
-Write-Host "[6/7] 启动 OpenClaude gRPC 服务器 (localhost:50051)..."
+Write-Host "[6/8] 启动 OpenClaude gRPC 服务器 (localhost:50051)..."
 
 if (-not (Test-Path "$OpenClaudeDir\package.json")) {
     Write-Host "  警告: 未找到 openclaude-temp package.json，跳过 gRPC 服务器启动"
@@ -252,9 +253,52 @@ if (-not (Test-Path "$OpenClaudeDir\package.json")) {
     }
 }
 
-# 6. 启动桌面应用
+# 6. 启动 CLI Web 应用
 Write-Host ""
-Write-Host "[7/7] 启动桌面应用..."
+Write-Host "[7/8] 启动 CLI Web 应用 (http://localhost:5173)..."
+
+if (-not (Test-Path "$CLIDir\package.json")) {
+    Write-Host "  警告: 未找到 cli package.json，跳过 CLI 启动"
+} else {
+    # 检查 npm 依赖
+    if (-not (Test-Path "$CLIDir\node_modules")) {
+        Write-Host "  安装 CLI 依赖..."
+        Push-Location $CLIDir
+        npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
+        Pop-Location
+    }
+
+    Write-Host "  启动命令: npm run dev"
+    Write-Host "  工作目录: $CLIDir"
+
+    # 在新窗口启动 CLI
+    Start-Process cmd.exe -ArgumentList "/k cd /d `"$CLIDir`" && npm run dev"
+
+    Write-Host "  CLI Web 应用已在新窗口启动"
+    Write-Host "  等待 CLI 应用就绪..."
+
+    # 等待 CLI 启动，最多 20 秒
+    $cliReady = $false
+    for ($i = 0; $i -lt 10; $i++) {
+        Start-Sleep -Seconds 2
+        try {
+            $response = Invoke-WebRequest -Uri "http://localhost:5173" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+            $cliReady = $true
+            Write-Host "  CLI Web 应用就绪 (http://localhost:5173)"
+            break
+        } catch {
+            Write-Host "    检查中... ($($i + 1)/10)"
+        }
+    }
+
+    if (-not $cliReady) {
+        Write-Host "  CLI Web 应用启动中（可能需要几秒钟）"
+    }
+}
+
+# 7. 启动桌面应用
+Write-Host ""
+Write-Host "[8/8] 启动桌面应用..."
 
 $launchBat = "$ProjectRoot\launch.bat"
 if (Test-Path $launchBat) {
@@ -269,10 +313,11 @@ if (Test-Path $launchBat) {
 Write-Host ""
 Write-Host "========================================"
 Write-Host "所有服务已启动:"
-Write-Host "  - packages:      构建完成"
+Write-Host "  - packages:       构建完成"
 Write-Host "  - PostgreSQL:     localhost:5432"
 Write-Host "  - 后端 API:      http://localhost:3001"
 Write-Host "  - OpenClaude gRPC: localhost:50051"
+Write-Host "  - CLI Web:        http://localhost:5173"
 Write-Host "  - 桌面应用:      已启动"
 Write-Host "========================================"
 Write-Host ""

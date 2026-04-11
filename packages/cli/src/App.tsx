@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Layout } from './components/Layout';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
+import { PTYTerminal } from './components/PTYTerminal';
 import { SparklesIcon, CodeIcon, ZapIcon, LayersIcon } from './components/Icons';
 import type { Project } from './types';
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [terminalOpen, setTerminalOpen] = useState(true);
 
   const handleCreateProject = (name: string) => {
     const newProject: Project = {
@@ -44,6 +46,7 @@ function App() {
           onDeleteProject={handleDeleteProject}
         />
       }
+      terminal={terminalOpen ? <PTYTerminal onClose={() => setTerminalOpen(false)} /> : null}
     >
       <div className="h-full flex flex-col items-center justify-center p-8 relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">

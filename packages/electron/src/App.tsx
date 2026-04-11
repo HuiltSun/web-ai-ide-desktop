@@ -7,6 +7,7 @@ import { Settings } from './components/Settings';
 import { LoginModal } from './components/LoginModal';
 import { AboutDialog } from './components/AboutDialog';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { PTYTerminal } from './components/PTYTerminal';
 import { SparklesIcon, CodeIcon, BotIcon } from './components/Icons';
 import type { Project, ProjectWithSession } from './types';
 import { api } from './services/api';
@@ -24,6 +25,7 @@ function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [terminalOpen, setTerminalOpen] = useState(true);
 
   useEffect(() => {
     const savedToken = localStorage.getItem('auth_token');
@@ -287,6 +289,7 @@ function App() {
             onDeleteProject={handleDeleteProject}
           />
         }
+        terminal={terminalOpen ? <PTYTerminal onClose={() => setTerminalOpen(false)} /> : null}
       >
         <div className="h-full flex flex-col">
           <div className="flex-1 overflow-hidden">

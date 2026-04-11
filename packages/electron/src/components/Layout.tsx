@@ -20,9 +20,10 @@ interface LayoutProps {
   sidebar: ReactNode;
   children: ReactNode;
   onMenuClick?: (event: string) => void;
+  terminal?: ReactNode;
 }
 
-export function Layout({ header, sidebar, children, onMenuClick }: LayoutProps) {
+export function Layout({ header, sidebar, children, onMenuClick, terminal }: LayoutProps) {
   const { t } = useSettings();
 
   const menus: Menu[] = [
@@ -147,8 +148,15 @@ export function Layout({ header, sidebar, children, onMenuClick }: LayoutProps) 
 
         <main className="flex-1 overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10 pointer-events-none" />
-          <div className="relative h-full">
-            {children}
+          <div className="relative h-full flex flex-col">
+            <div className="flex-1 overflow-hidden">
+              {children}
+            </div>
+            {terminal && (
+              <div className="h-80 border-t border-[var(--color-border)]">
+                {terminal}
+              </div>
+            )}
           </div>
         </main>
       </div>

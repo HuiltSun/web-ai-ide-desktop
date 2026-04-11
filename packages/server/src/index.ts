@@ -8,6 +8,7 @@ import { chatRouter } from './routes/chat.js';
 import { filesRouter } from './routes/files.js';
 import { authRouter } from './routes/auth.js';
 import { terminalRoutes } from './routes/terminal.js';
+import { ptyRoutes } from './routes/pty.js';
 import { RedisClient, redis } from './utils/redis.js';
 import { rabbitmq } from './utils/rabbitmq.js';
 import { appendFileSync, existsSync, mkdirSync } from 'fs';
@@ -90,6 +91,7 @@ await server.register(chatRouter, { prefix: '/api/chat' });
 await server.register(filesRouter, { prefix: '/api/files' });
 await server.register(authRouter, { prefix: '/api/auth' });
 await server.register(terminalRoutes);
+await server.register(ptyRoutes);
 
 const start = async () => {
   try {
