@@ -17,6 +17,7 @@ export function Chat({ sessionId }: ChatProps) {
     streamingContent,
     pendingToolCall,
     isConnected,
+    isLoading,
     sendMessage,
     approveTool,
     rejectTool,
@@ -31,6 +32,22 @@ export function Chat({ sessionId }: ChatProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages, streamingContent]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center bg-gradient-to-b from-slate-900/50 to-slate-800/30">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center animate-pulse">
+            <BotIcon className="text-white" size={24} />
+          </div>
+          <div className="flex items-center gap-2 text-slate-400">
+            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
+            <span className="text-sm">{t.welcome.loading}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-slate-900/50 to-slate-800/30">

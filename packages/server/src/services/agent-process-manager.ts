@@ -159,9 +159,10 @@ export class AgentProcessManager {
 
       const openClaudeDir = path.join(__dirname, '../../../openclaude-temp');
       console.log(`Starting agent process in: ${openClaudeDir}`);
+      console.log(`GRPC_PORT: ${port}`);
       
       const isWindows = process.platform === 'win32';
-      const bunCmd = isWindows ? 'bun' : 'bun';
+      const bunCmd = isWindows ? 'bun.cmd' : 'bun';
       const args = ['run', 'dev:grpc'];
       
       console.log(`Spawning: ${bunCmd} ${args.join(' ')}`);
@@ -170,7 +171,6 @@ export class AgentProcessManager {
         cwd: openClaudeDir,
         env,
         stdio: ['ignore', 'pipe', 'pipe'],
-        shell: isWindows,
       });
       
       // 监听输出以便调试
@@ -191,6 +191,9 @@ export class AgentProcessManager {
       });
 
       await this.waitForPort(port);
+      
+      // 等待 gRPC 服务器完全初始化
+      await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (err) {
       if (agentProc) {
         agentProc.kill();
