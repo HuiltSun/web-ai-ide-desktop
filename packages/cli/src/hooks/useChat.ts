@@ -8,6 +8,22 @@ export function useChat(sessionId: string | null) {
   const [pendingToolCall, setPendingToolCall] = useState<ToolCall | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingElapsed, setGeneratingElapsed] = useState(0);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    if (isGenerating) {
+      setGeneratingElapsed(0);
+      interval = setInterval(() => {
+        setGeneratingElapsed((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setGeneratingElapsed(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isGenerating]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -78,6 +94,7 @@ export function useChat(sessionId: string | null) {
     pendingToolCall,
     isConnected,
     isGenerating,
+    generatingElapsed,
     sendMessage,
     approveTool,
     rejectTool,

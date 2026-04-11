@@ -15,6 +15,7 @@ export function Chat({ sessionId }: ChatProps) {
     pendingToolCall,
     isConnected,
     isGenerating,
+    generatingElapsed,
     sendMessage,
     approveTool,
     rejectTool,
@@ -57,6 +58,7 @@ export function Chat({ sessionId }: ChatProps) {
               <div className="flex items-center gap-2 text-slate-400">
                 <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
                 <span className="text-xs">Generating response...</span>
+                <span className="text-xs text-slate-500 ml-auto">{generatingElapsed}s</span>
               </div>
             </div>
           </div>

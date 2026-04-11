@@ -19,6 +19,7 @@ export function Chat({ sessionId }: ChatProps) {
     isConnected,
     isLoading,
     isGenerating,
+    generatingElapsed,
     sendMessage,
     approveTool,
     rejectTool,
@@ -86,6 +87,7 @@ export function Chat({ sessionId }: ChatProps) {
               <div className="flex items-center gap-2 text-slate-400">
                 <SparklesIcon size={14} className="text-indigo-400 animate-pulse" />
                 <span className="text-xs">{t.chat.generating}</span>
+                <span className="text-xs text-slate-500 ml-auto">{generatingElapsed}s</span>
               </div>
             </div>
           </div>
