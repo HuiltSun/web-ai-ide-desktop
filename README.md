@@ -126,30 +126,115 @@ cd packages/electron
 npm run dev
 ```
 
-### Option 4: gRPC Service Development & Testing
+### Option 4: gRPC Service (AI Agent Engine)
 
-openclaude-temp includes a gRPC server for AI Agent services.
+`openclaude-temp` includes a headless gRPC server that exposes AI Agent capabilities (tools, bash, file editing) via bidirectional streaming. The server handles the full AI workflow including tool execution and user permission prompts.
 
-**Start gRPC Server:**
+#### Quick Start
+
+**1. Install dependencies:**
 ```bash
 cd packages/openclaude-temp
 bun install
 bun run build
-bun run dev:grpc
 ```
 
-**Test with gRPC CLI:**
+**2. Configure AI provider:**
+
+Create `packages/openclaude-temp/.env` file:
+```bash
+# For Qwen (default)
+OPENAI_API_KEY="your-qwen-api-key"
+OPENAI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+OPENAI_MODEL="qwen3.5-plus"
+
+# For OpenAI
+CLAUDE_CODE_USE_OPENAI=1
+OPENAI_API_KEY="your-openai-key"
+OPENAI_MODEL="gpt-4o"
+
+# For Anthropic
+ANTHROPIC_API_KEY="your-anthropic-key"
+ANTHROPIC_MODEL="claude-sonnet-4-5"
+```
+
+**3. Start gRPC Server:**
+```bash
+cd packages/openclaude-temp
+bun run dev:grpc
+```
+Server runs at `localhost:50051` by default. Configure via `GRPC_PORT` and `GRPC_HOST` environment variables.
+
+**4. Test with gRPC CLI:**
 ```bash
 cd packages/openclaude-temp
 bun run dev:grpc:cli
 ```
 
-**Environment Variables:**
+#### gRPC CLI Usage
+
+The interactive CLI streams tokens, displays tool calls, and prompts for approval (y/n) when needed:
+
 ```bash
-export CLAUDE_CODE_USE_OPENAI=1
-export OPENAI_API_KEY="your-api-key"
-export OPENAI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"  # for qwen
-export OPENAI_MODEL="qwen3.5-plus"
+> What files are in the current directory?
+[Tool Call] Bash
+{"command": "ls -la"}
+
+Tool executed successfully.
+
+[Generation Complete]
+```
+
+Type `/exit` or `/quit` to end the session.
+
+#### Protocol Definition
+
+The gRPC interface is defined in `src/proto/openclaude.proto`:
+
+```protobuf
+service AgentService {
+  rpc Chat(stream ClientMessage) returns (stream ServerMessage);
+}
+```
+
+**ClientMessage types:**
+- `ChatRequest` - Initial request with session_id, message, and working_directory
+- `UserInput` - User response to permission prompts (reply + prompt_id)
+- `CancelSignal` - Interrupt current generation
+
+**ServerMessage types:**
+- `TextChunk` - Streaming text tokens
+- `ToolCallStart` - Agent started executing a tool
+- `ToolCallResult` - Tool execution result
+- `ActionRequired` - User permission required
+- `FinalResponse` - Generation complete with token counts
+- `ErrorResponse` - Error occurred
+
+#### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GRPC_PORT` | `50051` | gRPC server port |
+| `GRPC_HOST` | `localhost` | gRPC server bind address |
+| `OPENAI_API_KEY` | - | API key for OpenAI-compatible providers |
+| `OPENAI_BASE_URL` | - | API endpoint base URL |
+| `OPENAI_MODEL` | - | Model name |
+| `ANTHROPIC_API_KEY` | - | API key for Anthropic |
+| `ANTHROPIC_MODEL` | - | Anthropic model name |
+
+#### Protocol Compatibility
+
+The gRPC client **must use Bun** to run (not Node.js or npx tsx). There is a protocol compatibility issue between Node.js gRPC implementation and the Bun runtime.
+
+**Correct:**
+```bash
+bun run dev:grpc:cli
+```
+
+**Incorrect (will fail):**
+```bash
+npx tsx scripts/grpc-cli.ts  # ❌ Protocol error
+node scripts/grpc-cli.ts     # ❌ Protocol error
 ```
 
 ---

@@ -126,30 +126,115 @@ cd packages/electron
 npm run dev
 ```
 
-### 方式四：gRPC 服务开发测试
+### 方式四：gRPC 服务（AI Agent 引擎）
 
-openclaude-temp 包含一个 gRPC 服务器，用于 AI Agent 服务。
+`openclaude-temp` 提供了一个无头 gRPC 服务器，通过双向流暴露 AI Agent 能力（工具调用、bash、文件编辑等）。服务器处理完整的 AI 工作流，包括工具执行和用户权限提示。
 
-**启动 gRPC 服务器：**
+#### 快速开始
+
+**1. 安装依赖：**
 ```bash
 cd packages/openclaude-temp
 bun install
 bun run build
-bun run dev:grpc
 ```
 
-**使用 gRPC CLI 测试：**
+**2. 配置 AI Provider：**
+
+创建 `packages/openclaude-temp/.env` 文件：
+```bash
+# 通义千问（默认）
+OPENAI_API_KEY="your-qwen-api-key"
+OPENAI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+OPENAI_MODEL="qwen3.5-plus"
+
+# OpenAI
+CLAUDE_CODE_USE_OPENAI=1
+OPENAI_API_KEY="your-openai-key"
+OPENAI_MODEL="gpt-4o"
+
+# Anthropic
+ANTHROPIC_API_KEY="your-anthropic-key"
+ANTHROPIC_MODEL="claude-sonnet-4-5"
+```
+
+**3. 启动 gRPC Server：**
+```bash
+cd packages/openclaude-temp
+bun run dev:grpc
+```
+Server 默认运行在 `localhost:50051`。可通过 `GRPC_PORT` 和 `GRPC_HOST` 环境变量配置。
+
+**4. 使用 gRPC CLI 测试：**
 ```bash
 cd packages/openclaude-temp
 bun run dev:grpc:cli
 ```
 
-**环境变量配置：**
+#### gRPC CLI 使用方法
+
+交互式 CLI 会流式输出 token、显示工具调用，并在需要时提示用户授权（y/n）：
+
 ```bash
-export CLAUDE_CODE_USE_OPENAI=1
-export OPENAI_API_KEY="your-api-key"
-export OPENAI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"  # for qwen
-export OPENAI_MODEL="qwen3.5-plus"
+> 当前目录下有哪些文件？
+[Tool Call] Bash
+{"command": "ls -la"}
+
+工具执行成功。
+
+[生成完成]
+```
+
+输入 `/exit` 或 `/quit` 结束会话。
+
+#### 协议定义
+
+gRPC 接口定义在 `src/proto/openclaude.proto`：
+
+```protobuf
+service AgentService {
+  rpc Chat(stream ClientMessage) returns (stream ServerMessage);
+}
+```
+
+**ClientMessage 类型：**
+- `ChatRequest` - 初始请求，包含 session_id、message 和 working_directory
+- `UserInput` - 用户对权限提示的响应（reply + prompt_id）
+- `CancelSignal` - 中断当前生成
+
+**ServerMessage 类型：**
+- `TextChunk` - 流式文本 token
+- `ToolCallStart` - Agent 开始执行工具
+- `ToolCallResult` - 工具执行结果
+- `ActionRequired` - 需要用户授权
+- `FinalResponse` - 生成完成，包含 token 统计
+- `ErrorResponse` - 发生错误
+
+#### 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `GRPC_PORT` | `50051` | gRPC 服务器端口 |
+| `GRPC_HOST` | `localhost` | gRPC 服务器绑定地址 |
+| `OPENAI_API_KEY` | - | OpenAI 兼容 Provider 的 API Key |
+| `OPENAI_BASE_URL` | - | API 端点基础 URL |
+| `OPENAI_MODEL` | - | 模型名称 |
+| `ANTHROPIC_API_KEY` | - | Anthropic 的 API Key |
+| `ANTHROPIC_MODEL` | - | Anthropic 模型名称 |
+
+#### 运行时兼容性
+
+gRPC 客户端**必须使用 Bun 运行**（不能使用 Node.js 或 npx tsx）。Node.js gRPC 实现与 Bun 运行时存在协议兼容性问题。
+
+**正确方式：**
+```bash
+bun run dev:grpc:cli
+```
+
+**错误方式（会失败）：**
+```bash
+npx tsx scripts/grpc-cli.ts  # ❌ 协议错误
+node scripts/grpc-cli.ts     # ❌ 协议错误
 ```
 
 ---
