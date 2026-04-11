@@ -1,6 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { usePTY } from '../hooks/usePTY';
 import { TerminalIcon } from './Icons';
@@ -13,12 +12,11 @@ interface PTYTerminalProps {
 export function PTYTerminal({ onClose }: PTYTerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstanceRef = useRef<Terminal | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
-  const dimensionsRef = useRef({ cols: 80, rows: 24 });
+  const isInitializedRef = useRef(false);
 
   const { isConnected, isConnecting, error, connect, write, resize, onOutput } = usePTY({
-    cols: dimensionsRef.current.cols,
-    rows: dimensionsRef.current.rows,
+    cols: 80,
+    rows: 24,
   });
 
   const handleData = useCallback(
@@ -29,7 +27,8 @@ export function PTYTerminal({ onClose }: PTYTerminalProps) {
   );
 
   useEffect(() => {
-    if (!terminalRef.current) return;
+    if (!terminalRef.current || isInitializedRef.current) return;
+    isInitializedRef.current = true;
 
     const terminal = new Terminal({
       fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", Consolas, monospace',
@@ -37,6 +36,8 @@ export function PTYTerminal({ onClose }: PTYTerminalProps) {
       lineHeight: 1.4,
       cursorBlink: true,
       cursorStyle: 'bar',
+      cols: 80,
+      rows: 24,
       theme: {
         background: '#1e1e1e',
         foreground: '#d4d4d4',
@@ -64,29 +65,29 @@ export function PTYTerminal({ onClose }: PTYTerminalProps) {
       allowTransparency: true,
     });
 
-    const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon();
-
-    terminal.loadAddon(fitAddon);
     terminal.loadAddon(webLinksAddon);
 
     terminal.open(terminalRef.current);
-    fitAddon.fit();
 
     terminalInstanceRef.current = terminal;
-    fitAddonRef.current = fitAddon;
 
-    const handleResize = () => {
-      if (fitAddonRef.current && isConnected) {
-        fitAddonRef.current.fit();
-        resize(terminal.cols, terminal.rows);
+    const handleTerminalResize = () => {
+      if (terminalInstanceRef.current) {
+        try {
+          resize(terminal.cols, terminal.rows);
+        } catch (e) {
+          console.warn('Failed to resize:', e);
+        }
       }
     };
 
-    window.addEventListener('resize', handleResize);
+    terminal.onResize(handleTerminalResize);
 
     const unsubscribe = onOutput((data) => {
-      terminal.write(data);
+      if (terminalInstanceRef.current) {
+        terminalInstanceRef.current.write(data);
+      }
     });
 
     terminal.onData(handleData);
@@ -94,22 +95,14 @@ export function PTYTerminal({ onClose }: PTYTerminalProps) {
     connect();
 
     return () => {
-      window.removeEventListener('resize', handleResize);
       unsubscribe();
-      terminal.dispose();
-      terminalInstanceRef.current = null;
-      fitAddonRef.current = null;
+      if (terminalInstanceRef.current) {
+        terminalInstanceRef.current.dispose();
+        terminalInstanceRef.current = null;
+      }
+      isInitializedRef.current = false;
     };
-  }, []);
-
-  useEffect(() => {
-    if (isConnected && fitAddonRef.current) {
-      setTimeout(() => {
-        fitAddonRef.current?.fit();
-        resize(terminalInstanceRef.current?.cols || 80, terminalInstanceRef.current?.rows || 24);
-      }, 100);
-    }
-  }, [isConnected, resize]);
+  }, [connect, handleData, onOutput, resize]);
 
   return (
     <div className="h-full flex flex-col bg-[var(--color-bg-primary)] border-t border-[var(--color-border)]">

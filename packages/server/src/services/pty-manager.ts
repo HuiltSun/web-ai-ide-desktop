@@ -11,10 +11,6 @@ export interface PTYProcess {
 export class PTYManager extends EventEmitter {
   private processes: Map<string, PTYProcess> = new Map();
 
-  private getOpenClaudePath(): string {
-    return join(process.cwd(), '../openclaude-temp/dist/cli.mjs');
-  }
-
   createOpenClaudeSession(
     sessionId: string,
     cols: number = 80,
@@ -26,11 +22,12 @@ export class PTYManager extends EventEmitter {
     }
 
     try {
-      const openClaudePath = this.getOpenClaudePath();
       const isWindows = process.platform === 'win32';
-      const shell = isWindows ? 'bun.exe' : 'bun';
-      const args = isWindows ? ['run', 'dev:grpc:cli'] : ['run', 'dev:grpc:cli'];
-      const cwd = join(process.cwd(), '../openclaude-temp');
+      const shell = isWindows ? 'cmd.exe' : 'bun';
+      const args = isWindows
+        ? ['/c', 'bun', 'run', 'scripts/grpc-cli.ts']
+        : ['run', 'scripts/grpc-cli.ts'];
+      const openClaudeDir = join(process.cwd(), '../openclaude-temp');
 
       const mergedEnv: Record<string, string> = {
         ...env,
@@ -51,7 +48,7 @@ export class PTYManager extends EventEmitter {
         cols,
         rows,
         env: mergedEnv,
-        cwd,
+        cwd: openClaudeDir,
       });
 
       proc.onData((data: string) => {
