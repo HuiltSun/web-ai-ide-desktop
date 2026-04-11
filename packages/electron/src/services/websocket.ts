@@ -1,33 +1,28 @@
 import { ChatStreamEvent } from '../types';
-import { api } from './api';
-
-const WS_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 type MessageHandler = (event: ChatStreamEvent) => void;
-
-interface PendingConfirmation {
-  promptId: string;
-  toolCallId?: string;
-}
 
 interface MessageMessage {
   type: 'message';
   content: string;
 }
 
-interface UserConfirmMessage {
-  type: 'user_confirm';
-  promptId: string;
-  approved: boolean;
+interface ApproveMessage {
+  type: 'approve';
+  toolCallId: string;
 }
 
-type OutgoingMessage = MessageMessage | UserConfirmMessage;
+interface RejectMessage {
+  type: 'reject';
+  toolCallId: string;
+}
+
+type OutgoingMessage = MessageMessage | ApproveMessage | RejectMessage;
 
 class WebSocketService {
   private ws: WebSocket | null = null;
   private handlers: Set<MessageHandler> = new Set();
   private sessionId: string | null = null;
-  private pendingConfirmation: PendingConfirmation | null = null;
 
   connect(sessionId: string) {
     if (this.ws?.readyState === WebSocket.OPEN) {
@@ -35,15 +30,7 @@ class WebSocketService {
     }
 
     this.sessionId = sessionId;
-    this.pendingConfirmation = null;
-    const { Authorization: token } = api.getAuthHeaders();
-    const tokenValue = token?.replace('Bearer ', '');
-    const wsProtocol = WS_BASE.startsWith('https://') ? 'wss' : 'ws';
-    const wsBase = WS_BASE.replace(/^https?:\/\//, `${wsProtocol}://`);
-    const wsUrl = tokenValue
-      ? `${wsBase}/api/chat/${sessionId}/stream?token=${tokenValue}`
-      : `${wsBase}/api/chat/${sessionId}/stream`;
-    this.ws = new WebSocket(wsUrl);
+    this.ws = new WebSocket(`ws://localhost:3001/api/chat/${sessionId}/stream`);
 
     this.ws.onopen = () => {
       console.log('WebSocket connected');
@@ -53,14 +40,6 @@ class WebSocketService {
       try {
         const data = JSON.parse(event.data);
         const chatEvent: ChatStreamEvent = data;
-
-        if (chatEvent.type === 'action_required' && chatEvent.promptId) {
-          this.pendingConfirmation = {
-            promptId: chatEvent.promptId,
-            toolCallId: chatEvent.toolCallId,
-          };
-        }
-
         this.handlers.forEach((handler) => handler(chatEvent));
       } catch (error) {
         console.error('Failed to parse WebSocket message:', error);
@@ -69,7 +48,6 @@ class WebSocketService {
 
     this.ws.onclose = () => {
       console.log('WebSocket disconnected');
-      this.pendingConfirmation = null;
     };
 
     this.ws.onerror = (error) => {
@@ -87,28 +65,12 @@ class WebSocketService {
     this.send({ type: 'message', content });
   }
 
-  approveTool(_toolCallId: string) {
-    if (this.pendingConfirmation?.promptId) {
-      const confirmMessage: UserConfirmMessage = {
-        type: 'user_confirm',
-        promptId: this.pendingConfirmation.promptId,
-        approved: true,
-      };
-      this.send(confirmMessage);
-      this.pendingConfirmation = null;
-    }
+  approveTool(toolCallId: string) {
+    this.send({ type: 'approve', toolCallId });
   }
 
-  rejectTool(_toolCallId: string) {
-    if (this.pendingConfirmation?.promptId) {
-      const confirmMessage: UserConfirmMessage = {
-        type: 'user_confirm',
-        promptId: this.pendingConfirmation.promptId,
-        approved: false,
-      };
-      this.send(confirmMessage);
-      this.pendingConfirmation = null;
-    }
+  rejectTool(toolCallId: string) {
+    this.send({ type: 'reject', toolCallId });
   }
 
   onMessage(handler: MessageHandler) {
@@ -121,7 +83,6 @@ class WebSocketService {
     this.ws = null;
     this.sessionId = null;
     this.handlers.clear();
-    this.pendingConfirmation = null;
   }
 
   get isConnected() {

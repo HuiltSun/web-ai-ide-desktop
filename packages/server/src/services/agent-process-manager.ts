@@ -125,58 +125,8 @@ export class AgentProcessManager {
   async createProcess(userId: string, sessionId: string, provider: ProviderConfig): Promise<AgentProcess> {
     await this.ensureInit();
 
-    // 首先尝试使用已有的 gRPC 服务器（端口 50051）
-    try {
-      console.log('Trying to connect to existing gRPC server on port 50051...');
-      if (!this.sharedClient) {
-        this.sharedClient = this.createGrpcClient(50051);
-      }
-      
-      // 测试连接是否正常
-      await new Promise((resolve, reject) => {
-        const testCall = this.sharedClient.Chat();
-        const timeout = setTimeout(() => {
-          testCall.cancel();
-          reject(new Error('Connection timeout'));
-        }, 2000);
-        
-        testCall.on('error', (err: any) => {
-          clearTimeout(timeout);
-          reject(err);
-        });
-        
-        testCall.on('data', () => {
-          clearTimeout(timeout);
-          testCall.cancel();
-          resolve(undefined);
-        });
-        
-        // 1.5 秒后认为连接成功（即使没有收到数据）
-        setTimeout(() => {
-          clearTimeout(timeout);
-          testCall.cancel();
-          resolve(undefined);
-        }, 1500);
-      });
-      
-      console.log('Successfully connected to existing gRPC server on port 50051');
-      
-      // 创建一个虚拟的 AgentProcess，使用共享的客户端
-      const agentProcess: AgentProcess = {
-        pid: 0,
-        port: 50051,
-        userId,
-        sessionId,
-        lastActivity: Date.now(),
-        proc: null as any,
-        client: this.sharedClient,
-      };
-      
-      this.processes.set(`${userId}:${sessionId}`, agentProcess);
-      return agentProcess;
-    } catch (err) {
-      console.log('Failed to connect to existing gRPC server, will try to start new process:', err);
-    }
+    // 直接启动新进程，不使用共享服务器
+    console.log('Starting new agent process...');
 
     // 如果连接失败，尝试启动新进程
     const port = this.allocatePort();

@@ -38,6 +38,10 @@ export class AgentSessionManager {
       this.handleGrpcMessage(sessionId, msg, notifyFrontend);
     });
 
+    call.on('error', (err: any) => {
+      console.error('[AgentSessionManager] gRPC call error:', err);
+    });
+
     call.on('end', () => {
       this.remove(sessionId);
     });
