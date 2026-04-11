@@ -1,6 +1,6 @@
 # Web AI IDE - UI Design Document
 
-> Last Updated: 2026-04-10
+> Last Updated: 2026-04-11
 
 ## Overview
 
@@ -22,22 +22,18 @@ Web AI IDE 是一个模块化的 AI 编程 IDE，包含三个主要 UI 包：
 ┌─────────────────────────────────────────────────────────┐
 │  MenuBar (窗口控制按钮: 最小化 | 最大化 | 关闭)          │
 ├─────────────────────────────────────────────────────────┤
-│  File  Edit  View  Window  Help              [─][□][×] │
+│  Header (h-14)                               [👤][⚙️] │
 ├────────┬────────────────────────────────────────────────┤
-│        │  Header                                        │
-│        │  ┌──────┐  App Name                 [👤][⚙️] │
-│        │  │ Logo │  Project: xxx                        │
-│ Sidebar│  └──────┘                                     │
-│        ├────────────────────────────────────────────────┤
-│ Projects│  [Chat] [Terminal]  (Panel Tabs)             │
-│  List   ├────────────────────────────────────────────────┤
 │        │                                                │
-│ [+New] │          Main Content Area                     │
-│        │          (Chat / Terminal)                      │
+│ Sidebar│          Main Content Area                     │
+│ (w-64) │          (Chat / Editor)                       │
 │        │                                                │
-│        │                                                │
-│        ├────────────────────────────────────────────────┤
-│        │  ChatInput (发送消息框)                        │
+│ Projects│                                               │
+│  List   │                                               │
+│ [+New]  │                                               │
+├────────┼────────────────────────────────────────────────┤
+│        │  PTYTerminal (h-80, optional)                  │
+│        │  (WebSocket PTY)                               │
 └────────┴────────────────────────────────────────────────┘
 ```
 
@@ -129,10 +125,12 @@ Electron 应用支持 **双主题切换**：
 - 聚焦时边框发光
 - Enter 发送, Shift+Enter 换行
 
-#### Terminal
-- xterm.js 终端模拟器
+#### PTYTerminal
+
+- xterm.js 终端模拟器 + WebSocket PTY
 - JetBrains Mono 字体
 - iOS 深色主题配色
+- 支持后端 PTY 管理器的 WebSocket 连接
 
 #### Settings
 5 个标签页:
@@ -205,7 +203,7 @@ packages/cli/src/components/
 ├── EditorTabs.tsx   # 文件标签
 ├── FileExplorer.tsx # 文件浏览器
 ├── FileTree.tsx     # 文件树
-├── Terminal.tsx     # 终端
+├── PTYTerminal.tsx  # WebSocket PTY 终端
 ├── Settings.tsx     # 设置
 ├── ToolCallCard.tsx # 工具调用卡片
 └── Icons.tsx        # SVG 图标
@@ -419,8 +417,8 @@ packages/
 │   │   ├── Chat.tsx
 │   │   ├── ChatInput.tsx
 │   │   ├── ChatMessage.tsx
-│   │   ├── Terminal.tsx
-│   │   ├── TerminalTabs.tsx
+│   │   ├── PTYTerminal.tsx
+│   │   ├── PTYTerminalTabs.tsx
 │   │   ├── Settings.tsx
 │   │   ├── LoginModal.tsx
 │   │   ├── AboutDialog.tsx

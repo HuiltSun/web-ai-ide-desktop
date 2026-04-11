@@ -11,7 +11,7 @@
 - 🤖 **AI 对话** - 与 AI 助手实时对话，支持流式响应
 - 💻 **代码编辑器** - 基于 Monaco Editor 的专业代码编辑
 - 📁 **文件管理器** - 项目文件树，支持创建、编辑、删除
-- 🖥️ **终端模拟器** - 内置 Web 终端
+- 🖥️ **终端模拟器** - 内置 Web 终端，支持 WebSocket PTY
 - 🔧 **工具系统** - AI 可调用文件读写、Shell 命令等工具
 - 🔄 **多模型支持** - OpenAI GPT、Anthropic Claude、Qwen 等
 - 💾 **会话管理** - 保存和恢复对话历史（PostgreSQL 存储）
@@ -20,6 +20,7 @@
 - 💻 **桌面应用** - Windows EXE 原生桌面应用
 - 🌐 **国际化** - 支持中英文界面切换
 - 📋 **自定义菜单栏** - 自定义深色主题菜单栏，与设计系统统一
+- 🔌 **gRPC Agent 引擎** - 通过 gRPC 与 openclaude-temp AI Agent 交互
 
 ---
 
@@ -246,46 +247,49 @@ web-ai-ide/
 ├── packages/
 │   ├── electron/             # Electron 桌面应用
 │   │   ├── electron/         # 主进程 (main.ts, preload.ts)
-│   │   ├── src/             # React 前端
-│   │   │   ├── components/   # Chat, Editor, FileExplorer, Terminal, Settings, MenuBar, AboutDialog...
-│   │   │   ├── hooks/       # useChat, useFileSystem, useTerminal
-│   │   │   ├── services/    # api.ts, websocket.ts
-│   │   │   ├── contexts/    # SettingsContext
-│   │   │   ├── i18n/       # translations.ts (国际化)
-│   │   │   └── index.css   # 设计系统 (CSS 变量)
-│   │   ├── scripts/         # build-with-timestamp.cjs
-│   │   └── dist/           # 构建输出
+│   │   ├── src/              # React 前端
+│   │   │   ├── components/   # Chat, Editor, FileExplorer, PTYTerminal, Settings, MenuBar, AboutDialog...
+│   │   │   ├── hooks/        # useChat, useFileSystem, usePTY
+│   │   │   ├── services/     # api.ts, websocket.ts, pty-client.ts
+│   │   │   ├── contexts/     # SettingsContext
+│   │   │   ├── i18n/         # translations.ts (国际化)
+│   │   │   └── index.css     # 设计系统 (CSS 变量)
+│   │   ├── scripts/          # build-with-timestamp.cjs
+│   │   └── dist/             # 构建输出
 │   │
 │   ├── cli/                  # 独立 React Web 应用
 │   │   └── src/
-│   │       ├── components/   # UI 组件
-│   │       ├── hooks/        # useChat, useFileSystem, useTerminal
-│   │       ├── services/     # api.ts, websocket.ts
+│   │       ├── components/   # UI 组件 (PTYTerminal, Layout, Chat...)
+│   │       ├── hooks/        # useChat, useFileSystem, usePTY
+│   │       ├── services/     # api.ts, websocket.ts, pty-client.ts
 │   │       └── contexts/     # SettingsContext
 │   │
-│   ├── core/                  # AI 核心逻辑 (AIGateway + Providers)
+│   ├── core/                 # AI 核心逻辑 (AIGateway + Providers)
 │   │   └── src/
-│   │       ├── ai/           # gateway.ts + providers (openai, anthropic, qwen)
-│   │       ├── models/        # config.ts
-│   │       └── tools/        # edit, file-read, file-write, glob, grep, registry
+│   │       ├── ai/          # gateway.ts + providers (openai, anthropic, qwen)
+│   │       ├── models/      # config.ts
+│   │       └── tools/       # edit, file-read, file-write, glob, grep, registry
 │   │
-│   ├── openclaude-temp/       # AI Agent gRPC 服务
+│   ├── openclaude-temp/      # AI Agent gRPC 服务
 │   │   └── src/
 │   │       ├── grpc/         # gRPC server (QueryEngine)
-│   │       ├── tools/        # Agent tools (Bash, Read, Write, Grep...)
+│   │       ├── tools/       # Agent tools (Bash, Read, Write, Grep...)
 │   │       └── proto/        # openclaude.proto 定义
 │   │
 │   ├── server/               # Fastify 后端 API
 │   │   ├── src/
-│   │   │   ├── routes/       # auth, chat, files, projects, sessions, terminal
-│   │   │   ├── services/      # auth, project, session, tenant, pty, shellRegistry, agent-*
+│   │   │   ├── routes/       # auth, chat, files, projects, sessions, pty
+│   │   │   ├── services/     # auth, project, session, tenant, pty-manager, agent-*, bun-grpc-chat-bridge
+│   │   │   ├── scripts/      # agent-grpc-sidecar.ts
 │   │   │   └── utils/        # encryption, prisma, redis, rabbitmq
 │   │   └── prisma/           # 数据库 schema
 │   │
 │   └── shared/               # 共享类型定义
 
-├── release/                  # 构建输出 (release-{timestamp}/)
 ├── docs/                     # 设计文档
+│   ├── GRPC_CONNECTION_REPORT_zh.md
+│   └── websocket-protocol.md
+├── release/                  # 构建输出 (release-{timestamp}/)
 ├── docker-compose.yml        # Docker 编排
 ├── debug.ps1                 # 一键启动脚本
 ├── launch.bat                # 快捷启动脚本 (自动生成)

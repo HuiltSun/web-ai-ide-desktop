@@ -290,11 +290,9 @@ $env:POSTGRES_PASSWORD="StrongPass123!"
 
 | 模块 | 文件 | 完成度 | 说明 |
 |------|------|--------|------|
-| **Chat WebSocket** | `routes/chat.ts` | 95% | 已集成 AgentSessionManager，通过 gRPC 连接 openclaude-temp |
-| **AI 流式集成** | `routes/chat.ts` | 90% | 通过 AgentSessionManager → AgentProcessManager → gRPC 已连接 |
 | **Monaco Editor** | `src/components/Editor.tsx` | 90% | UI 组件存在 |
 | **文件浏览器** | `src/components/FileExplorer.tsx` + `FileTree.tsx` | 90% | UI 组件存在 |
-| **终端组件** | `src/components/Terminal.tsx` | 90% | UI 组件存在 |
+| **PTY Terminal** | `src/components/PTYTerminal.tsx` | 100% | ✅ WebSocket PTY 已完整实现 |
 | **Settings UI** | `src/components/Settings.tsx` | 100% | ✅ 已完成动态模型配置 |
 | **登录弹窗** | `src/components/LoginModal.tsx` | 100% | 完整实现 |
 
@@ -307,25 +305,27 @@ $env:POSTGRES_PASSWORD="StrongPass123!"
 3. **Electron 构建**：⚠️ 因沙箱权限问题阻塞
 4. **Worker AI 集成**：Worker 目前只是模拟响应，未连接到 openclaude-temp gRPC 服务
 
-### 📊 状态对比 (2026-04-08 → 2026-04-10)
+### 📊 状态对比 (2026-04-08 → 2026-04-11)
 
 | 模块 | 之前状态 | 当前状态 | 变化 |
 |------|----------|----------|------|
 | **Chat WebSocket** | 80% | 95% | ↑ 已集成 AgentSessionManager + gRPC |
-| **AI 流式集成** | 0% | 90% | ↑ 通过 gRPC 连接到 openclaude-temp |
+| **AI 流式集成** | 0% | 95% | ↑ 通过 gRPC 连接到 openclaude-temp |
 | **Worker** | 未统计 | 70% | 新增 |
-| **Terminal PTY** | 未统计 | 95% | 新增（已完整实现） |
+| **Terminal PTY** | 未统计 | 100% | ✅ 已完整实现 WebSocket PTY |
+| **WebSocket 服务** | 80% | 95% | ↑ 连接状态管理 + 断线重连 |
+| **Chat 消息处理** | 80% | 95% | ↑ fullText 支持 + 增强消息处理 |
 
 ## 六、各包完成度
 
 ```
 packages/
-├── server/           ████████████ 98%  (路由 + 加密 + 认证 + AgentManager 完整)
+├── server/           ████████████ 98%  (路由 + 加密 + 认证 + AgentManager + PTY 完整)
 ├── core/             ████████████ 100% (AI gateway + providers + tools 完整)
 ├── openclaude-temp/  ████████████ 100% (gRPC server + tools 完整)
 ├── worker/           ███████░░░░ 70%  (AMQP 队列 + Worker 框架，模拟响应)
-├── electron/         ████████░░░ 90%  (主进程 + UI + 设计系统 + i18n 完整)
-├── cli/              █████████░░░ 85%  (UI 组件 + hooks + 服务完整)
+├── electron/         █████████░░░ 95%  (主进程 + UI + 设计系统 + i18n + PTY 完整)
+├── cli/              █████████░░░ 90%  (UI 组件 + hooks + 服务 + PTY 完整)
 └── shared/           ████████████ 100% (类型定义完整)
 ```
 
@@ -335,47 +335,120 @@ packages/
 e:\web\
 ├── web-ai-ide/                    # Web AI IDE 项目
 │   ├── packages/
-│   │   ├── electron/             # Electron 桌面应用 (90%)
+│   │   ├── electron/             # Electron 桌面应用 (95%)
 │   │   │   ├── electron/        # 主进程 (main.ts, preload.ts)
 │   │   │   └── src/            # React 前端
-│   │   │       ├── components/ # MenuBar, AboutDialog, Chat, Editor, FileExplorer, Terminal...
+│   │   │       ├── components/ # MenuBar, AboutDialog, Chat, Editor, FileExplorer, PTYTerminal...
 │   │   │       ├── contexts/    # SettingsContext
-│   │   │       ├── hooks/      # useChat, useFileSystem, useTerminal
+│   │   │       ├── hooks/      # useChat, useFileSystem, usePTY
+│   │   │       ├── services/   # api.ts, websocket.ts, pty-client.ts
 │   │   │       ├── i18n/      # translations.ts
-│   │   │       ├── services/   # api.ts, websocket.ts
 │   │   │       └── index.css   # 设计系统
-│   │   ├── cli/                  # Web CLI 界面 (85%)
+│   │   ├── cli/                  # Web CLI 界面 (90%)
+│   │   │   └── src/
+│   │   │       ├── components/ # Layout, Chat, Editor, PTYTerminal...
+│   │   │       ├── hooks/      # useChat, useFileSystem, usePTY
+│   │   │       ├── services/   # api.ts, websocket.ts, pty-client.ts
+│   │   │       └── contexts/    # SettingsContext
 │   │   ├── core/                 # AI 核心逻辑 (100%)
 │   │   │   └── src/
 │   │   │       ├── ai/           # gateway + providers
 │   │   │       ├── models/       # config.ts
 │   │   │       └── tools/        # tools
 │   │   ├── server/               # Fastify 后端 API (98%)
-│   │   │   └── src/
-│   │   │       ├── routes/       # auth, chat, files, projects, sessions, terminal
-│   │   │       ├── services/     # auth, project, session, tenant, pty, shellRegistry, queue, session-cache, agent-*
-│   │   │       └── utils/        # encryption, prisma, redis, rabbitmq
+│   │   │   ├── src/
+│   │   │   │   ├── routes/       # auth, chat, files, projects, sessions, pty
+│   │   │   │   ├── services/     # auth, project, session, tenant, pty-manager, agent-*, bun-grpc-chat-bridge
+│   │   │   │   └── utils/        # encryption, prisma, redis, rabbitmq
+│   │   │   ├── scripts/          # agent-grpc-sidecar.ts
+│   │   │   └── prisma/           # 数据库 schema
 │   │   ├── openclaude-temp/      # AI Agent gRPC 服务 (100%)
 │   │   │   └── src/
 │   │   │       ├── grpc/         # gRPC server
 │   │   │       ├── tools/        # Agent tools
 │   │   │       └── proto/        # proto 定义
-│   │   ├── worker/               # AI Worker (70%) - AMQP 队列消费者
+│   │   ├── worker/               # AI Worker (70%)
 │   │   │   └── src/
 │   │   │       └── index.ts      # Worker 主逻辑
 │   │   └── shared/               # 共享类型 (100%)
+│   ├── docs/                     # 设计文档
+│   │   ├── GRPC_CONNECTION_REPORT_zh.md
+│   │   └── websocket-protocol.md
 │   ├── release/                  # 构建输出
 │   ├── debug.ps1                 # 一键启动脚本
 │   ├── launch.bat               # 快捷启动脚本 (自动生成)
 │   ├── docker-compose.yml        # Docker 部署
 │   └── README*.md               # 文档
-│
-└── packages/                      # Qwen Code CLI 包
 ```
 
 ---
 
-## 八、下一步建议
+## 九、近期更新 (2026-04-11)
+
+### 新增功能
+
+#### 1. WebSocket PTY 终端支持 ✅
+
+**新增文件**：
+| 文件 | 说明 |
+|------|------|
+| `packages/server/src/routes/pty.ts` | PTY 路由，WebSocket 升级处理 |
+| `packages/server/src/services/pty-manager.ts` | PTY 管理器，统一管理多个 PTY 会话 |
+| `packages/cli/src/components/PTYTerminal.tsx` | CLI 终端组件 |
+| `packages/electron/src/components/PTYTerminal.tsx` | Electron 终端组件 |
+| `packages/cli/src/hooks/usePTY.ts` | CLI PTY Hook |
+| `packages/electron/src/hooks/usePTY.ts` | Electron PTY Hook |
+| `packages/cli/src/services/pty-client.ts` | CLI PTY WebSocket 客户端 |
+| `packages/electron/src/services/pty-client.ts` | Electron PTY WebSocket 客户端 |
+
+**重构优化**：
+- 简化终端输出处理逻辑
+- 移除冗余的番兵检查（`# 80` 判断）
+- 优化 PTY 管理器和终端组件实现
+- 更新 WebSocket 连接路径和端口配置
+
+#### 2. gRPC Agent 集成 ✅
+
+**更新文件**：
+| 文件 | 说明 |
+|------|------|
+| `packages/server/src/services/agent-process-manager.ts` | gRPC 进程管理，支持 Windows 平台 Bun 命令 |
+| `packages/server/src/services/agent-session-manager.ts` | gRPC 会话管理，添加错误处理 |
+| `packages/server/scripts/agent-grpc-sidecar.ts` | gRPC Sidecar 脚本 |
+| `packages/server/src/services/bun-grpc-chat-bridge.ts` | Bun gRPC Chat Bridge |
+| `debug.ps1` | 增强 gRPC 服务端口显示 |
+
+**新增文档**：
+- `docs/GRPC_CONNECTION_REPORT_zh.md` - gRPC 连接报告（中文）
+- `docs/websocket-protocol.md` - WebSocket 协议文档
+
+#### 3. WebSocket 服务优化 ✅
+
+**更新的文件**：
+| 文件 | 说明 |
+|------|------|
+| `packages/electron/src/services/websocket.ts` | 优化连接状态管理 |
+| `packages/cli/src/services/websocket.ts` | 同步更新 |
+| `packages/electron/src/hooks/useChat.ts` | 增强消息处理 |
+| `packages/cli/src/hooks/useChat.ts` | 同步更新 |
+
+**新增功能**：
+- 连接状态管理
+- 断线自动重连
+- fullText 消息支持
+
+#### 4. Chat 消息处理增强 ✅
+
+**更新的文件**：
+| 文件 | 说明 |
+|------|------|
+| `packages/server/src/routes/chat.ts` | 增强 ChatMessage 处理，支持 fullText 字段 |
+| `packages/electron/src/types.ts` | ChatMessage 类型更新 |
+| `packages/cli/src/types.ts` | 同步更新 |
+
+---
+
+## 十、下一步建议
 
 ### 高优先级
 
@@ -405,4 +478,4 @@ e:\web\
 
 ---
 
-*最后更新时间：2026-04-10*
+*最后更新时间：2026-04-11*

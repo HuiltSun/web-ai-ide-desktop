@@ -18,10 +18,10 @@ Web AI IDE 包含两个共享相似架构的前端包：
 packages/
 ├── electron/                    # 桌面应用 (Electron)
 │   ├── src/
-│   │   ├── components/          # UI 组件
+│   │   ├── components/          # UI 组件 (PTYTerminal, Chat, Editor...)
 │   │   ├── contexts/            # React Context (SettingsContext)
-│   │   ├── hooks/               # 自定义 Hooks (useChat, useFileSystem, useTerminal)
-│   │   ├── services/            # API 和 WebSocket 服务
+│   │   ├── hooks/               # 自定义 Hooks (useChat, useFileSystem, usePTY)
+│   │   ├── services/            # API、WebSocket 和 PTY 客户端服务 (pty-client.ts)
 │   │   ├── App.tsx              # 根组件
 │   │   ├── main.tsx             # 入口文件
 │   │   └── index.css            # 全局样式 + 设计令牌
@@ -29,10 +29,10 @@ packages/
 │
 └── cli/                         # Web 应用 (React SPA)
     └── src/
-        ├── components/          # UI 组件
+        ├── components/          # UI 组件 (PTYTerminal, Chat, Editor...)
         ├── contexts/            # React Context
-        ├── hooks/               # 自定义 Hooks
-        ├── services/            # API 和 WebSocket 服务
+        ├── hooks/               # 自定义 Hooks (useChat, useFileSystem, usePTY)
+        ├── services/            # API、WebSocket 和 PTY 客户端服务 (pty-client.ts)
         ├── App.tsx              # 根组件
         ├── main.tsx             # 入口文件
         └── index.css            # 全局样式
@@ -55,7 +55,7 @@ App
 │       │   └── ToolCallCard
 │       ├── Editor (Monaco)
 │       │   └── EditorTabs
-│       └── Terminal
+│       └── PTYTerminal (WebSocket PTY)
 ├── Settings (模态框)
 └── LoginModal (模态框, 仅 electron)
 ```
@@ -248,9 +248,9 @@ export function Layout({ header, sidebar, children }: LayoutProps) {
 - **Editor**: Monaco Editor 代码编辑集成
 - **EditorTabs**: 打开文件的标签栏
 
-### Terminal 组件
+### PTYTerminal 组件
 
-基于 Web 的终端模拟器，用于执行 Shell 命令。
+基于 WebSocket PTY 的终端模拟器，用于执行 Shell 命令。支持 WebSocket PTY 连接和 xterm.js 渲染。
 
 ### 模态框组件
 
@@ -292,9 +292,9 @@ interface AIModel {
 
 处理项目工作空间内的文件操作（读取、写入、删除）。
 
-### useTerminal
+### usePTY
 
-管理终端会话和 Shell 命令执行。
+管理 PTY 终端会话和 Shell 命令执行，通过 WebSocket 与后端 PTY 服务通信。
 
 ---
 
@@ -310,7 +310,11 @@ interface AIModel {
 
 ### websocket.ts
 
-用于实时聊天流和工具调用处理的 WebSocket 客户端。
+用于实时聊天流和工具调用处理的 WebSocket 客户端，支持连接状态管理和断线重连。
+
+### pty-client.ts
+
+WebSocket PTY 客户端，用于终端模拟器与后端 PTY 服务的通信。
 
 ---
 
@@ -340,9 +344,15 @@ interface AIModel {
 |------|------|
 | `packages/electron/src/index.css` | 设计令牌和全局样式（243 行） |
 | `packages/electron/src/components/Layout.tsx` | 带大气层效果的根容器 |
+| `packages/electron/src/components/PTYTerminal.tsx` | WebSocket PTY 终端组件 |
+| `packages/electron/src/hooks/usePTY.ts` | PTY Hook |
+| `packages/electron/src/services/pty-client.ts` | PTY WebSocket 客户端 |
 | `packages/cli/src/index.css` | 带 CSS 变量的 CLI 包样式 |
 | `packages/cli/src/components/Layout.tsx` | Web 版简化布局 |
+| `packages/cli/src/components/PTYTerminal.tsx` | WebSocket PTY 终端组件 |
+| `packages/cli/src/hooks/usePTY.ts` | PTY Hook |
+| `packages/cli/src/services/pty-client.ts` | PTY WebSocket 客户端 |
 
 ---
 
-*文档生成日期：2026-04-08*
+*文档生成日期：2026-04-11*

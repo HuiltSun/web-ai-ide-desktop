@@ -18,10 +18,10 @@ Both packages are built with React 18, TypeScript, Vite, and TailwindCSS.
 packages/
 ├── electron/                    # Desktop app (Electron)
 │   ├── src/
-│   │   ├── components/          # UI Components
+│   │   ├── components/          # UI Components (PTYTerminal, Chat, Editor...)
 │   │   ├── contexts/            # React Contexts (SettingsContext)
-│   │   ├── hooks/               # Custom hooks (useChat, useFileSystem, useTerminal)
-│   │   ├── services/            # API & WebSocket services
+│   │   ├── hooks/               # Custom hooks (useChat, useFileSystem, usePTY)
+│   │   ├── services/            # API, WebSocket and PTY client services (pty-client.ts)
 │   │   ├── App.tsx              # Root component
 │   │   ├── main.tsx             # Entry point
 │   │   └── index.css            # Global styles + Design tokens
@@ -29,10 +29,10 @@ packages/
 │
 └── cli/                         # Web app (React SPA)
     └── src/
-        ├── components/          # UI Components
+        ├── components/          # UI Components (PTYTerminal, Chat, Editor...)
         ├── contexts/            # React Contexts
-        ├── hooks/               # Custom hooks
-        ├── services/            # API & WebSocket services
+        ├── hooks/               # Custom hooks (useChat, useFileSystem, usePTY)
+        ├── services/            # API, WebSocket and PTY client services (pty-client.ts)
         ├── App.tsx              # Root component
         ├── main.tsx             # Entry point
         └── index.css            # Global styles
@@ -55,7 +55,7 @@ App
 │       │   └── ToolCallCard
 │       ├── Editor (Monaco)
 │       │   └── EditorTabs
-│       └── Terminal
+│       └── PTYTerminal (WebSocket PTY)
 ├── Settings (Modal)
 └── LoginModal (Modal, electron only)
 ```
@@ -248,9 +248,9 @@ The header displays project info and provides access to settings and user contro
 - **Editor**: Monaco Editor integration for code editing
 - **EditorTabs**: Tab bar for open files
 
-### Terminal Component
+### PTYTerminal Component
 
-Web-based terminal emulator for shell commands.
+WebSocket PTY-based terminal emulator for shell command execution. Supports WebSocket PTY connection and xterm.js rendering.
 
 ### Modal Components
 
@@ -292,9 +292,9 @@ Manages chat state and WebSocket communication for AI conversations.
 
 Handles file operations (read, write, delete) within the project workspace.
 
-### useTerminal
+### usePTY
 
-Manages terminal session and shell command execution.
+Manages PTY terminal session and shell command execution, communicating with backend PTY service via WebSocket.
 
 ---
 
@@ -310,7 +310,11 @@ REST API client for backend communication:
 
 ### websocket.ts
 
-WebSocket client for real-time chat streaming and tool call handling.
+WebSocket client for real-time chat streaming and tool call handling, with connection state management and auto-reconnect.
+
+### pty-client.ts
+
+WebSocket PTY client for communication between the terminal emulator and the backend PTY service.
 
 ---
 
@@ -340,9 +344,15 @@ The application is optimized for desktop use (h-screen constraint). Mobile respo
 |------|-------------|
 | `packages/electron/src/index.css` | Design tokens and global styles (243 lines) |
 | `packages/electron/src/components/Layout.tsx` | Root container with atmospheric effects |
+| `packages/electron/src/components/PTYTerminal.tsx` | WebSocket PTY terminal component |
+| `packages/electron/src/hooks/usePTY.ts` | PTY Hook |
+| `packages/electron/src/services/pty-client.ts` | PTY WebSocket client |
 | `packages/cli/src/index.css` | CLI package styles with CSS variables |
 | `packages/cli/src/components/Layout.tsx` | Simplified layout for web |
+| `packages/cli/src/components/PTYTerminal.tsx` | WebSocket PTY terminal component |
+| `packages/cli/src/hooks/usePTY.ts` | PTY Hook |
+| `packages/cli/src/services/pty-client.ts` | PTY WebSocket client |
 
 ---
 
-*Document generated: 2026-04-08*
+*Document generated: 2026-04-11*

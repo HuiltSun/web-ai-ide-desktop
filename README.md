@@ -11,7 +11,7 @@ A browser-based + Electron desktop AI-assisted coding environment similar to Cla
 - 🤖 **AI Chat** - Real-time conversations with AI assistants supporting streaming responses
 - 💻 **Code Editor** - Professional code editing powered by Monaco Editor
 - 📁 **File Explorer** - Project file tree with create, edit, delete support
-- 🖥️ **Terminal** - Built-in web terminal
+- 🖥️ **Terminal** - Built-in web terminal with WebSocket PTY support
 - 🔧 **Tool System** - AI can invoke file read/write, shell commands and more
 - 🔄 **Multi-Model Support** - OpenAI GPT, Anthropic Claude, Qwen and more
 - 💾 **Session Management** - Save and restore conversation history (PostgreSQL storage)
@@ -20,6 +20,7 @@ A browser-based + Electron desktop AI-assisted coding environment similar to Cla
 - 💻 **Desktop App** - Windows EXE native desktop application
 - 🌐 **Internationalization** - Supports English and Chinese interface switching
 - 📋 **Custom Menu Bar** - Custom dark-themed menu bar, unified with design system
+- 🔌 **gRPC Agent Engine** - Interact with openclaude-temp AI Agent via gRPC
 
 ---
 
@@ -246,49 +247,52 @@ web-ai-ide/
 ├── packages/
 │   ├── electron/             # Electron desktop app
 │   │   ├── electron/         # Main process (main.ts, preload.ts)
-│   │   ├── src/             # React frontend
-│   │   │   ├── components/   # Chat, Editor, FileExplorer, Terminal, Settings, MenuBar, AboutDialog...
-│   │   │   ├── hooks/       # useChat, useFileSystem, useTerminal
-│   │   │   ├── services/    # api.ts, websocket.ts
-│   │   │   ├── contexts/    # SettingsContext
-│   │   │   ├── i18n/       # translations.ts (internationalization)
-│   │   │   └── index.css   # Design system (CSS variables)
-│   │   ├── scripts/         # build-with-timestamp.cjs
-│   │   └── dist/           # Build output
+│   │   ├── src/              # React frontend
+│   │   │   ├── components/   # Chat, Editor, FileExplorer, PTYTerminal, Settings, MenuBar, AboutDialog...
+│   │   │   ├── hooks/        # useChat, useFileSystem, usePTY
+│   │   │   ├── services/     # api.ts, websocket.ts, pty-client.ts
+│   │   │   ├── contexts/     # SettingsContext
+│   │   │   ├── i18n/         # translations.ts (internationalization)
+│   │   │   └── index.css     # Design system (CSS variables)
+│   │   ├── scripts/          # build-with-timestamp.cjs
+│   │   └── dist/             # Build output
 │   │
 │   ├── cli/                  # Standalone React web app
 │   │   └── src/
-│   │       ├── components/   # UI components
-│   │       ├── hooks/        # useChat, useFileSystem, useTerminal
-│   │       ├── services/     # api.ts, websocket.ts
-│   │       └── contexts/     # SettingsContext
+│   │       ├── components/   # UI components (PTYTerminal, Layout, Chat...)
+│   │       ├── hooks/         # useChat, useFileSystem, usePTY
+│   │       ├── services/      # api.ts, websocket.ts, pty-client.ts
+│   │       └── contexts/      # SettingsContext
 │   │
-│   ├── core/                  # AI core logic (AIGateway + Providers)
+│   ├── core/                 # AI core logic (AIGateway + Providers)
 │   │   └── src/
 │   │       ├── ai/           # gateway.ts + providers (openai, anthropic, qwen)
-│   │       ├── models/        # config.ts
+│   │       ├── models/       # config.ts
 │   │       └── tools/        # edit, file-read, file-write, glob, grep, registry
 │   │
-│   ├── openclaude-temp/       # AI Agent gRPC service
+│   ├── openclaude-temp/      # AI Agent gRPC service
 │   │   └── src/
-│   │       ├── grpc/         # gRPC server (QueryEngine)
+│   │       ├── grpc/          # gRPC server (QueryEngine)
 │   │       ├── tools/        # Agent tools (Bash, Read, Write, Grep...)
 │   │       └── proto/        # openclaude.proto definition
 │   │
 │   ├── server/               # Fastify backend API
 │   │   ├── src/
-│   │   │   ├── routes/       # auth, chat, files, projects, sessions, terminal
-│   │   │   ├── services/      # auth, project, session, tenant, pty, shellRegistry, agent-*
+│   │   │   ├── routes/       # auth, chat, files, projects, sessions, pty
+│   │   │   ├── services/     # auth, project, session, tenant, pty-manager, agent-*, bun-grpc-chat-bridge
+│   │   │   ├── scripts/       # agent-grpc-sidecar.ts
 │   │   │   └── utils/        # encryption, prisma, redis, rabbitmq
 │   │   └── prisma/           # Database schema
 │   │
 │   └── shared/               # Shared type definitions
 
-├── release/                  # Build output (release-{timestamp}/)
 ├── docs/                     # Design documents
-├── docker-compose.yml         # Docker orchestration
-├── debug.ps1                 # One-click startup script
-├── launch.bat                # Quick launch script (auto-generated)
+│   ├── GRPC_CONNECTION_REPORT_zh.md
+│   └── websocket-protocol.md
+├── release/                  # Build output (release-{timestamp}/)
+├── docker-compose.yml        # Docker orchestration
+├── debug.ps1                  # One-click startup script
+├── launch.bat                 # Quick launch script (auto-generated)
 └── package.json
 ```
 
