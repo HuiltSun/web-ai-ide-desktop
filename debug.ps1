@@ -29,23 +29,19 @@ if (Test-Path $EnvFile) {
             Write-Host "    $key = ****"
         }
     }
+} else {
+    Write-Host "  警告: .env 文件不存在"
 }
 
 # 检查数据库配置
-
 if (-not $env:POSTGRES_USER -or -not $env:POSTGRES_PASSWORD) {
     Write-Host ""
     Write-Host "错误: 缺少必需的数据库环境变量"
     Write-Host ""
-    Write-Host "请设置以下环境变量后重新运行脚本："
-    Write-Host '  $env:POSTGRES_USER  - PostgreSQL 用户名'
-    Write-Host '  $env:POSTGRES_PASSWORD - PostgreSQL 密码'
-    Write-Host '  $env:POSTGRES_DB - 数据库名称（可选，默认为 webaiide）'
-    Write-Host ""
-    Write-Host "示例："
-    Write-Host '  $env:POSTGRES_USER="myuser"'
-    Write-Host '  $env:POSTGRES_PASSWORD="StrongPass123!"'
-    Write-Host "  .\debug.ps1"
+    Write-Host "请确保根目录 .env 文件包含:"
+    Write-Host "  POSTGRES_USER=myuser"
+    Write-Host "  POSTGRES_PASSWORD=StrongPass123!"
+    Write-Host "  POSTGRES_DB=webaiide"
     exit 1
 }
 
@@ -57,6 +53,7 @@ if (-not $env:ENCRYPTION_SECRET) {
     $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
     $rng.GetBytes($randomBytes)
     $env:ENCRYPTION_SECRET = [Convert]::ToBase64String($randomBytes)
+    [Environment]::SetEnvironmentVariable("ENCRYPTION_SECRET", $env:ENCRYPTION_SECRET, 'Process')
     Write-Host "  已生成加密密钥 (仅用于开发环境)"
 }
 
@@ -74,6 +71,13 @@ $PackagesDir = "$ProjectRoot\packages\electron\"
 if (Test-Path "$PackagesDir\package.json") {
     Push-Location $PackagesDir -ErrorAction SilentlyContinue
     try {
+        Write-Host "  清理缓存和旧构建..."
+        if (Test-Path "$PackagesDir\node_modules\.vite") {
+            Remove-Item -Recurse -Force "$PackagesDir\node_modules\.vite" -ErrorAction SilentlyContinue
+        }
+        if (Test-Path "$PackagesDir\dist") {
+            Remove-Item -Recurse -Force "$PackagesDir\dist" -ErrorAction SilentlyContinue
+        }
         Write-Host "  执行: npm install"
         npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
         if ($LASTEXITCODE -eq 0) {
