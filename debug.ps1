@@ -255,7 +255,7 @@ if (-not (Test-Path "$OpenClaudeDir\package.json")) {
 
 # 6. 启动 CLI Web 应用
 Write-Host ""
-Write-Host "[7/8] 启动 CLI Web 应用 (http://localhost:5173)..."
+Write-Host "[7/8] 启动 CLI Web 应用 (http://localhost:3000)..."
 
 if (-not (Test-Path "$CLIDir\package.json")) {
     Write-Host "  警告: 未找到 cli package.json，跳过 CLI 启动"
@@ -282,9 +282,9 @@ if (-not (Test-Path "$CLIDir\package.json")) {
     for ($i = 0; $i -lt 10; $i++) {
         Start-Sleep -Seconds 2
         try {
-            $response = Invoke-WebRequest -Uri "http://localhost:5173" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+            $response = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
             $cliReady = $true
-            Write-Host "  CLI Web 应用就绪 (http://localhost:5173)"
+            Write-Host "  CLI Web 应用就绪 (http://localhost:3000)"
             break
         } catch {
             Write-Host "    检查中... ($($i + 1)/10)"
@@ -317,7 +317,7 @@ Write-Host "  - packages:       构建完成"
 Write-Host "  - PostgreSQL:     localhost:5432"
 Write-Host "  - 后端 API:      http://localhost:3001"
 Write-Host "  - OpenClaude gRPC: localhost:50051"
-Write-Host "  - CLI Web:        http://localhost:5173"
+Write-Host "  - CLI Web:        http://localhost:3000"
 Write-Host "  - 桌面应用:      已启动"
 Write-Host "========================================"
 Write-Host ""

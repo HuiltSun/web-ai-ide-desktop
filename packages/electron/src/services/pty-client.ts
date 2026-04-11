@@ -7,6 +7,11 @@ export interface PTYClientOptions {
   onConnect?: () => void;
 }
 
+export interface PTYClientConnectOptions {
+  cols?: number;
+  rows?: number;
+}
+
 export class PTYClient {
   private ws: WebSocket | null = null;
   private sessionId: string | null = null;
@@ -18,14 +23,23 @@ export class PTYClient {
     this.options = options;
   }
 
-  connect(): Promise<string> {
+  connect(connectOptions: PTYClientConnectOptions = {}): Promise<string> {
     return new Promise((resolve, reject) => {
       const wsUrl = API_BASE.replace(/^http/, 'ws');
-      this.ws = new WebSocket(`${wsUrl}/api/pty/ws`);
+      this.ws = new WebSocket(`${wsUrl}/ws/pty`);
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
         this.options.onConnect?.();
+        this.ws?.send(
+          JSON.stringify({
+            type: 'create',
+            payload: {
+              cols: connectOptions.cols || 80,
+              rows: connectOptions.rows || 24,
+            },
+          })
+        );
       };
 
       this.ws.onmessage = (event) => {
@@ -40,7 +54,7 @@ export class PTYClient {
       this.ws.onerror = () => {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
           this.reconnectAttempts++;
-          setTimeout(() => this.connect(), 1000 * this.reconnectAttempts);
+          setTimeout(() => this.connect(connectOptions), 1000 * this.reconnectAttempts);
         } else {
           this.options.onError?.('Connection failed');
           reject(new Error('Failed to connect to PTY server'));

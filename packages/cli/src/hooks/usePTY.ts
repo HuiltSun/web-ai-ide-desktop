@@ -6,13 +6,15 @@ export interface UsePTYOptions {
   rows?: number;
 }
 
-export function usePTY() {
+export function usePTY(options: UsePTYOptions = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exitCode, setExitCode] = useState<number | null>(null);
   const clientRef = useRef<PTYClient | null>(null);
   const onOutputRef = useRef<((data: string) => void) | null>(null);
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   const connect = useCallback(async () => {
     if (clientRef.current?.isConnected) {
@@ -44,8 +46,7 @@ export function usePTY() {
     clientRef.current = client;
 
     try {
-      await client.connect();
-      client.write('');
+      await client.connect(optionsRef.current);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect');
       setIsConnecting(false);

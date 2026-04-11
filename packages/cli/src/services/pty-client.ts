@@ -1,10 +1,16 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const WS_URL = API_BASE.replace(/^http/, 'ws');
 
 export interface PTYClientOptions {
   onOutput?: (data: string) => void;
   onExit?: (exitCode: number) => void;
   onError?: (error: string) => void;
   onConnect?: () => void;
+}
+
+export interface PTYClientConnectOptions {
+  cols?: number;
+  rows?: number;
 }
 
 export class PTYClient {
@@ -18,14 +24,23 @@ export class PTYClient {
     this.options = options;
   }
 
-  connect(): Promise<string> {
+  connect(connectOptions: PTYClientConnectOptions = {}): Promise<string> {
     return new Promise((resolve, reject) => {
-      const wsUrl = API_BASE.replace(/^http/, 'ws');
-      this.ws = new WebSocket(`${wsUrl}/api/pty/ws`);
+      const wsUrl = `${WS_URL}/ws/pty`;
+      this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
         this.options.onConnect?.();
+        this.ws?.send(
+          JSON.stringify({
+            type: 'create',
+            payload: {
+              cols: connectOptions.cols || 80,
+              rows: connectOptions.rows || 24,
+            },
+          })
+        );
       };
 
       this.ws.onmessage = (event) => {
@@ -40,7 +55,7 @@ export class PTYClient {
       this.ws.onerror = () => {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
           this.reconnectAttempts++;
-          setTimeout(() => this.connect(), 1000 * this.reconnectAttempts);
+          setTimeout(() => this.connect(connectOptions), 1000 * this.reconnectAttempts);
         } else {
           this.options.onError?.('Connection failed');
           reject(new Error('Failed to connect to PTY server'));

@@ -14,8 +14,12 @@ export function PTYTerminal({ onClose }: PTYTerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstanceRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const dimensionsRef = useRef({ cols: 80, rows: 24 });
 
-  const { isConnected, isConnecting, error, connect, write, resize, onOutput } = usePTY();
+  const { isConnected, isConnecting, error, connect, write, resize, onOutput } = usePTY({
+    cols: dimensionsRef.current.cols,
+    rows: dimensionsRef.current.rows,
+  });
 
   const handleData = useCallback(
     (data: string) => {
