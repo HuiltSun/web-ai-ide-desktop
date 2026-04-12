@@ -4,7 +4,7 @@ import App from './App';
 import { SettingsProvider } from './contexts/SettingsContext';
 import './index.css';
 
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && !window.electronAPI) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then(
       (registration) => {

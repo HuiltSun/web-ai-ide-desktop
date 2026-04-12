@@ -67,6 +67,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      partition: 'no-cache',
     },
     title: 'Web AI IDE',
     show: false,

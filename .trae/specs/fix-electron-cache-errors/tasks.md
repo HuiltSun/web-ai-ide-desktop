@@ -1,27 +1,16 @@
 # Tasks
 
-- [ ] Task 1: 分析错误日志，确认缓存错误的根本原因
-  - [ ] 检查 Electron 启动参数
-  - [ ] 检查应用数据目录权限
-  - [ ] 检查是否有重复的设置加载调用
+- [x] Task 1: 在 main.ts BrowserWindow webPreferences 中添加 partition: 'no-cache'
+  - 修改 webPreferences 配置，添加 partition 选项
 
-- [ ] Task 2: 在 main.ts 中添加启动参数禁用缓存
-  - [ ] 添加 `--disable-gpu-cache` 参数
-  - [ ] 添加 `--disable-dev-shm-usage` 参数
-  - [ ] 添加其他必要的缓存禁用参数
+- [x] Task 2: 条件化 Service Worker 注册
+  - 在 main.tsx 中检查是否在 Electron 环境
+  - 仅在非 Electron 环境注册 Service Worker
 
-- [ ] Task 3: 优化设置加载逻辑
-  - [ ] 查找重复调用 `getAllSettings` 的代码
-  - [ ] 确保设置只在初始化时加载一次
-  - [ ] 添加防重复加载机制
-
-- [ ] Task 4: 测试验证
-  - [ ] 运行 `launch.bat` 测试
-  - [ ] 确认缓存错误消失
-  - [ ] 确认设置只加载一次
-  - [ ] 确认应用功能正常
+- [x] Task 3: 重新构建并测试
+  - 运行 npm run build 构建生产版本
+  - 运行 launch.bat 验证缓存错误是否消失
 
 # Task Dependencies
-- [Task 2] depends on [Task 1]
-- [Task 3] depends on [Task 1]
-- [Task 4] depends on [Task 2, Task 3]
+- [Task 2] 可以与 [Task 1] 并行进行
+- [Task 3] 依赖 [Task 1, Task 2]
