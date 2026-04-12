@@ -1,8 +1,0 @@
-- [ ] 退出按钮有正确的 CSS 样式
-- [ ] 按钮没有 pointer-events: none
-- [ ] 按钮的 z-index 正确
-- [ ] onClick 事件正确绑定
-- [ ] onLogout 回调正确传递
-- [ ] 点击按钮调用 onLogout
-- [ ] 点击后菜单关闭
-- [ ] 点击后用户退出登录

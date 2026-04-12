@@ -82,17 +82,19 @@
 
 ### 实现方式
 
-复制 `openclaude-temp/src/components/StartupScreen.ts` 到 `electron/src/utils/startupScreen.ts`，然后进行适配修改：
+复制 `openclaude-temp/src/components/StartupScreen.ts` 的**全部内容**到 `electron/src/utils/startupScreen.ts`，然后进行适配修改：
 
-需要保留的核心逻辑：
+需要复制的完整内容：
 - ASCII Logo 生成函数 (`paintLine`, `gradAt`, `lerp`)
 - 颜色定义 (SUNSET_GRAD, ACCENT, CREAM, DIMCOL, BORDER)
 - 边框绘制函数 (`boxRow`)
+- `printStartupScreen()` 函数
 
 需要进行以下适配：
 - 将 Logo 文字从 "OPEN" + "CLAUDE" 改为 "WEB" + "AI" + "IDE"
 - 从 `electron-store` 获取 Provider 配置（`main.ts` 中的 store 实例），而非环境变量
 - 版本号从 package.json 获取
+- Provider 检测改为从 store 读取 `selectedProvider` 和 `selectedModel`
 
 ### 文件结构
 
