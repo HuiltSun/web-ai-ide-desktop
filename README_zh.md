@@ -327,16 +327,14 @@ const project = await fetch('/api/projects', {
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| type | string | 是 | 固定 `"chat:message"` |
-| sessionId | string | 是 | 会话 ID |
-| message | string | 是 | 消息内容 |
+| type | string | 是 | 固定 `"message"` |
+| content | string | 是 | 消息内容 |
 
 **示例**
 ```typescript
 ws.send(JSON.stringify({
-  type: 'chat:message',
-  sessionId: 'session_xxx',
-  message: '解释这段代码'
+  type: 'message',
+  content: '解释这段代码'
 }));
 ```
 
@@ -346,7 +344,7 @@ AI 流式响应。
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| type | string | 固定 `"chat:stream"` |
+| type | string | 事件类型 |
 | sessionId | string | 会话 ID |
 | content | string | 响应内容片段 |
 
@@ -356,7 +354,8 @@ AI 流式响应。
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| type | string | 固定 `"chat:tool_call"` |
+| type | string | 事件类型 |
+| toolCallId | string | 调用 ID |
 | tool | string | 工具名称 |
 | params | object | 工具参数 |
 
@@ -366,8 +365,8 @@ AI 流式响应。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| type | string | 是 | 固定 `"chat:approve"` |
-| callId | string | 是 | 调用 ID |
+| type | string | 是 | 固定 `"approve"` |
+| toolCallId | string | 是 | 调用 ID |
 
 #### chat:reject (Client → Server)
 
@@ -375,8 +374,68 @@ AI 流式响应。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| type | string | 是 | 固定 `"chat:reject"` |
-| callId | string | 是 | 调用 ID |
+| type | string | 是 | 固定 `"reject"` |
+| toolCallId | string | 是 | 调用 ID |
+
+### PTY WebSocket
+
+内置终端模拟器，通过 WebSocket 连接 PTY 服务。
+
+**连接端点**：`ws://localhost:3001/ws/pty`
+
+#### 创建会话 (Client → Server)
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| type | string | 固定 `"create"` |
+| payload.cols | number | 列数，默认 80 |
+| payload.rows | number | 行数，默认 24 |
+
+**示例**
+```typescript
+ws.send(JSON.stringify({
+  type: 'create',
+  payload: { cols: 80, rows: 24 }
+}));
+```
+
+#### 会话创建成功 (Server → Client)
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| type | string | 固定 `"created"` |
+| sessionId | string | 会话 ID |
+
+#### 输出数据 (Server → Client)
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| type | string | 固定 `"output"` |
+| payload.data | string | 终端输出数据 |
+
+#### 输入数据 (Client → Server)
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| type | string | 固定 `"input"` |
+| payload.sessionId | string | 会话 ID |
+| payload.data | string | 输入数据 |
+
+#### 调整大小 (Client → Server)
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| type | string | 固定 `"resize"` |
+| payload.sessionId | string | 会话 ID |
+| payload.cols | number | 新列数 |
+| payload.rows | number | 新行数 |
+
+#### 断开连接 (Client → Server)
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| type | string | 固定 `"kill"` |
+| payload.sessionId | string | 会话 ID |
 
 ### gRPC 接口
 

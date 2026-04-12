@@ -327,16 +327,14 @@ Send a chat message.
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| type | string | Yes | Fixed `"chat:message"` |
-| sessionId | string | Yes | Session ID |
-| message | string | Yes | Message content |
+| type | string | Yes | Fixed `"message"` |
+| content | string | Yes | Message content |
 
 **Example**
 ```typescript
 ws.send(JSON.stringify({
-  type: 'chat:message',
-  sessionId: 'session_xxx',
-  message: 'Explain this code'
+  type: 'message',
+  content: 'Explain this code'
 }));
 ```
 
@@ -346,7 +344,7 @@ AI streaming response.
 
 | Param | Type | Description |
 |-------|------|-------------|
-| type | string | Fixed `"chat:stream"` |
+| type | string | Event type |
 | sessionId | string | Session ID |
 | content | string | Response content fragment |
 
@@ -356,7 +354,8 @@ Tool call request.
 
 | Param | Type | Description |
 |-------|------|-------------|
-| type | string | Fixed `"chat:tool_call"` |
+| type | string | Event type |
+| toolCallId | string | Call ID |
 | tool | string | Tool name |
 | params | object | Tool parameters |
 
@@ -366,8 +365,8 @@ Approve tool call.
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| type | string | Yes | Fixed `"chat:approve"` |
-| callId | string | Yes | Call ID |
+| type | string | Yes | Fixed `"approve"` |
+| toolCallId | string | Yes | Call ID |
 
 #### chat:reject (Client → Server)
 
@@ -375,8 +374,68 @@ Reject tool call.
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| type | string | Yes | Fixed `"chat:reject"` |
-| callId | string | Yes | Call ID |
+| type | string | Yes | Fixed `"reject"` |
+| toolCallId | string | Yes | Call ID |
+
+### PTY WebSocket
+
+Built-in terminal emulator, connecting to PTY service via WebSocket.
+
+**Endpoint**：`ws://localhost:3001/ws/pty`
+
+#### Create Session (Client → Server)
+
+| Param | Type | Description |
+|-------|------|-------------|
+| type | string | Fixed `"create"` |
+| payload.cols | number | Columns, default 80 |
+| payload.rows | number | Rows, default 24 |
+
+**Example**
+```typescript
+ws.send(JSON.stringify({
+  type: 'create',
+  payload: { cols: 80, rows: 24 }
+}));
+```
+
+#### Session Created (Server → Client)
+
+| Param | Type | Description |
+|-------|------|-------------|
+| type | string | Fixed `"created"` |
+| sessionId | string | Session ID |
+
+#### Output Data (Server → Client)
+
+| Param | Type | Description |
+|-------|------|-------------|
+| type | string | Fixed `"output"` |
+| payload.data | string | Terminal output data |
+
+#### Input Data (Client → Server)
+
+| Param | Type | Description |
+|-------|------|-------------|
+| type | string | Fixed `"input"` |
+| payload.sessionId | string | Session ID |
+| payload.data | string | Input data |
+
+#### Resize (Client → Server)
+
+| Param | Type | Description |
+|-------|------|-------------|
+| type | string | Fixed `"resize"` |
+| payload.sessionId | string | Session ID |
+| payload.cols | number | New columns |
+| payload.rows | number | New rows |
+
+#### Disconnect (Client → Server)
+
+| Param | Type | Description |
+|-------|------|-------------|
+| type | string | Fixed `"kill"` |
+| payload.sessionId | string | Session ID |
 
 ### gRPC Interface
 
