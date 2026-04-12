@@ -22,24 +22,122 @@
 ```
 web-ai-ide/
 ├── packages/
-│   ├── electron/              # Electron 桌面应用
-│   │   ├── electron/          # 主进程 (main.ts, preload.ts)
-│   │   └── src/              # React 前端
-│   │       ├── components/   # UI 组件
-│   │       ├── hooks/        # 状态钩子
-│   │       ├── services/     # API、WebSocket 客户端
-│   │       ├── contexts/    # SettingsContext
-│   │       └── i18n/         # 国际化翻译
-│   ├── cli/                   # 独立 React Web 应用
-│   ├── core/                 # AI 核心逻辑 (AIGateway + Providers)
-│   ├── openclaude-temp/       # AI Agent gRPC 服务
-│   ├── server/               # Fastify 后端 API
-│   └── shared/               # 共享类型定义
-├── docs/                     # 设计文档
-├── release/                  # 构建输出
-├── docker-compose.yml        # Docker 编排
-├── debug.ps1                # 一键启动脚本
-└── package.json
+│   ├── electron/                        # Electron 桌面应用
+│   │   ├── electron/                    # 主进程代码
+│   │   │   ├── main.ts                  # Electron 主进程入口
+│   │   │   └── preload.ts               # 预加载脚本，安全暴露 IPC
+│   │   ├── src/                         # React 前端
+│   │   │   ├── App.tsx                  # 根组件
+│   │   │   ├── main.tsx                 # 前端入口
+│   │   │   ├── index.css                # 全局样式 (Tailwind)
+│   │   │   ├── types.ts                  # 共享类型定义
+│   │   │   ├── components/               # UI 组件
+│   │   │   │   ├── Layout.tsx            # 布局组件 (Header + Sidebar)
+│   │   │   │   ├── Chat.tsx              # AI 对话面板
+│   │   │   │   ├── ChatInput.tsx         # 对话输入框
+│   │   │   │   ├── ChatMessage.tsx       # 消息气泡
+│   │   │   │   ├── Editor.tsx            # Monaco 编辑器
+│   │   │   │   ├── EditorTabs.tsx        # 编辑器标签页
+│   │   │   │   ├── FileExplorer.tsx      # 文件浏览器
+│   │   │   │   ├── FileTree.tsx          # 文件树组件
+│   │   │   │   ├── Header.tsx            # 顶部导航栏
+│   │   │   │   ├── MenuBar.tsx           # 菜单栏
+│   │   │   │   ├── Sidebar.tsx           # 侧边栏
+│   │   │   │   ├── PTYTerminal.tsx      # WebSocket PTY 终端
+│   │   │   │   ├── LoginModal.tsx        # 登录弹窗
+│   │   │   │   ├── Settings.tsx          # 设置面板
+│   │   │   │   ├── WelcomeScreen.tsx    # 欢迎页
+│   │   │   │   ├── ToolCallCard.tsx      # 工具调用卡片
+│   │   │   │   ├── AboutDialog.tsx       # 关于对话框
+│   │   │   │   ├── AppHeader.tsx         # 应用头部
+│   │   │   │   ├── ErrorBoundary.tsx      # 错误边界
+│   │   │   │   ├── Icons.tsx             # SVG 图标
+│   │   │   │   └── settings/             # 设置子面板
+│   │   │   │       ├── SettingsAITab.tsx       # AI 设置
+│   │   │   │       ├── SettingsAppearanceTab.tsx  # 外观设置
+│   │   │   │       ├── SettingsDatabaseTab.tsx   # 数据库设置
+│   │   │   │       ├── SettingsEditorTab.tsx     # 编辑器设置
+│   │   │   │       ├── SettingsLanguageTab.tsx   # 语言设置
+│   │   │   │       └── index.ts
+│   │   │   ├── contexts/                 # React Context
+│   │   │   │   ├── SettingsContext.tsx   # 设置上下文 (Reducer 模式)
+│   │   │   │   ├── settingsReducer.ts    # 设置 Reducer 和 Action 类型
+│   │   │   │   ├── settingsTypes.ts     # 设置接口和默认值
+│   │   │   │   ├── settingsTheme.ts     # 主题切换逻辑
+│   │   │   │   ├── settingsStorage.ts   # 设置持久化
+│   │   │   │   └── settingsHelpers.ts   # 设置辅助函数
+│   │   │   ├── hooks/                    # 自定义 Hooks
+│   │   │   │   ├── useChat.ts           # AI 对话逻辑
+│   │   │   │   ├── useFileSystem.ts     # 文件系统操作
+│   │   │   │   └── usePTY.ts            # PTY 终端连接
+│   │   │   ├── services/                 # 客户端服务
+│   │   │   │   ├── api.ts               # REST API 客户端
+│   │   │   │   ├── websocket.ts         # WebSocket 客户端
+│   │   │   │   └── pty-client.ts        # PTY WebSocket 客户端
+│   │   │   ├── config/                   # 配置文件
+│   │   │   │   ├── providerPresets.ts   # AI provider 预设
+│   │   │   │   └── provider-presets.json
+│   │   │   └── i18n/                    # 国际化
+│   │   │       ├── translations.ts      # 翻译入口
+│   │   │       ├── translations.types.ts # 翻译类型定义
+│   │   │       ├── translations.utils.ts # 翻译工具函数
+│   │   │       ├── en.translations.ts   # 英文翻译
+│   │   │       └── zh.translations.ts   # 中文翻译
+│   │   ├── public/                       # 静态资源
+│   │   │   ├── favicon.svg              # 网站图标
+│   │   │   └── sw.js                    # Service Worker
+│   │   ├── scripts/                      # 构建脚本
+│   │   ├── index.html                    # HTML 模板
+│   │   ├── vite.config.ts               # Vite 配置
+│   │   ├── tailwind.config.js           # Tailwind 配置
+│   │   ├── postcss.config.js            # PostCSS 配置
+│   │   └── package.json
+│   ├── cli/                             # 独立 React Web 应用
+│   │   └── src/
+│   │       ├── services/                 # API 客户端
+│   │       │   ├── api.ts               # REST API
+│   │       │   ├── websocket.ts         # WebSocket
+│   │       │   └── pty-client.ts        # PTY
+│   │       └── types.ts                 # 类型定义
+│   ├── core/                           # AI 核心逻辑
+│   │   └── src/
+│   │       ├── ai/
+│   │       │   ├── gateway.ts           # AI 网关 (统一接口)
+│   │       │   └── providers/           # AI Provider 实现
+│   │       │       ├── openai.ts      # OpenAI GPT
+│   │       │       ├── anthropic.ts   # Anthropic Claude
+│   │       │       └── qwen.ts        # 阿里 Qwen
+│   │       ├── tools/                  # 工具实现
+│   │       │   ├── registry.ts         # 工具注册表
+│   │       │   ├── edit.ts            # 文件编辑
+│   │       │   ├── file-read.ts       # 文件读取
+│   │       │   ├── file-write.ts      # 文件写入
+│   │       │   ├── glob.ts            # 文件匹配
+│   │       │   ├── grep.ts            # 内容搜索
+│   │       │   └── shell.ts           # Shell 执行
+│   │       └── models/
+│   │           └── config.ts           # 模型配置
+│   ├── openclaude-temp/                # AI Agent gRPC 服务 (外部依赖)
+│   │   ├── src/                        # 服务源码
+│   │   ├── python/                     # Python Provider
+│   │   ├── scripts/                    # 启动脚本
+│   │   └── proto/                      # gRPC 协议定义
+│   ├── server/                        # Fastify 后端 API
+│   │   └── src/
+│   │       └── ...                    # 后端路由、Service、Prisma Schema
+│   └── shared/                        # 共享类型定义
+│       └── ...
+├── docs/                              # 设计文档
+│   ├── frontend_zh.md                  # 前端设计文档
+│   ├── websocket-protocol.md           # WebSocket 协议
+│   └── ...
+├── release/                           # 构建输出
+├── docker-compose.yml                 # Docker 编排
+├── debug.ps1                         # 一键启动脚本
+├── Dockerfile                        # Docker 镜像
+├── nginx.conf                        # Nginx 配置
+├── package.json                      # 根 package.json
+└── README.md
 ```
 
 ---

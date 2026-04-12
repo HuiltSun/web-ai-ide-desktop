@@ -22,24 +22,122 @@ A browser-based + Electron desktop AI-assisted coding environment with multi-AI 
 ```
 web-ai-ide/
 ├── packages/
-│   ├── electron/              # Electron desktop app
-│   │   ├── electron/          # Main process (main.ts, preload.ts)
-│   │   └── src/              # React frontend
-│   │       ├── components/   # UI components
-│   │       ├── hooks/        # State hooks
-│   │       ├── services/     # API, WebSocket clients
-│   │       ├── contexts/     # SettingsContext
-│   │       └── i18n/         # Internationalization
-│   ├── cli/                   # Standalone React web app
-│   ├── core/                 # AI core logic (AIGateway + Providers)
-│   ├── openclaude-temp/      # AI Agent gRPC service
-│   ├── server/               # Fastify backend API
-│   └── shared/               # Shared type definitions
-├── docs/                     # Design documents
-├── release/                  # Build output
-├── docker-compose.yml        # Docker orchestration
-├── debug.ps1                # One-click startup script
-└── package.json
+│   ├── electron/                        # Electron desktop app
+│   │   ├── electron/                    # Main process code
+│   │   │   ├── main.ts                  # Electron main process entry
+│   │   │   └── preload.ts               # Preload script, secure IPC exposure
+│   │   ├── src/                         # React frontend
+│   │   │   ├── App.tsx                  # Root component
+│   │   │   ├── main.tsx                 # Frontend entry
+│   │   │   ├── index.css                # Global styles (Tailwind)
+│   │   │   ├── types.ts                 # Shared type definitions
+│   │   │   ├── components/               # UI components
+│   │   │   │   ├── Layout.tsx            # Layout (Header + Sidebar)
+│   │   │   │   ├── Chat.tsx              # AI chat panel
+│   │   │   │   ├── ChatInput.tsx         # Chat input
+│   │   │   │   ├── ChatMessage.tsx       # Message bubble
+│   │   │   │   ├── Editor.tsx            # Monaco editor
+│   │   │   │   ├── EditorTabs.tsx        # Editor tabs
+│   │   │   │   ├── FileExplorer.tsx      # File browser
+│   │   │   │   ├── FileTree.tsx          # File tree component
+│   │   │   │   ├── Header.tsx            # Top navigation
+│   │   │   │   ├── MenuBar.tsx           # Menu bar
+│   │   │   │   ├── Sidebar.tsx           # Sidebar
+│   │   │   │   ├── PTYTerminal.tsx        # WebSocket PTY terminal
+│   │   │   │   ├── LoginModal.tsx         # Login modal
+│   │   │   │   ├── Settings.tsx           # Settings panel
+│   │   │   │   ├── WelcomeScreen.tsx     # Welcome screen
+│   │   │   │   ├── ToolCallCard.tsx       # Tool call card
+│   │   │   │   ├── AboutDialog.tsx        # About dialog
+│   │   │   │   ├── AppHeader.tsx          # App header
+│   │   │   │   ├── ErrorBoundary.tsx      # Error boundary
+│   │   │   │   ├── Icons.tsx              # SVG icons
+│   │   │   │   └── settings/              # Settings sub-panels
+│   │   │   │       ├── SettingsAITab.tsx         # AI settings
+│   │   │   │       ├── SettingsAppearanceTab.tsx # Appearance settings
+│   │   │   │       ├── SettingsDatabaseTab.tsx  # Database settings
+│   │   │   │       ├── SettingsEditorTab.tsx    # Editor settings
+│   │   │   │       ├── SettingsLanguageTab.tsx  # Language settings
+│   │   │   │       └── index.ts
+│   │   │   ├── contexts/                  # React Context
+│   │   │   │   ├── SettingsContext.tsx    # Settings context (Reducer pattern)
+│   │   │   │   ├── settingsReducer.ts     # Settings Reducer and Action types
+│   │   │   │   ├── settingsTypes.ts        # Settings interfaces and defaults
+│   │   │   │   ├── settingsTheme.ts       # Theme switching logic
+│   │   │   │   ├── settingsStorage.ts     # Settings persistence
+│   │   │   │   └── settingsHelpers.ts     # Settings helper functions
+│   │   │   ├── hooks/                     # Custom Hooks
+│   │   │   │   ├── useChat.ts            # AI chat logic
+│   │   │   │   ├── useFileSystem.ts      # File system operations
+│   │   │   │   └── usePTY.ts            # PTY terminal connection
+│   │   │   ├── services/                  # Client services
+│   │   │   │   ├── api.ts                # REST API client
+│   │   │   │   ├── websocket.ts          # WebSocket client
+│   │   │   │   └── pty-client.ts         # PTY WebSocket client
+│   │   │   ├── config/                    # Config files
+│   │   │   │   ├── providerPresets.ts    # AI provider presets
+│   │   │   │   └── provider-presets.json
+│   │   │   └── i18n/                     # Internationalization
+│   │   │       ├── translations.ts        # Translation entry
+│   │   │       ├── translations.types.ts  # Translation type definitions
+│   │   │       ├── translations.utils.ts   # Translation utilities
+│   │   │       ├── en.translations.ts     # English translations
+│   │   │       └── zh.translations.ts      # Chinese translations
+│   │   ├── public/                        # Static assets
+│   │   │   ├── favicon.svg               # Favicon
+│   │   │   └── sw.js                     # Service Worker
+│   │   ├── scripts/                       # Build scripts
+│   │   ├── index.html                     # HTML template
+│   │   ├── vite.config.ts                # Vite config
+│   │   ├── tailwind.config.js            # Tailwind config
+│   │   ├── postcss.config.js             # PostCSS config
+│   │   └── package.json
+│   ├── cli/                              # Standalone React web app
+│   │   └── src/
+│   │       ├── services/                  # API clients
+│   │       │   ├── api.ts                # REST API
+│   │       │   ├── websocket.ts          # WebSocket
+│   │       │   └── pty-client.ts         # PTY
+│   │       └── types.ts                  # Type definitions
+│   ├── core/                            # AI core logic
+│   │   └── src/
+│   │       ├── ai/
+│   │       │   ├── gateway.ts             # AI gateway (unified interface)
+│   │       │   └── providers/             # AI Provider implementations
+│   │       │       ├── openai.ts        # OpenAI GPT
+│   │       │       ├── anthropic.ts     # Anthropic Claude
+│   │       │       └── qwen.ts         # Alibaba Qwen
+│   │       ├── tools/                   # Tool implementations
+│   │       │   ├── registry.ts          # Tool registry
+│   │       │   ├── edit.ts             # File editing
+│   │       │   ├── file-read.ts        # File reading
+│   │       │   ├── file-write.ts       # File writing
+│   │       │   ├── glob.ts             # File matching
+│   │       │   ├── grep.ts             # Content search
+│   │       │   └── shell.ts            # Shell execution
+│   │       └── models/
+│   │           └── config.ts            # Model configuration
+│   ├── openclaude-temp/                 # AI Agent gRPC service (external dependency)
+│   │   ├── src/                        # Service source code
+│   │   ├── python/                     # Python Provider
+│   │   ├── scripts/                    # Startup scripts
+│   │   └── proto/                      # gRPC protocol definition
+│   ├── server/                         # Fastify backend API
+│   │   └── src/
+│   │       └── ...                    # Backend routes, Services, Prisma Schema
+│   └── shared/                         # Shared type definitions
+│       └── ...
+├── docs/                               # Design documents
+│   ├── frontend_zh.md                  # Frontend design doc
+│   ├── websocket-protocol.md            # WebSocket protocol
+│   └── ...
+├── release/                            # Build output
+├── docker-compose.yml                  # Docker orchestration
+├── debug.ps1                          # One-click startup script
+├── Dockerfile                         # Docker image
+├── nginx.conf                         # Nginx config
+├── package.json                       # Root package.json
+└── README.md
 ```
 
 ---
