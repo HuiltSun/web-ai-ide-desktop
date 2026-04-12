@@ -1,5 +1,6 @@
 import { TerminalIcon, CheckIcon, CloseIcon } from './Icons';
 import type { ToolCall } from '../types';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface ToolCallCardProps {
   toolCall: ToolCall;
@@ -8,6 +9,7 @@ interface ToolCallCardProps {
 }
 
 export function ToolCallCard({ toolCall, onApprove, onReject }: ToolCallCardProps) {
+  const { t } = useSettings();
   return (
     <div className="animate-in slide-in-from-bottom-2 duration-200">
       <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-2xl p-4">
@@ -17,7 +19,7 @@ export function ToolCallCard({ toolCall, onApprove, onReject }: ToolCallCardProp
           </div>
           <div>
             <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
-              Tool Request
+              {t.toolCall.toolRequest}
             </span>
             <span className="ml-2 font-mono text-sm text-slate-300">{toolCall.name}</span>
           </div>
@@ -33,14 +35,14 @@ export function ToolCallCard({ toolCall, onApprove, onReject }: ToolCallCardProp
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-medium rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-500/25"
           >
             <CheckIcon size={14} />
-            Approve
+            {t.toolCall.approve}
           </button>
           <button
             onClick={onReject}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-rose-500 text-white text-sm font-medium rounded-xl hover:from-red-600 hover:to-rose-600 transition-all shadow-lg shadow-red-500/25"
           >
             <CloseIcon size={14} />
-            Reject
+            {t.toolCall.reject}
           </button>
         </div>
       </div>

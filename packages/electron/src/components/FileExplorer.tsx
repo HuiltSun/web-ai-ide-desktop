@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FileNode } from '../services/api';
 import { FileTree } from './FileTree';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface FileExplorerProps {
   files: FileNode[];
@@ -17,6 +18,7 @@ export function FileExplorer({
   onFileCreate,
   onFileDelete,
 }: FileExplorerProps) {
+  const { t } = useSettings();
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -29,7 +31,7 @@ export function FileExplorer({
   };
 
   const handleCreateFile = () => {
-    const name = prompt('Enter file name:');
+    const name = prompt(t.fileExplorer.enterFileName);
     if (name) {
       onFileCreate(name);
     }
@@ -39,12 +41,12 @@ export function FileExplorer({
     <div className="h-full flex flex-col bg-white">
       <div className="p-3 border-b border-gray-200 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-          Files
+          {t.fileExplorer.files}
         </h3>
         <button
           onClick={handleCreateFile}
           className="p-1 hover:bg-gray-100 rounded"
-          title="New File"
+          title={t.fileExplorer.newFile}
         >
           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -61,7 +63,7 @@ export function FileExplorer({
           />
         ) : (
           <div className="text-sm text-gray-500 p-2">
-            No files yet. Create one to get started.
+            {t.fileExplorer.noFiles}
           </div>
         )}
       </div>
@@ -82,7 +84,7 @@ export function FileExplorer({
               }}
               className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600"
             >
-              Delete
+              {t.fileExplorer.delete}
             </button>
           </div>
         </>

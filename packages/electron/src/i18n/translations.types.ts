@@ -1,6 +1,41 @@
 export type Language = 'en' | 'zh';
 
 export interface Translations {
+  about: {
+    version: string;
+    electron: string;
+    react: string;
+    typescript: string;
+    copyright: string;
+    close: string;
+  };
+  toolCall: {
+    toolRequest: string;
+    approve: string;
+    reject: string;
+  };
+  editor: {
+    openFile: string;
+  };
+  fileExplorer: {
+    files: string;
+    newFile: string;
+    noFiles: string;
+    delete: string;
+    enterFileName: string;
+  };
+  terminal: {
+    title: string;
+    connecting: string;
+    connected: string;
+    closeTerminal: string;
+  };
+  app: {
+    selectProject: string;
+    saveFunctionality: string;
+    noProjectSelected: string;
+    enterProjectName: string;
+  };
   settings: {
     title: string;
     subtitle: string;

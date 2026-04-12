@@ -72,7 +72,7 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
 
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 mb-6">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-sm text-[var(--color-text-secondary)]">Version 1.0.0</span>
+              <span className="text-sm text-[var(--color-text-secondary)]">{t.about.version} 1.0.0</span>
             </div>
 
             <p className="text-[var(--color-text-secondary)] mb-8 leading-relaxed" style={{ fontFamily: 'var(--font-sans)' }}>
@@ -81,15 +81,15 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
 
             <div className="w-full space-y-3 mb-8">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[var(--color-text-muted)]">Electron</span>
+                <span className="text-[var(--color-text-muted)]">{t.about.electron}</span>
                 <span className="text-[var(--color-text-secondary)] font-mono">30.5.1</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[var(--color-text-muted)]">React</span>
+                <span className="text-[var(--color-text-muted)]">{t.about.react}</span>
                 <span className="text-[var(--color-text-secondary)] font-mono">18.x</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-[var(--color-text-muted)]">TypeScript</span>
+                <span className="text-[var(--color-text-muted)]">{t.about.typescript}</span>
                 <span className="text-[var(--color-text-secondary)] font-mono">5.x</span>
               </div>
             </div>
@@ -97,7 +97,7 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
             <div className="w-full h-px bg-gradient-to-r from-transparent via-[var(--color-border)] to-transparent mb-6" />
 
             <p className="text-xs text-[var(--color-text-muted)] mb-6">
-              © 2024 Web AI IDE. All rights reserved.
+              {t.about.copyright}
             </p>
 
             <button
@@ -105,7 +105,7 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
               className="w-full py-2.5 px-6 rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90 text-white font-medium transition-all duration-200 hover:shadow-lg hover:shadow-indigo-500/20"
               style={{ fontFamily: 'var(--font-sans)' }}
             >
-              Close
+              {t.about.close}
             </button>
           </div>
 

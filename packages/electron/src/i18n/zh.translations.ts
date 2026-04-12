@@ -1,6 +1,41 @@
 import type { Translations } from './translations.types';
 
 export const zhTranslations: Translations = {
+  about: {
+    version: '版本',
+    electron: 'Electron',
+    react: 'React',
+    typescript: 'TypeScript',
+    copyright: '© 2024 Web AI IDE. 保留所有权利。',
+    close: '关闭',
+  },
+  toolCall: {
+    toolRequest: '工具请求',
+    approve: '批准',
+    reject: '拒绝',
+  },
+  editor: {
+    openFile: '打开文件以开始编辑',
+  },
+  fileExplorer: {
+    files: '文件',
+    newFile: '新建文件',
+    noFiles: '暂无文件。创建一个开始吧。',
+    delete: '删除',
+    enterFileName: '输入文件名：',
+  },
+  terminal: {
+    title: 'OpenClaude CLI',
+    connecting: '连接中...',
+    connected: '已连接',
+    closeTerminal: '关闭终端',
+  },
+  app: {
+    selectProject: '选择项目编号：',
+    saveFunctionality: '保存功能：使用 api.writeFile(projectId, path, content)',
+    noProjectSelected: '未选择项目。请先打开一个项目。',
+    enterProjectName: '输入"另存为"的新项目名称：',
+  },
   settings: {
     title: '设置',
     subtitle: '配置您的 AI IDE',

@@ -66,17 +66,10 @@ export function Header({ projectId, onSettingsClick, onRefreshClick, onLoginClic
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  console.log('退出按钮被点击');
                   setShowUserMenu(false);
                   if (onLogout) {
-                    console.log('调用 onLogout');
                     onLogout();
-                  } else {
-                    console.error('onLogout 未定义');
                   }
-                }}
-                onMouseEnter={() => {
-                  console.log('鼠标移入退出按钮');
                 }}
                 className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-white/5 transition-colors flex items-center gap-2 cursor-pointer select-none"
                 style={{ pointerEvents: 'auto' }}

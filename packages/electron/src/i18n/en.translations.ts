@@ -1,6 +1,41 @@
 import type { Translations } from './translations.types';
 
 export const enTranslations: Translations = {
+  about: {
+    version: 'Version',
+    electron: 'Electron',
+    react: 'React',
+    typescript: 'TypeScript',
+    copyright: '© 2024 Web AI IDE. All rights reserved.',
+    close: 'Close',
+  },
+  toolCall: {
+    toolRequest: 'Tool Request',
+    approve: 'Approve',
+    reject: 'Reject',
+  },
+  editor: {
+    openFile: 'Open a file to start editing',
+  },
+  fileExplorer: {
+    files: 'Files',
+    newFile: 'New File',
+    noFiles: 'No files yet. Create one to get started.',
+    delete: 'Delete',
+    enterFileName: 'Enter file name:',
+  },
+  terminal: {
+    title: 'OpenClaude CLI',
+    connecting: 'Connecting...',
+    connected: 'Connected',
+    closeTerminal: 'Close terminal',
+  },
+  app: {
+    selectProject: 'Select project number:',
+    saveFunctionality: 'Save functionality: Uses api.writeFile(projectId, path, content)',
+    noProjectSelected: 'No project selected. Please open a project first.',
+    enterProjectName: 'Enter new project name for "Save As":',
+  },
   settings: {
     title: 'Settings',
     subtitle: 'Configure your AI IDE',

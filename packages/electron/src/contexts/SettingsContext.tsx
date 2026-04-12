@@ -1,439 +1,143 @@
-import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
-import type { AIProvider, AIModel } from '../types';
-import { Language, getTranslation, Translations } from '../i18n/translations';
-
-type UIStyle = 'ios' | 'legacy';
-type ThemeMode = 'light' | 'dark' | 'system';
-
-interface Settings {
-  aiProviders: AIProvider[];
-  selectedProvider: string;
-  selectedModel: string;
-  uiStyle: UIStyle;
-  themeMode: ThemeMode;
-  fontSize: number;
-  tabSize: number;
-  language: Language;
-}
-
-interface SettingsContextValue {
-  settings: Settings;
-  t: Translations;
-  isLoggedIn: boolean;
-  setIsLoggedIn: (loggedIn: boolean) => void;
-  updateSettings: (updates: Partial<Settings>) => void;
-  addProvider: (provider?: AIProvider) => void;
-  removeProvider: (id: string) => void;
-  updateProvider: (id: string, updates: Partial<AIProvider>) => void;
-  addModel: (providerId: string) => void;
-  removeModel: (providerId: string, modelId: string) => void;
-  updateModel: (providerId: string, modelId: string, updates: Partial<AIModel>) => void;
-  setSelectedProvider: (id: string) => void;
-  setSelectedModel: (id: string) => void;
-  setLanguage: (lang: Language) => void;
-  setUIStyle: (style: UIStyle) => void;
-  setThemeMode: (mode: ThemeMode) => void;
-  getSelectedProvider: () => AIProvider | undefined;
-  getSelectedModel: () => AIModel | undefined;
-}
-
-const defaultSettings: Settings = {
-  aiProviders: [
-    {
-      id: 'openai',
-      name: 'OpenAI',
-      apiEndpoint: 'https://api.openai.com/v1',
-      apiKey: '',
-      models: [{ id: 'gpt-4o', name: 'GPT-4o' }],
-    },
-  ],
-  selectedProvider: 'openai',
-  selectedModel: 'gpt-4o',
-  uiStyle: 'ios',
-  themeMode: 'dark',
-  fontSize: 14,
-  tabSize: 2,
-  language: 'en',
-};
+import { createContext, useContext, useReducer, useCallback, useEffect, useState, ReactNode } from 'react';
+import { getTranslation } from '../i18n/translations';
+import type { Translations } from '../i18n/translations';
+import {
+  type Settings,
+  type SettingsContextValue,
+  type UIStyle,
+  type ThemeMode,
+  defaultSettings,
+} from './settingsTypes';
+import { settingsReducer } from './settingsReducer';
+import { applyUIStyle, applyThemeMode, createThemeChangeListener } from './settingsTheme';
+import { loadSettingsFromStorage } from './settingsStorage';
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [settings, dispatch] = useReducer(settingsReducer, defaultSettings);
   const [t, setT] = useState<Translations>(getTranslation(defaultSettings.language));
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
   useEffect(() => {
     setT(getTranslation(settings.language));
   }, [settings.language]);
 
-  const getSystemTheme = (): 'light' | 'dark' => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return 'dark';
-  };
-
-  const applyUIStyle = (style: UIStyle) => {
-    const root = document.documentElement;
-    if (style === 'ios') {
-      root.classList.add('ios');
-    } else {
-      root.classList.remove('ios');
-    }
-  };
-
-  const applyThemeMode = (mode: ThemeMode, uiStyle: UIStyle) => {
-    const root = document.documentElement;
-    if (uiStyle === 'legacy') return;
-
-    let isDark: boolean;
-    if (mode === 'system') {
-      isDark = getSystemTheme() === 'dark';
-    } else {
-      isDark = mode === 'dark';
-    }
-
-    if (isDark) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  };
-
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      if (settings.themeMode === 'system' && settings.uiStyle === 'ios') {
-        applyThemeMode('system', 'ios');
-      }
-    };
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    const cleanup = createThemeChangeListener(
+      settings.themeMode,
+      settings.uiStyle,
+      () => applyThemeMode(settings.themeMode, settings.uiStyle)
+    );
+    return cleanup;
   }, [settings.themeMode, settings.uiStyle]);
 
   useEffect(() => {
     const loadSettings = async () => {
-      let savedUIStyle: UIStyle | null = null;
-      let savedThemeMode: ThemeMode | null = null;
+      let loadedUIStyle: UIStyle | null = null;
+      let loadedThemeMode: ThemeMode | null = null;
 
       if (window.electronAPI?.settings) {
         try {
-          const data = await window.electronAPI.settings.getAll() as {
-            ui_style?: string;
-            theme_mode?: string;
-            ai_providers?: AIProvider[] | Record<string, AIProvider>;
-            selected_provider?: string;
-            selected_model?: string;
-            fontSize?: number;
-            tabSize?: number;
-            language?: Language;
-          };
-          if (data.ui_style === 'ios' || data.ui_style === 'legacy') {
-            savedUIStyle = data.ui_style as UIStyle;
+          const data = await window.electronAPI.settings.getAll() as Record<string, unknown>;
+
+          if (typeof data.ui_style === 'string' && (data.ui_style === 'ios' || data.ui_style === 'legacy')) {
+            loadedUIStyle = data.ui_style as UIStyle;
           }
-          if (data.theme_mode === 'light' || data.theme_mode === 'dark' || data.theme_mode === 'system') {
-            savedThemeMode = data.theme_mode as ThemeMode;
+          if (typeof data.theme_mode === 'string' && ['light', 'dark', 'system'].includes(data.theme_mode)) {
+            loadedThemeMode = data.theme_mode as ThemeMode;
           }
-          if (data.ai_providers) {
-            const providers = Array.isArray(data.ai_providers)
-              ? data.ai_providers
-              : Object.values(data.ai_providers as Record<string, AIProvider>);
-            setSettings(prev => ({ ...prev, aiProviders: providers }));
+
+          const payload: Partial<Settings> = {};
+          if (Array.isArray(data.ai_providers)) payload.aiProviders = data.ai_providers as Settings['aiProviders'];
+          if (typeof data.selected_provider === 'string') payload.selectedProvider = data.selected_provider;
+          if (typeof data.selected_model === 'string') payload.selectedModel = data.selected_model;
+          if (typeof data.fontSize === 'number') payload.fontSize = data.fontSize;
+          if (typeof data.tabSize === 'number') payload.tabSize = data.tabSize;
+          if (typeof data.language === 'string' && ['en', 'zh'].includes(data.language)) {
+            payload.language = data.language as Settings['language'];
           }
-          if (data.selected_provider) setSettings(prev => ({ ...prev, selectedProvider: data.selected_provider as string }));
-          if (data.selected_model) setSettings(prev => ({ ...prev, selectedModel: data.selected_model as string }));
-          if (data.fontSize) setSettings(prev => ({ ...prev, fontSize: data.fontSize as number }));
-          if (data.tabSize) setSettings(prev => ({ ...prev, tabSize: data.tabSize as number }));
-          if (data.language) {
-            const lang = data.language as Language;
-            setSettings(prev => ({ ...prev, language: lang }));
-            setT(getTranslation(lang));
+
+          if (Object.keys(payload).length > 0) {
+            dispatch({ type: 'LOAD_SETTINGS', payload });
           }
         } catch (err) {
           console.error('Failed to load settings from electron:', err);
         }
       } else {
-        const saved = localStorage.getItem('ui_style');
-        if (saved === 'ios' || saved === 'legacy') {
-          savedUIStyle = saved as UIStyle;
+        const loaded = loadSettingsFromStorage();
+
+        if (loaded.aiProviders) dispatch({ type: 'LOAD_SETTINGS', payload: { aiProviders: loaded.aiProviders } });
+        if (loaded.selectedProvider) dispatch({ type: 'LOAD_SETTINGS', payload: { selectedProvider: loaded.selectedProvider } });
+        if (loaded.selectedModel) dispatch({ type: 'LOAD_SETTINGS', payload: { selectedModel: loaded.selectedModel } });
+        if (loaded.fontSize) dispatch({ type: 'LOAD_SETTINGS', payload: { fontSize: loaded.fontSize } });
+        if (loaded.tabSize) dispatch({ type: 'LOAD_SETTINGS', payload: { tabSize: loaded.tabSize } });
+        if (loaded.language) {
+          dispatch({ type: 'LOAD_SETTINGS', payload: { language: loaded.language } });
+          setT(getTranslation(loaded.language));
         }
-        const savedMode = localStorage.getItem('theme_mode');
-        if (savedMode === 'light' || savedMode === 'dark' || savedMode === 'system') {
-          savedThemeMode = savedMode as ThemeMode;
-        }
-        const savedProviders = localStorage.getItem('ai_providers');
-        const savedProvider = localStorage.getItem('selected_provider');
-        const savedModel = localStorage.getItem('selected_model');
-        const savedFontSize = localStorage.getItem('fontSize');
-        const savedTabSize = localStorage.getItem('tabSize');
-        const savedLanguage = localStorage.getItem('language') as Language | null;
-        if (savedProviders) {
-          try {
-            const parsed = JSON.parse(savedProviders);
-            if (Array.isArray(parsed)) {
-              setSettings(prev => ({ ...prev, aiProviders: parsed }));
-            }
-          } catch (err) {
-            console.error('Failed to parse saved providers:', err);
-          }
-        }
-        if (savedProvider) setSettings(prev => ({ ...prev, selectedProvider: savedProvider }));
-        if (savedModel) setSettings(prev => ({ ...prev, selectedModel: savedModel }));
-        if (savedFontSize) setSettings(prev => ({ ...prev, fontSize: Number(savedFontSize) }));
-        if (savedTabSize) setSettings(prev => ({ ...prev, tabSize: Number(savedTabSize) }));
-        if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'zh')) {
-          setSettings(prev => ({ ...prev, language: savedLanguage }));
-          setT(getTranslation(savedLanguage));
-        }
+        if (loaded.uiStyle) loadedUIStyle = loaded.uiStyle;
+        if (loaded.themeMode) loadedThemeMode = loaded.themeMode;
       }
 
-      const initialUIStyle = savedUIStyle || 'ios';
-      const initialThemeMode = savedThemeMode || 'dark';
+      const initialUIStyle = loadedUIStyle || 'ios';
+      const initialThemeMode = loadedThemeMode || 'dark';
 
       applyUIStyle(initialUIStyle);
       applyThemeMode(initialThemeMode, initialUIStyle);
 
-      if (savedUIStyle || savedThemeMode) {
-        setSettings(prev => ({
-          ...prev,
-          uiStyle: initialUIStyle,
-          themeMode: initialThemeMode,
-        }));
-      }
+      if (loadedUIStyle) dispatch({ type: 'SET_UI_STYLE', payload: loadedUIStyle });
+      if (loadedThemeMode) dispatch({ type: 'SET_THEME_MODE', payload: loadedThemeMode });
     };
     loadSettings();
   }, []);
 
   const updateSettings = useCallback((updates: Partial<Settings>) => {
-    setSettings(prev => {
-      const newSettings = { ...prev, ...updates };
-
-      if (window.electronAPI?.settings) {
-        window.electronAPI.settings.set('ai_providers', newSettings.aiProviders);
-        window.electronAPI.settings.set('selected_provider', newSettings.selectedProvider);
-        window.electronAPI.settings.set('selected_model', newSettings.selectedModel);
-        window.electronAPI.settings.set('fontSize', newSettings.fontSize);
-        window.electronAPI.settings.set('tabSize', newSettings.tabSize);
-        window.electronAPI.settings.set('language', newSettings.language);
-      } else {
-        localStorage.setItem('ai_providers', JSON.stringify(newSettings.aiProviders));
-        localStorage.setItem('selected_provider', newSettings.selectedProvider);
-        localStorage.setItem('selected_model', newSettings.selectedModel);
-        localStorage.setItem('fontSize', String(newSettings.fontSize));
-        localStorage.setItem('tabSize', String(newSettings.tabSize));
-        localStorage.setItem('language', newSettings.language);
-      }
-
-      return newSettings;
-    });
+    dispatch({ type: 'UPDATE_SETTINGS', payload: updates });
   }, []);
 
-  const addProvider = useCallback((provider?: AIProvider) => {
-    if (provider && !provider.id) {
-      console.warn('Provider object passed without id property');
-    }
-    const newId = `provider-${Date.now()}`;
-    const newProvider = provider || {
-      id: newId,
-      name: 'New Provider',
-      apiEndpoint: 'https://api.example.com/v1',
-      apiKey: '',
-      models: [],
-    };
-    if (!provider?.id) {
-      newProvider.id = newId;
-    }
-    setSettings(prev => {
-      const newProviders = [
-        ...prev.aiProviders,
-        newProvider,
-      ];
-      const newSettings = { ...prev, aiProviders: newProviders, selectedProvider: newProvider.id };
-
-      if (window.electronAPI?.settings) {
-        window.electronAPI.settings.set('ai_providers', newProviders);
-        window.electronAPI.settings.set('selected_provider', newProvider.id);
-      } else {
-        localStorage.setItem('ai_providers', JSON.stringify(newProviders));
-        localStorage.setItem('selected_provider', newProvider.id);
-      }
-
-      return newSettings;
-    });
+  const addProvider = useCallback((provider?: Settings['aiProviders'][0]) => {
+    dispatch({ type: 'ADD_PROVIDER', payload: provider });
   }, []);
 
   const removeProvider = useCallback((id: string) => {
-    setSettings(prev => {
-      if (prev.aiProviders.length <= 1) return prev;
-      const newProviders = prev.aiProviders.filter(p => p.id !== id);
-      const newSelectedProvider = prev.selectedProvider === id ? newProviders[0].id : prev.selectedProvider;
-      const newSelectedModel = prev.selectedProvider === id ? newProviders[0].models[0]?.id || '' : prev.selectedModel;
-
-      if (window.electronAPI?.settings) {
-        window.electronAPI.settings.set('ai_providers', newProviders);
-        window.electronAPI.settings.set('selected_provider', newSelectedProvider);
-        window.electronAPI.settings.set('selected_model', newSelectedModel);
-      } else {
-        localStorage.setItem('ai_providers', JSON.stringify(newProviders));
-        localStorage.setItem('selected_provider', newSelectedProvider);
-        localStorage.setItem('selected_model', newSelectedModel);
-      }
-
-      return {
-        ...prev,
-        aiProviders: newProviders,
-        selectedProvider: newSelectedProvider,
-        selectedModel: newSelectedModel,
-      };
-    });
+    dispatch({ type: 'REMOVE_PROVIDER', payload: id });
   }, []);
 
-  const updateProvider = useCallback((id: string, updates: Partial<AIProvider>) => {
-    setSettings(prev => {
-      const newProviders = prev.aiProviders.map(p => p.id === id ? { ...p, ...updates } : p);
-
-      if (window.electronAPI?.settings) {
-        window.electronAPI.settings.set('ai_providers', newProviders);
-      } else {
-        localStorage.setItem('ai_providers', JSON.stringify(newProviders));
-      }
-
-      return { ...prev, aiProviders: newProviders };
-    });
+  const updateProvider = useCallback((id: string, updates: Partial<Settings['aiProviders'][0]>) => {
+    dispatch({ type: 'UPDATE_PROVIDER', payload: { id, updates } });
   }, []);
 
   const addModel = useCallback((providerId: string) => {
-    const newModelId = `model-${Date.now()}`;
-    setSettings(prev => {
-      const newProviders = prev.aiProviders.map(p => {
-        if (p.id !== providerId) return p;
-        return { ...p, models: [...p.models, { id: newModelId, name: 'New Model' }] };
-      });
-      const newSettings = { ...prev, aiProviders: newProviders, selectedModel: newModelId };
-
-      if (window.electronAPI?.settings) {
-        window.electronAPI.settings.set('ai_providers', newProviders);
-        window.electronAPI.settings.set('selected_model', newModelId);
-      } else {
-        localStorage.setItem('ai_providers', JSON.stringify(newProviders));
-        localStorage.setItem('selected_model', newModelId);
-      }
-
-      return newSettings;
-    });
+    dispatch({ type: 'ADD_MODEL', payload: providerId });
   }, []);
 
   const removeModel = useCallback((providerId: string, modelId: string) => {
-    setSettings(prev => {
-      const provider = prev.aiProviders.find(p => p.id === providerId);
-      if (!provider || provider.models.length <= 1) return prev;
-
-      const newProviders = prev.aiProviders.map(p => {
-        if (p.id !== providerId) return p;
-        return { ...p, models: p.models.filter(m => m.id !== modelId) };
-      });
-
-      const newSelectedModel = prev.selectedModel === modelId
-        ? newProviders.find(p => p.id === providerId)?.models[0]?.id || ''
-        : prev.selectedModel;
-
-      if (window.electronAPI?.settings) {
-        window.electronAPI.settings.set('ai_providers', newProviders);
-        window.electronAPI.settings.set('selected_model', newSelectedModel);
-      } else {
-        localStorage.setItem('ai_providers', JSON.stringify(newProviders));
-        localStorage.setItem('selected_model', newSelectedModel);
-      }
-
-      return { ...prev, aiProviders: newProviders, selectedModel: newSelectedModel };
-    });
+    dispatch({ type: 'REMOVE_MODEL', payload: { providerId, modelId } });
   }, []);
 
-  const updateModel = useCallback((providerId: string, modelId: string, updates: Partial<AIModel>) => {
-    setSettings(prev => {
-      const newProviders = prev.aiProviders.map(p => {
-        if (p.id !== providerId) return p;
-        return { ...p, models: p.models.map(m => m.id === modelId ? { ...m, ...updates } : m) };
-      });
-
-      if (window.electronAPI?.settings) {
-        window.electronAPI.settings.set('ai_providers', newProviders);
-      } else {
-        localStorage.setItem('ai_providers', JSON.stringify(newProviders));
-      }
-
-      return { ...prev, aiProviders: newProviders };
-    });
+  const updateModel = useCallback((providerId: string, modelId: string, updates: Partial<Settings['aiProviders'][0]['models'][0]>) => {
+    dispatch({ type: 'UPDATE_MODEL', payload: { providerId, modelId, updates } });
   }, []);
 
   const setSelectedProvider = useCallback((id: string) => {
-    setSettings(prev => {
-      const provider = prev.aiProviders.find(p => p.id === id);
-      const newModel = provider?.models[0]?.id || prev.selectedModel;
-
-      if (window.electronAPI?.settings) {
-        window.electronAPI.settings.set('selected_provider', id);
-        window.electronAPI.settings.set('selected_model', newModel);
-      } else {
-        localStorage.setItem('selected_provider', id);
-        localStorage.setItem('selected_model', newModel);
-      }
-
-      return { ...prev, selectedProvider: id, selectedModel: newModel };
-    });
+    dispatch({ type: 'SET_SELECTED_PROVIDER', payload: id });
   }, []);
 
   const setSelectedModel = useCallback((id: string) => {
-    setSettings(prev => {
-      if (window.electronAPI?.settings) {
-        window.electronAPI.settings.set('selected_model', id);
-      } else {
-        localStorage.setItem('selected_model', id);
-      }
-      return { ...prev, selectedModel: id };
-    });
+    dispatch({ type: 'SET_SELECTED_MODEL', payload: id });
   }, []);
 
-  const setLanguage = useCallback((lang: Language) => {
-    setSettings(prev => {
-      if (window.electronAPI?.settings) {
-        window.electronAPI.settings.set('language', lang);
-      } else {
-        localStorage.setItem('language', lang);
-      }
-      return { ...prev, language: lang };
-    });
+  const setLanguage = useCallback((lang: Settings['language']) => {
+    dispatch({ type: 'SET_LANGUAGE', payload: lang });
     setT(getTranslation(lang));
   }, []);
 
   const setUIStyle = useCallback((style: UIStyle) => {
-    setSettings(prev => {
-      applyUIStyle(style);
-      applyThemeMode(prev.themeMode, style);
-
-      if (window.electronAPI?.settings) {
-        window.electronAPI.settings.set('ui_style', style);
-      } else {
-        localStorage.setItem('ui_style', style);
-      }
-
-      return { ...prev, uiStyle: style };
-    });
+    dispatch({ type: 'SET_UI_STYLE', payload: style });
   }, []);
 
   const setThemeMode = useCallback((mode: ThemeMode) => {
-    setSettings(prev => {
-      applyThemeMode(mode, prev.uiStyle);
-
-      if (window.electronAPI?.settings) {
-        window.electronAPI.settings.set('theme_mode', mode);
-      } else {
-        localStorage.setItem('theme_mode', mode);
-      }
-
-      return { ...prev, themeMode: mode };
-    });
+    dispatch({ type: 'SET_THEME_MODE', payload: mode });
   }, []);
 
   const getSelectedProvider = useCallback(() => {
@@ -445,29 +149,29 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return provider?.models.find(m => m.id === settings.selectedModel);
   }, [settings.aiProviders, settings.selectedProvider, settings.selectedModel]);
 
+  const value: SettingsContextValue = {
+    settings,
+    t,
+    isUserLoggedIn: false,
+    setIsUserLoggedIn: () => {},
+    updateSettings,
+    addProvider,
+    removeProvider,
+    updateProvider,
+    addModel,
+    removeModel,
+    updateModel,
+    setSelectedProvider,
+    setSelectedModel,
+    setLanguage,
+    setUIStyle,
+    setThemeMode,
+    getSelectedProvider,
+    getSelectedModel,
+  };
+
   return (
-    <SettingsContext.Provider
-      value={{
-        settings,
-        t,
-        isLoggedIn,
-        setIsLoggedIn,
-        updateSettings,
-        addProvider,
-        removeProvider,
-        updateProvider,
-        addModel,
-        removeModel,
-        updateModel,
-        setSelectedProvider,
-        setSelectedModel,
-        setLanguage,
-        setUIStyle,
-        setThemeMode,
-        getSelectedProvider,
-        getSelectedModel,
-      }}
-    >
+    <SettingsContext.Provider value={value}>
       {children}
     </SettingsContext.Provider>
   );

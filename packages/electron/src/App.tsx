@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
+import type { Project, ProjectWithSession } from './types';
+import { api } from './services/api';
+import { useSettings } from './contexts/SettingsContext';
 import { Layout } from './components/Layout';
-import { Header } from './components/Header';
+import { AppHeader } from './components/AppHeader';
 import { Sidebar } from './components/Sidebar';
 import { Chat } from './components/Chat';
 import { Settings } from './components/Settings';
@@ -8,15 +11,13 @@ import { LoginModal } from './components/LoginModal';
 import { AboutDialog } from './components/AboutDialog';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PTYTerminal } from './components/PTYTerminal';
-import { SparklesIcon, CodeIcon, BotIcon } from './components/Icons';
-import type { Project, ProjectWithSession } from './types';
-import { api } from './services/api';
-import { useSettings } from './contexts/SettingsContext';
+import { BotIcon } from './components/Icons';
+import { WelcomeScreen } from './components/WelcomeScreen';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function App() {
-  const { t, setIsLoggedIn } = useSettings();
+  const { t, setIsUserLoggedIn } = useSettings();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -49,19 +50,19 @@ function App() {
         if (validUser) {
           api.setAuthToken(savedToken);
           setUser(validUser);
-          setIsLoggedIn(true);
+          setIsUserLoggedIn(true);
         } else {
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
-          setIsLoggedIn(false);
+          setIsUserLoggedIn(false);
         }
       } else {
-        setIsLoggedIn(false);
+        setIsUserLoggedIn(false);
       }
       loadProjects();
     };
     initAuth();
-  }, [setIsLoggedIn]);
+  }, [setIsUserLoggedIn]);
 
   const handleMenuClick = (event: string) => {
     switch (event) {
@@ -82,7 +83,7 @@ function App() {
           loadProjects();
           if (projects.length > 0) {
             const projectNames = projects.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
-            const choice = prompt(`Select project number:\n${projectNames}`);
+            const choice = prompt(`${t.app.selectProject}\n${projectNames}`);
             if (choice) {
               const index = parseInt(choice, 10) - 1;
               if (index >= 0 && index < projects.length) {
@@ -90,27 +91,27 @@ function App() {
               }
             }
           } else {
-            alert('No projects found. Create a new project first.');
+            alert(t.sidebar.noProjects);
           }
         }
         break;
       case 'save':
         if (selectedProjectId) {
-          alert('Save functionality: Uses api.writeFile(projectId, path, content)\nThis feature requires active file editing context.');
+          alert(t.app.saveFunctionality);
         } else {
-          alert('No project selected. Please open a project first.');
+          alert(t.app.noProjectSelected);
         }
         break;
       case 'save-as':
         if (selectedProjectId && user) {
-          const newName = prompt('Enter new project name for "Save As":');
+          const newName = prompt(t.app.enterProjectName);
           if (newName && newName.trim()) {
             handleDuplicateProject(selectedProjectId, newName.trim());
           }
         } else if (!user) {
           setLoginOpen(true);
         } else {
-          alert('No project selected. Please open a project first.');
+          alert(t.app.noProjectSelected);
         }
         break;
       case 'about':
@@ -153,7 +154,7 @@ function App() {
     localStorage.setItem('user', JSON.stringify(data.user));
     api.setAuthToken(data.token);
     setUser(data.user);
-    setIsLoggedIn(true);
+    setIsUserLoggedIn(true);
     setSelectedProjectId(null);
     setSelectedSessionId(null);
     await loadProjects();
@@ -186,24 +187,22 @@ function App() {
     localStorage.setItem('user', JSON.stringify(data.user));
     api.setAuthToken(data.token);
     setUser(data.user);
-    setIsLoggedIn(true);
+    setIsUserLoggedIn(true);
     setSelectedProjectId(null);
     setSelectedSessionId(null);
     await loadProjects();
   };
 
   const handleLogout = () => {
-    console.log('handleLogout 被调用');
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
     api.setAuthToken(null);
     setUser(null);
-    setIsLoggedIn(false);
+    setIsUserLoggedIn(false);
     setSelectedProjectId(null);
     setSelectedSessionId(null);
     setProjects([]);
     setLoginOpen(false);
-    console.log('退出登录完成');
   };
 
   const handleCreateProject = async (name: string) => {
@@ -308,12 +307,12 @@ function App() {
       <Layout
         onMenuClick={handleMenuClick}
         header={
-          <Header
-            projectId={selectedProject?.name || null}
+          <AppHeader
+            selectedProjectName={selectedProject?.name}
             onSettingsClick={() => setSettingsOpen(true)}
             onRefreshClick={loadProjects}
             onLoginClick={() => setLoginOpen(true)}
-            userEmail={user?.email || null}
+            userEmail={user?.email}
             onLogout={handleLogout}
           />
         }
@@ -333,36 +332,7 @@ function App() {
             {selectedSessionId ? (
               <Chat sessionId={selectedSessionId} />
             ) : (
-              <div className="h-full flex flex-col items-center justify-center p-8">
-                <div className="text-center max-w-lg">
-                  <div className="relative inline-block mb-6">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-2xl shadow-indigo-500/30">
-                      <SparklesIcon className="text-white" size={36} />
-                    </div>
-                    <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg">
-                      <CodeIcon className="text-white" size={12} />
-                    </div>
-                  </div>
-                  <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">
-                    {t.welcome.title}
-                  </h2>
-                  <p className="text-slate-400 text-sm leading-relaxed">
-                    {user
-                      ? `${t.welcome.loggedIn}, ${user.email}. ${t.welcome.selectOrCreate}`
-                      : t.welcome.loggedOut}
-                  </p>
-                  <div className="mt-8 flex items-center justify-center gap-6">
-                    <div className="flex items-center gap-2 text-slate-500">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span className="text-xs font-medium">{t.welcome.connected}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-500">
-                      <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                      <span className="text-xs font-medium">{t.welcome.aiReady}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <WelcomeScreen userEmail={user?.email} />
             )}
           </div>
         </div>

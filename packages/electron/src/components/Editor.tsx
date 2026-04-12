@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import type { OnMount } from '@monaco-editor/react';
 import { EditorTabs } from './EditorTabs';
+import { useSettings } from '../contexts/SettingsContext';
 
 export interface EditorFile {
   path: string;
@@ -17,6 +18,7 @@ export interface EditorProps {
 }
 
 export function Editor({ files, activeFile, onFileSelect, onFileChange }: EditorProps) {
+  const { t } = useSettings();
   const handleMount: OnMount = useCallback((_editor: Parameters<OnMount>[0]) => {
   }, []);
 
@@ -53,7 +55,7 @@ export function Editor({ files, activeFile, onFileSelect, onFileChange }: Editor
           />
         ) : (
           <div className="h-full flex items-center justify-center bg-gray-100">
-            <p className="text-gray-500">Open a file to start editing</p>
+            <p className="text-gray-500">{t.editor.openFile}</p>
           </div>
         )}
       </div>

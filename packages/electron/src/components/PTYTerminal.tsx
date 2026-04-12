@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { usePTY } from '../hooks/usePTY';
+import { useSettings } from '../contexts/SettingsContext';
 import { TerminalIcon } from './Icons';
 import '@xterm/xterm/css/xterm.css';
 
@@ -10,6 +11,7 @@ interface PTYTerminalProps {
 }
 
 export function PTYTerminal({ onClose }: PTYTerminalProps) {
+  const { t } = useSettings();
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstanceRef = useRef<Terminal | null>(null);
   const isInitializedRef = useRef(false);
@@ -108,15 +110,15 @@ export function PTYTerminal({ onClose }: PTYTerminalProps) {
         <div className="flex items-center gap-2">
           <TerminalIcon size={14} className="text-emerald-500" />
           <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-            OpenClaude CLI
+            {t.terminal.title}
           </span>
           {isConnecting && (
-            <span className="text-xs text-yellow-500">Connecting...</span>
+            <span className="text-xs text-yellow-500">{t.terminal.connecting}</span>
           )}
           {isConnected && (
             <span className="flex items-center gap-1 text-xs text-emerald-500">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Connected
+              {t.terminal.connected}
             </span>
           )}
           {error && (
@@ -126,7 +128,7 @@ export function PTYTerminal({ onClose }: PTYTerminalProps) {
         <button
           onClick={onClose}
           className="text-slate-500 hover:text-slate-300 transition-colors"
-          title="Close terminal"
+          title={t.terminal.closeTerminal}
         >
           ×
         </button>
