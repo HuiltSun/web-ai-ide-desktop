@@ -1,9 +1,6 @@
-import type { Settings, AIProvider, AIModel } from '../types';
-import type { UIStyle, ThemeMode } from '../contexts/SettingsContext';
+import type { AIProvider } from '../types';
+import type { UIStyle, ThemeMode, Settings } from './settingsTypes';
 import type { Language } from '../i18n/translations';
-
-type UIStyle = 'ios' | 'legacy';
-type ThemeMode = 'light' | 'dark' | 'system';
 
 export function getSystemTheme(): 'light' | 'dark' {
   if (typeof window !== 'undefined' && window.matchMedia) {

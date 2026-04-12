@@ -19,7 +19,7 @@ export function useChat(sessionId: string | null) {
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingElapsed, setGeneratingElapsed] = useState(0);
-  const [waitingForFirstResponse, setWaitingForFirstResponse] = useState(false);
+  const [_waitingForFirstResponse, _setWaitingForFirstResponse] = useState(false); // 保留供后续开发使用
   const streamingContentRef = useRef('');
   const sessionIdRef = useRef(sessionId);
 

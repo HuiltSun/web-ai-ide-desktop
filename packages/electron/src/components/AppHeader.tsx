@@ -11,7 +11,7 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ selectedProjectName, onSettingsClick, onRefreshClick, onLoginClick, userEmail, onLogout }: AppHeaderProps) {
-  const { t } = useSettings();
+  const { t: _t } = useSettings(); // 保留供后续开发使用
 
   return (
     <Header

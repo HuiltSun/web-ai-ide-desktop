@@ -17,7 +17,7 @@ interface SettingsProps {
 export function Settings({ isOpen, onClose }: SettingsProps) {
   const { t } = useSettings();
   const [activeTab, setActiveTab] = useState<Tab>('ai');
-  const [saved, setSaved] = useState(false);
+  const [saved, _setSaved] = useState(false); // 保留供后续开发使用
 
   const tabs: { id: Tab; icon: React.ReactNode }[] = [
     { id: 'ai', icon: <SparklesIcon size={16} /> },
