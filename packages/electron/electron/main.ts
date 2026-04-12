@@ -102,6 +102,8 @@ app.commandLine.appendSwitch('disable-gpu-cache');
 app.commandLine.appendSwitch('disable-dev-shm-usage');
 app.commandLine.appendSwitch('disable-cache');
 app.commandLine.appendSwitch('disable-application-cache');
+app.commandLine.appendSwitch('disable-service-worker');
+app.commandLine.appendSwitch('service-worker-max-resources', '0');
 
 app.whenReady().then(() => {
   log.info('App ready');
