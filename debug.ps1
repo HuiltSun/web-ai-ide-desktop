@@ -67,20 +67,7 @@ Write-Host "  加密: 已启用"
 Write-Host ""
 Write-Host "[2/8] 检查依赖安装..."
 
-# 检查 CLI 包依赖
-$CLIPackagesDir = "$ProjectRoot\packages\cli\"
-if (Test-Path "$CLIPackagesDir\package.json") {
-    if (-not (Test-Path "$CLIPackagesDir\node_modules")) {
-        Write-Host "  安装 CLI 依赖..."
-        Push-Location $CLIPackagesDir -ErrorAction SilentlyContinue
-        npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
-        Pop-Location -ErrorAction SilentlyContinue
-    } else {
-        Write-Host "  CLI 依赖已安装"
-    }
-}
-
-# 检查 Electron 包依赖（可选）
+# 检查 Electron 包依赖
 $ElectronPackagesDir = "$ProjectRoot\packages\electron\"
 if (Test-Path "$ElectronPackagesDir\package.json") {
     if (-not (Test-Path "$ElectronPackagesDir\node_modules")) {
@@ -94,7 +81,6 @@ if (Test-Path "$ElectronPackagesDir\package.json") {
 }
 
 Write-Host "  依赖检查完成"
-Write-Host "  提示: 使用 CLI 包在浏览器中调试 (http://localhost:3000)"
 Write-Host "  提示: 使用 Electron 包在桌面应用中调试 (npm run dev)"
 
 # 2. 启动 PostgreSQL (Docker)
@@ -249,47 +235,31 @@ if (-not (Test-Path "$OpenClaudeDir\package.json")) {
     }
 }
 
-# 6. 启动 CLI Web 应用
+# 6. 启动 Electron 桌面应用
 Write-Host ""
-Write-Host "[7/7] 启动 CLI Web 应用 (http://localhost:3000)..."
+Write-Host "[7/7] 启动 Electron 桌面应用..."
 
-if (-not (Test-Path "$CLIDir\package.json")) {
-    Write-Host "  警告: 未找到 cli package.json，跳过 CLI 启动"
+$ElectronDir = "$ProjectRoot\packages\electron"
+if (-not (Test-Path "$ElectronDir\package.json")) {
+    Write-Host "  警告: 未找到 electron package.json，跳过 Electron 启动"
 } else {
     # 检查 npm 依赖
-    if (-not (Test-Path "$CLIDir\node_modules")) {
-        Write-Host "  安装 CLI 依赖..."
-        Push-Location $CLIDir
+    if (-not (Test-Path "$ElectronDir\node_modules")) {
+        Write-Host "  安装 Electron 依赖..."
+        Push-Location $ElectronDir
         npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
         Pop-Location
     }
 
     Write-Host "  启动命令: npm run dev"
-    Write-Host "  工作目录: $CLIDir"
+    Write-Host "  工作目录: $ElectronDir"
 
-    # 在新窗口启动 CLI
-    Start-Process cmd.exe -ArgumentList "/k cd /d `"$CLIDir`" && npm run dev"
+    # 在新窗口启动 Electron
+    Start-Process cmd.exe -ArgumentList "/k cd /d `"$ElectronDir`" && npm run dev"
 
-    Write-Host "  CLI Web 应用已在新窗口启动"
-    Write-Host "  等待 CLI 应用就绪..."
-
-    # 等待 CLI 启动，最多 20 秒
-    $cliReady = $false
-    for ($i = 0; $i -lt 10; $i++) {
-        Start-Sleep -Seconds 2
-        try {
-            $response = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
-            $cliReady = $true
-            Write-Host "  CLI Web 应用就绪 (http://localhost:3000)"
-            break
-        } catch {
-            Write-Host "    检查中... ($($i + 1)/10)"
-        }
-    }
-
-    if (-not $cliReady) {
-        Write-Host "  CLI Web 应用启动中（可能需要几秒钟）"
-    }
+    Write-Host "  Electron 桌面应用已在新窗口启动"
+    Write-Host "  等待 Electron 应用就绪..."
+    Write-Host "  注意: Electron 应用启动可能需要几秒钟时间"
 }
 
 # 完成信息
@@ -299,15 +269,11 @@ Write-Host "所有服务已启动:"
 Write-Host "  - PostgreSQL:     localhost:5432"
 Write-Host "  - 后端 API:      http://localhost:3001"
 Write-Host "  - OpenClaude gRPC: localhost:50051"
-Write-Host "  - CLI Web:        http://localhost:3000"
+Write-Host "  - Electron 桌面应用: 已启动"
 Write-Host "========================================"
 Write-Host ""
-Write-Host "浏览器访问:"
-Write-Host "  - CLI Web 应用:   http://localhost:3000"
-Write-Host ""
-Write-Host "桌面应用调试 (可选):"
-Write-Host "  - cd packages\electron"
-Write-Host "  - npm run dev"
+Write-Host "桌面应用调试:"
+Write-Host "  - Electron 应用已在新窗口启动"
 Write-Host ""
 Write-Host "生产构建 (可选):"
 Write-Host "  - cd packages\electron"
