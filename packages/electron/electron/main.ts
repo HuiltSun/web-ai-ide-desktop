@@ -52,6 +52,10 @@ const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
 function createWindow() {
   log.info('Creating main window...');
 
+  // 开发模式下不自动显示窗口
+  const isDevMode = process.env['VITE_DEV_SERVER_URL'] !== undefined;
+  const autoShowWindow = process.env['AUTO_SHOW_WINDOW'] === 'true';
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -70,7 +74,13 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     log.info('Window ready to show');
-    mainWindow?.show();
+    // 开发模式下不自动显示窗口，除非设置 AUTO_SHOW_WINDOW=true
+    if (isDevMode && !autoShowWindow) {
+      log.info('Dev mode: keeping window hidden (set AUTO_SHOW_WINDOW=true to show)');
+    } else {
+      log.info('Auto-showing window');
+      mainWindow?.show();
+    }
   });
 
   if (VITE_DEV_SERVER_URL) {
