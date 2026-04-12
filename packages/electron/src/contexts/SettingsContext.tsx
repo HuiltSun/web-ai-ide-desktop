@@ -122,49 +122,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           const data = await window.electronAPI.settings.getAll() as {
             ui_style?: string;
             theme_mode?: string;
-          };
-          if (data.ui_style === 'ios' || data.ui_style === 'legacy') {
-            savedUIStyle = data.ui_style as UIStyle;
-          }
-          if (data.theme_mode === 'light' || data.theme_mode === 'dark' || data.theme_mode === 'system') {
-            savedThemeMode = data.theme_mode as ThemeMode;
-          }
-        } catch (err) {
-          console.error('Failed to load settings from electron:', err);
-        }
-      } else {
-        const saved = localStorage.getItem('ui_style');
-        if (saved === 'ios' || saved === 'legacy') {
-          savedUIStyle = saved as UIStyle;
-        }
-        const savedMode = localStorage.getItem('theme_mode');
-        if (savedMode === 'light' || savedMode === 'dark' || savedMode === 'system') {
-          savedThemeMode = savedMode as ThemeMode;
-        }
-      }
-
-      const initialUIStyle = savedUIStyle || 'ios';
-      const initialThemeMode = savedThemeMode || 'dark';
-
-      applyUIStyle(initialUIStyle);
-      applyThemeMode(initialThemeMode, initialUIStyle);
-
-      if (savedUIStyle || savedThemeMode) {
-        setSettings(prev => ({
-          ...prev,
-          uiStyle: initialUIStyle,
-          themeMode: initialThemeMode,
-        }));
-      }
-    };
-    loadSettings();
-  }, []);
-
-  useEffect(() => {
-    const loadSettings = async () => {
-      if (window.electronAPI?.settings) {
-        try {
-          const data = await window.electronAPI.settings.getAll() as {
             ai_providers?: AIProvider[] | Record<string, AIProvider>;
             selected_provider?: string;
             selected_model?: string;
@@ -172,6 +129,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             tabSize?: number;
             language?: Language;
           };
+          if (data.ui_style === 'ios' || data.ui_style === 'legacy') {
+            savedUIStyle = data.ui_style as UIStyle;
+          }
+          if (data.theme_mode === 'light' || data.theme_mode === 'dark' || data.theme_mode === 'system') {
+            savedThemeMode = data.theme_mode as ThemeMode;
+          }
           if (data.ai_providers) {
             const providers = Array.isArray(data.ai_providers)
               ? data.ai_providers
@@ -191,6 +154,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           console.error('Failed to load settings from electron:', err);
         }
       } else {
+        const saved = localStorage.getItem('ui_style');
+        if (saved === 'ios' || saved === 'legacy') {
+          savedUIStyle = saved as UIStyle;
+        }
+        const savedMode = localStorage.getItem('theme_mode');
+        if (savedMode === 'light' || savedMode === 'dark' || savedMode === 'system') {
+          savedThemeMode = savedMode as ThemeMode;
+        }
         const savedProviders = localStorage.getItem('ai_providers');
         const savedProvider = localStorage.getItem('selected_provider');
         const savedModel = localStorage.getItem('selected_model');
@@ -215,6 +186,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           setSettings(prev => ({ ...prev, language: savedLanguage }));
           setT(getTranslation(savedLanguage));
         }
+      }
+
+      const initialUIStyle = savedUIStyle || 'ios';
+      const initialThemeMode = savedThemeMode || 'dark';
+
+      applyUIStyle(initialUIStyle);
+      applyThemeMode(initialThemeMode, initialUIStyle);
+
+      if (savedUIStyle || savedThemeMode) {
+        setSettings(prev => ({
+          ...prev,
+          uiStyle: initialUIStyle,
+          themeMode: initialThemeMode,
+        }));
       }
     };
     loadSettings();

@@ -53,7 +53,7 @@ function createWindow() {
   log.info('Creating main window...');
 
   // 开发模式下不自动显示窗口
-  const isDevMode = process.env['VITE_DEV_SERVER_URL'] !== undefined;
+  const isDevMode = VITE_DEV_SERVER_URL !== undefined;
   const autoShowWindow = process.env['AUTO_SHOW_WINDOW'] === 'true';
 
   mainWindow = new BrowserWindow({
@@ -96,6 +96,11 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+app.commandLine.appendSwitch('disable-gpu-cache');
+app.commandLine.appendSwitch('disable-dev-shm-usage');
+app.commandLine.appendSwitch('disable-cache');
+app.commandLine.appendSwitch('disable-application-cache');
 
 app.whenReady().then(() => {
   log.info('App ready');

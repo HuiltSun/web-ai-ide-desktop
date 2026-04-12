@@ -157,7 +157,7 @@ export const enTranslations: Translations = {
     selectAll: 'Select All',
     view: 'View',
     reload: 'Reload',
-    toggleDeveloperTools: 'Toggle Developer Tools',
+    toggleDeveloperTools: 'Developer Tools',
     toggleFullScreen: 'Toggle Full Screen',
     window: 'Window',
     minimize: 'Minimize',
