@@ -252,7 +252,12 @@ web-ai-ide/
 │   │   │   ├── hooks/        # useChat, useFileSystem, usePTY
 │   │   │   ├── services/     # api.ts, websocket.ts, pty-client.ts
 │   │   │   ├── contexts/     # SettingsContext
-│   │   │   ├── i18n/         # translations.ts (国际化)
+│   │   │   ├── i18n/         # 国际化 (模块化设计)
+│   │   │   │   ├── translations.ts          # 统一导出入口
+│   │   │   │   ├── translations.types.ts    # 类型定义
+│   │   │   │   ├── translations.utils.ts    # 工具函数
+│   │   │   │   ├── en.translations.ts       # 英文翻译
+│   │   │   │   └── zh.translations.ts       # 中文翻译
 │   │   │   └── index.css     # 设计系统 (CSS 变量)
 │   │   ├── scripts/          # build-with-timestamp.cjs
 │   │   └── dist/             # 构建输出

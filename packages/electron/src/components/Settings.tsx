@@ -12,7 +12,7 @@ interface SettingsProps {
 }
 
 export function Settings({ isOpen, onClose }: SettingsProps) {
-  const { settings, t, setSelectedProvider, setSelectedModel, addProvider, removeProvider, updateProvider, addModel, removeModel, setLanguage, updateSettings, setUIStyle, setThemeMode } = useSettings();
+  const { settings, t, isLoggedIn, setSelectedProvider, setSelectedModel, addProvider, removeProvider, updateProvider, addModel, removeModel, setLanguage, updateSettings, setUIStyle, setThemeMode } = useSettings();
   const [activeTab, setActiveTab] = useState<Tab>('ai');
   const [saved, setSaved] = useState(false);
   const [showPresetDropdown, setShowPresetDropdown] = useState(false);
@@ -91,13 +91,29 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
         <div className="p-6 overflow-y-auto max-h-[calc(85vh-140px)]">
           {activeTab === 'ai' && (
             <div className="space-y-6">
-              <div className="space-y-4">
+              {!isLoggedIn && (
+                <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5">
+                      <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium text-amber-500 mb-1">{t.settings.ai.loginRequiredTitle}</h4>
+                      <p className="text-sm text-amber-400/80">{t.settings.ai.loginRequiredMessage}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className={`space-y-4 ${!isLoggedIn ? 'opacity-50 pointer-events-none' : ''}`}>
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-medium text-[var(--color-text-secondary)]">{t.settings.ai.providers}</h3>
                   <div className="relative">
                     <button
                       onClick={() => setShowPresetDropdown(!showPresetDropdown)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--color-accent)] bg-[var(--color-accent-subtle)] rounded-lg hover:bg-[var(--color-accent)]/20 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--color-accent)] bg-[var(--color-accent-subtle)] rounded-lg hover:bg-[var(--color-accent)]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!isLoggedIn}
                     >
                       <PlusIcon size={14} />
                       {t.settings.ai.addProvider}
@@ -147,7 +163,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
               </div>
 
               {selectedProvider && (
-                <div className="space-y-4 p-4 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
+                <div className={`space-y-4 p-4 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] ${!isLoggedIn ? 'opacity-50 pointer-events-none' : ''}`}>
                   <div className="grid gap-4">
                     <div>
                       <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
@@ -157,7 +173,8 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                         type="text"
                         value={selectedProvider.name}
                         onChange={e => updateProvider(selectedProvider.id, { name: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)]"
+                        disabled={!isLoggedIn}
+                        className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                     <div>
@@ -168,7 +185,8 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                         type="text"
                         value={selectedProvider.apiEndpoint}
                         onChange={e => updateProvider(selectedProvider.id, { apiEndpoint: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)]"
+                        disabled={!isLoggedIn}
+                        className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                     <div>
@@ -180,7 +198,8 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                         value={selectedProvider.apiKey}
                         onChange={e => updateProvider(selectedProvider.id, { apiKey: e.target.value })}
                         placeholder="sk-..."
-                        className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)]"
+                        disabled={!isLoggedIn}
+                        className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                   </div>
@@ -190,7 +209,8 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                       <h4 className="text-sm font-medium text-[var(--color-text-secondary)]">{t.settings.ai.models}</h4>
                       <button
                         onClick={() => addModel(selectedProvider.id)}
-                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-[var(--color-accent)] bg-[var(--color-accent-subtle)] rounded-md hover:bg-[var(--color-accent)]/20 transition-colors"
+                        disabled={!isLoggedIn}
+                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-[var(--color-accent)] bg-[var(--color-accent-subtle)] rounded-md hover:bg-[var(--color-accent)]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <PlusIcon size={12} />
                         {t.settings.ai.addModel}
@@ -205,7 +225,8 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                           <div key={model.id} className="flex items-center gap-2">
                             <button
                               onClick={() => setSelectedModel(model.id)}
-                              className={`flex-1 p-2 text-left rounded-md border transition-all ${
+                              disabled={!isLoggedIn}
+                              className={`flex-1 p-2 text-left rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                 settings.selectedModel === model.id
                                   ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
                                   : 'border-[var(--color-border)] bg-[var(--color-bg-primary)] hover:border-[var(--color-border-hover)]'
@@ -217,7 +238,8 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                             {selectedProvider.models.length > 1 && (
                               <button
                                 onClick={() => removeModel(selectedProvider.id, model.id)}
-                                className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-colors"
+                                disabled={!isLoggedIn}
+                                className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <TrashIcon size={14} />
                               </button>
@@ -232,7 +254,8 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
 
               <button
                 onClick={handleSave}
-                className="w-full py-2.5 rounded-lg font-medium text-white bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] transition-colors"
+                disabled={!isLoggedIn}
+                className="w-full py-2.5 rounded-lg font-medium text-white bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {t.settings.actions.save}
               </button>
@@ -241,7 +264,22 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
 
           {activeTab === 'database' && (
             <div className="space-y-6">
-              <div className="p-4 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
+              {!isLoggedIn && (
+                <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5">
+                      <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium text-amber-500 mb-1">{t.settings.ai.loginRequiredTitle}</h4>
+                      <p className="text-sm text-amber-400/80">{t.settings.database.loginRequiredMessage}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className={`p-4 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] ${!isLoggedIn ? 'opacity-50 pointer-events-none' : ''}`}>
                 <div className="flex items-center gap-3 mb-4">
                   <DatabaseIcon size={20} className="text-[var(--color-accent)]" />
                   <h3 className="text-sm font-medium text-[var(--color-text-primary)]">{t.settings.database.title}</h3>

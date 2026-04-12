@@ -16,7 +16,7 @@ import { useSettings } from './contexts/SettingsContext';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function App() {
-  const { t } = useSettings();
+  const { t, setIsLoggedIn } = useSettings();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -49,15 +49,19 @@ function App() {
         if (validUser) {
           api.setAuthToken(savedToken);
           setUser(validUser);
+          setIsLoggedIn(true);
         } else {
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
+          setIsLoggedIn(false);
         }
+      } else {
+        setIsLoggedIn(false);
       }
       loadProjects();
     };
     initAuth();
-  }, []);
+  }, [setIsLoggedIn]);
 
   const handleMenuClick = (event: string) => {
     switch (event) {
@@ -149,6 +153,7 @@ function App() {
     localStorage.setItem('user', JSON.stringify(data.user));
     api.setAuthToken(data.token);
     setUser(data.user);
+    setIsLoggedIn(true);
     setSelectedProjectId(null);
     setSelectedSessionId(null);
     await loadProjects();
@@ -181,6 +186,7 @@ function App() {
     localStorage.setItem('user', JSON.stringify(data.user));
     api.setAuthToken(data.token);
     setUser(data.user);
+    setIsLoggedIn(true);
     setSelectedProjectId(null);
     setSelectedSessionId(null);
     await loadProjects();
@@ -192,6 +198,7 @@ function App() {
     localStorage.removeItem('user');
     api.setAuthToken(null);
     setUser(null);
+    setIsLoggedIn(false);
     setSelectedProjectId(null);
     setSelectedSessionId(null);
     setProjects([]);

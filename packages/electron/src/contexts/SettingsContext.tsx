@@ -19,6 +19,8 @@ interface Settings {
 interface SettingsContextValue {
   settings: Settings;
   t: Translations;
+  isLoggedIn: boolean;
+  setIsLoggedIn: (loggedIn: boolean) => void;
   updateSettings: (updates: Partial<Settings>) => void;
   addProvider: (provider?: AIProvider) => void;
   removeProvider: (id: string) => void;
@@ -59,6 +61,7 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [t, setT] = useState<Translations>(getTranslation(defaultSettings.language));
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
   useEffect(() => {
     setT(getTranslation(settings.language));
@@ -462,6 +465,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       value={{
         settings,
         t,
+        isLoggedIn,
+        setIsLoggedIn,
         updateSettings,
         addProvider,
         removeProvider,
