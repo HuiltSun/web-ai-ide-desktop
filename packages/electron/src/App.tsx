@@ -187,6 +187,7 @@ function App() {
   };
 
   const handleLogout = () => {
+    console.log('handleLogout 被调用');
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
     api.setAuthToken(null);
@@ -195,6 +196,7 @@ function App() {
     setSelectedSessionId(null);
     setProjects([]);
     setLoginOpen(false);
+    console.log('退出登录完成');
   };
 
   const handleCreateProject = async (name: string) => {

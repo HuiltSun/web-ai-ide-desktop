@@ -1,0 +1,13 @@
+- [x] Header 组件中用户菜单正确显示（已登录状态）
+- [x] 点击用户按钮显示下拉菜单
+- [x] 下拉菜单中包含退出登录选项
+- [x] 退出按钮点击触发 onLogout 回调
+- [x] handleLogout 函数清除 localStorage 中的 auth_token
+- [x] handleLogout 函数清除 localStorage 中的 user
+- [x] handleLogout 函数调用 api.setAuthToken(null)
+- [x] handleLogout 函数重置 user 状态为 null
+- [x] handleLogout 函数重置 selectedProjectId 为 null
+- [x] handleLogout 函数重置 selectedSessionId 为 null
+- [x] handleLogout 函数清空 projects 列表
+- [x] 退出后 UI 正确更新为未登录状态
+- [x] 退出后可以重新登录

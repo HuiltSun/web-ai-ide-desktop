@@ -102,6 +102,7 @@ export interface Translations {
     refresh: string;
     login: string;
     logout: string;
+    signedInAs: string;
   };
   sidebar: {
     projects: string;
@@ -268,6 +269,7 @@ export const translations: Record<Language, Translations> = {
       refresh: 'Refresh',
       login: 'Sign In',
       logout: 'Sign Out',
+      signedInAs: 'Signed in as',
     },
     sidebar: {
       projects: 'Projects',
@@ -432,6 +434,7 @@ export const translations: Record<Language, Translations> = {
       refresh: '刷新',
       login: '登录',
       logout: '退出登录',
+      signedInAs: '已登录',
     },
     sidebar: {
       projects: '项目',

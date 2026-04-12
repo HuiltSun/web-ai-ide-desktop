@@ -7,9 +7,18 @@ $ProjectRoot = if ($ScriptDir) { $ScriptDir } else { $PWD }
 $ReleaseDir = "$ProjectRoot\release"
 $ServerDir = "$ProjectRoot\packages\server"
 $OpenClaudeDir = "$ProjectRoot\packages\openclaude-temp"
-$CLIDir = "$ProjectRoot\packages\cli"
+$ElectronDir = "$ProjectRoot\packages\electron"
 $DockerContainer = "webaiide-postgres"
 $EnvFile = "$ProjectRoot\.env"
+
+# 命令行参数
+$BuildOnly = $false
+if ($args -contains "--build") {
+    $BuildOnly = $true
+    Write-Host "========================================"
+    Write-Host "Web AI IDE 构建模式"
+    Write-Host "========================================"
+}
 
 Write-Host "========================================"
 Write-Host "Web AI IDE 一键调试脚本"
@@ -17,7 +26,7 @@ Write-Host "========================================"
 
 # 读取 .env 文件
 Write-Host ""
-Write-Host "[1/8] 检查环境配置..."
+Write-Host "[1] 检查环境配置..."
 
 if (Test-Path $EnvFile) {
     Write-Host "  读取 .env 文件..."
@@ -65,7 +74,7 @@ Write-Host "  加密: 已启用"
 
 # 1. 检查依赖安装
 Write-Host ""
-Write-Host "[2/8] 检查依赖安装..."
+Write-Host "[2] 检查依赖安装..."
 
 # 检查 Electron 包依赖
 $ElectronPackagesDir = "$ProjectRoot\packages\electron\"
@@ -85,7 +94,7 @@ Write-Host "  提示: 使用 Electron 包在桌面应用中调试 (npm run dev)"
 
 # 2. 启动 PostgreSQL (Docker)
 Write-Host ""
-Write-Host "[3/7] 启动 PostgreSQL 数据库..."
+Write-Host "[3] 启动 PostgreSQL 数据库..."
 
 try {
     $dockerRunning = docker ps 2>$null
@@ -132,7 +141,7 @@ try {
 
 # 3. 初始化数据库
 Write-Host ""
-Write-Host "[4/7] 初始化数据库..."
+Write-Host "[4] 初始化数据库..."
 
 if (Test-Path "$ServerDir\prisma\schema.prisma") {
     Push-Location $ServerDir -ErrorAction SilentlyContinue
@@ -152,7 +161,7 @@ if (Test-Path "$ServerDir\prisma\schema.prisma") {
 
 # 4. 启动后端服务器（新窗口）
 Write-Host ""
-Write-Host "[5/7] 启动后端服务器 (http://localhost:3001)..."
+Write-Host "[5] 启动后端服务器 (http://localhost:3001)..."
 # 先关闭可能正在运行的后端进程
 Write-Host "  检查并关闭已存在的后端进程..."
 $existingNodeProcesses = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object {
@@ -202,7 +211,7 @@ if (-not (Test-Path "$ServerDir\package.json")) {
 
 # 5. 启动 OpenClaude gRPC 服务器（新窗口）
 Write-Host ""
-Write-Host "[6/7] 启动 OpenClaude gRPC 服务器 (localhost:50051)..."
+Write-Host "[6] 启动 OpenClaude gRPC 服务器 (localhost:50051)..."
 
 if (-not (Test-Path "$OpenClaudeDir\package.json")) {
     Write-Host "  警告: 未找到 openclaude-temp package.json，跳过 gRPC 服务器启动"
@@ -237,7 +246,7 @@ if (-not (Test-Path "$OpenClaudeDir\package.json")) {
 
 # 6. 启动 Electron 桌面应用
 Write-Host ""
-Write-Host "[7/7] 启动 Electron 桌面应用..."
+Write-Host "[7] 启动 Electron 桌面应用..."
 
 $ElectronDir = "$ProjectRoot\packages\electron"
 if (-not (Test-Path "$ElectronDir\package.json")) {
@@ -262,6 +271,51 @@ if (-not (Test-Path "$ElectronDir\package.json")) {
     Write-Host "  注意: Electron 应用启动可能需要几秒钟时间"
 }
 
+# 构建模式处理
+if ($BuildOnly) {
+    Write-Host ""
+    Write-Host "[8] 构建 Electron 应用..."
+    
+    if (-not (Test-Path "$ElectronDir\package.json")) {
+        Write-Host "  错误: 未找到 electron package.json"
+    } else {
+        # 检查 npm 依赖
+        if (-not (Test-Path "$ElectronDir\node_modules")) {
+            Write-Host "  安装 Electron 依赖..."
+            Push-Location $ElectronDir
+            npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
+            Pop-Location
+        }
+
+        Write-Host "  构建命令: npm run build"
+        Write-Host "  工作目录: $ElectronDir"
+
+        # 执行构建
+        Push-Location $ElectronDir
+        try {
+            npm run build 2>&1 | ForEach-Object { Write-Host "    $_" }
+            Write-Host "  构建完成！"
+        } catch {
+            Write-Host "  构建失败: $_"
+        }
+        Pop-Location
+    }
+    
+    # 完成信息
+    Write-Host ""
+    Write-Host "========================================"
+    Write-Host "构建完成!"
+    Write-Host "========================================"
+    Write-Host ""
+    Write-Host "启动应用:"
+    Write-Host "  - 双击：launch.bat"
+    Write-Host ""
+    Write-Host "构建输出目录:"
+    Write-Host "  - $ReleaseDir"
+    Write-Host ""
+    exit 0
+}
+
 # 完成信息
 Write-Host ""
 Write-Host "========================================"
@@ -269,15 +323,18 @@ Write-Host "所有服务已启动:"
 Write-Host "  - PostgreSQL:     localhost:5432"
 Write-Host "  - 后端 API:      http://localhost:3001"
 Write-Host "  - OpenClaude gRPC: localhost:50051"
-Write-Host "  - Electron 桌面应用: 已启动"
+Write-Host "  - Electron 桌面应用：已启动"
 Write-Host "========================================"
 Write-Host ""
 Write-Host "桌面应用调试:"
 Write-Host "  - Electron 应用已在新窗口启动"
 Write-Host ""
 Write-Host "生产构建 (可选):"
-Write-Host "  - cd packages\electron"
-Write-Host "  - npm run build"
+Write-Host "  - 运行：.\debug.ps1 --build"
+Write-Host "  或：cd packages\electron && npm run build"
 Write-Host ""
-Write-Host "提示: 关闭后端服务器和 gRPC 服务器窗口即可停止服务"
+Write-Host "启动构建后的应用:"
+Write-Host "  - 双击：launch.bat"
+Write-Host ""
+Write-Host "提示：关闭后端服务器和 gRPC 服务器窗口即可停止服务"
 Write-Host "========================================"

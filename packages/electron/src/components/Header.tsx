@@ -57,20 +57,32 @@ export function Header({ projectId, onSettingsClick, onRefreshClick, onLoginClic
             {userEmail && <span className="text-xs text-slate-400 max-w-[120px] truncate">{userEmail}</span>}
           </button>
           {showUserMenu && (
-            <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900/95 backdrop-blur-xl rounded-xl border border-white/10 shadow-xl overflow-hidden z-50">
+            <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900/95 backdrop-blur-xl rounded-xl border border-white/10 shadow-xl z-50">
               <div className="px-3 py-2 border-b border-white/5">
-                <p className="text-xs text-slate-400">Signed in as</p>
+                <p className="text-xs text-slate-400">{t.header.signedInAs}</p>
                 <p className="text-sm text-white truncate">{userEmail}</p>
               </div>
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('退出按钮被点击');
                   setShowUserMenu(false);
-                  if (onLogout) onLogout();
+                  if (onLogout) {
+                    console.log('调用 onLogout');
+                    onLogout();
+                  } else {
+                    console.error('onLogout 未定义');
+                  }
                 }}
-                className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-white/5 transition-colors flex items-center gap-2"
+                onMouseEnter={(e) => {
+                  console.log('鼠标移入退出按钮');
+                }}
+                className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-white/5 transition-colors flex items-center gap-2 cursor-pointer select-none"
+                style={{ pointerEvents: 'auto' }}
               >
                 <CloseIcon size={14} />
-                {t.header.logout}
+                <span>{t.header.logout}</span>
               </button>
             </div>
           )}
