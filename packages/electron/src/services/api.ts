@@ -107,4 +107,39 @@ export const api = {
     });
     if (!response.ok) handleApiError(response, 'Failed to delete project');
   },
+
+  async duplicateProject(sourceProjectId: string, newName: string, userId: string): Promise<ProjectWithSession> {
+    try {
+      const newProjectPath = `./projects/${newName.toLowerCase().replace(/\s+/g, '-')}`;
+      const newProjectWithSession = await this.createProject(newName, newProjectPath, userId);
+
+      const files = await this.getProjectFiles(sourceProjectId);
+      await this.duplicateFiles(sourceProjectId, newProjectWithSession.project.id, files);
+
+      return newProjectWithSession;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`复制项目失败: ${error.message}`);
+      }
+      throw new Error('复制项目失败: 未知错误');
+    }
+  },
+
+  async duplicateFiles(sourceProjectId: string, targetProjectId: string, files: FileNode[]): Promise<void> {
+    for (const file of files) {
+      await this.duplicateFileNode(sourceProjectId, targetProjectId, file);
+    }
+  },
+
+  async duplicateFileNode(sourceProjectId: string, targetProjectId: string, node: FileNode): Promise<void> {
+    if (node.isDirectory && node.children) {
+      for (const child of node.children) {
+        await this.duplicateFileNode(sourceProjectId, targetProjectId, child);
+      }
+    } else {
+      const relativePath = node.path.replace(sourceProjectId, '').replace(/^\//, '');
+      const content = await this.readFile(sourceProjectId, relativePath);
+      await this.writeFile(targetProjectId, relativePath, content);
+    }
+  },
 };
