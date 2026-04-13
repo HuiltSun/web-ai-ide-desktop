@@ -113,8 +113,14 @@ export const api = {
       const newProjectPath = `./projects/${newName.toLowerCase().replace(/\s+/g, '-')}`;
       const newProjectWithSession = await this.createProject(newName, newProjectPath, userId);
 
+      const sourceProjectWithSession = await this.getProjectWithSession(sourceProjectId);
       const files = await this.getProjectFiles(sourceProjectId);
-      await this.duplicateFiles(sourceProjectId, newProjectWithSession.project.id, files);
+      await this.duplicateFiles(
+        sourceProjectId,
+        newProjectWithSession.project.id,
+        sourceProjectWithSession.project.path,
+        files
+      );
 
       return newProjectWithSession;
     } catch (error) {
@@ -125,19 +131,29 @@ export const api = {
     }
   },
 
-  async duplicateFiles(sourceProjectId: string, targetProjectId: string, files: FileNode[]): Promise<void> {
+  async duplicateFiles(
+    sourceProjectId: string,
+    targetProjectId: string,
+    sourceBasePath: string,
+    files: FileNode[]
+  ): Promise<void> {
     for (const file of files) {
-      await this.duplicateFileNode(sourceProjectId, targetProjectId, file);
+      await this.duplicateFileNode(sourceProjectId, targetProjectId, sourceBasePath, file);
     }
   },
 
-  async duplicateFileNode(sourceProjectId: string, targetProjectId: string, node: FileNode): Promise<void> {
+  async duplicateFileNode(
+    sourceProjectId: string,
+    targetProjectId: string,
+    sourceBasePath: string,
+    node: FileNode
+  ): Promise<void> {
     if (node.isDirectory && node.children) {
       for (const child of node.children) {
-        await this.duplicateFileNode(sourceProjectId, targetProjectId, child);
+        await this.duplicateFileNode(sourceProjectId, targetProjectId, sourceBasePath, child);
       }
     } else {
-      const relativePath = node.path.replace(sourceProjectId, '').replace(/^\//, '');
+      const relativePath = node.path.replace(sourceBasePath, '').replace(/^\//, '');
       const content = await this.readFile(sourceProjectId, relativePath);
       await this.writeFile(targetProjectId, relativePath, content);
     }
