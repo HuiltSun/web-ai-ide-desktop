@@ -1,4 +1,5 @@
 import type { Project, ProjectWithSession } from '../types';
+import { relative as pathRelative } from 'path';
 
 export interface FileNode {
   name: string;
@@ -153,7 +154,7 @@ export const api = {
         await this.duplicateFileNode(sourceProjectId, targetProjectId, sourceBasePath, child);
       }
     } else {
-      const relativePath = node.path.replace(sourceBasePath, '').replace(/^\//, '');
+      const relativePath = pathRelative(sourceBasePath, node.path).replace(/\\/g, '/');
       const content = await this.readFile(sourceProjectId, relativePath);
       await this.writeFile(targetProjectId, relativePath, content);
     }
