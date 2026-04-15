@@ -2,13 +2,6 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../utils/prisma.js';
 import { createHash } from 'crypto';
 
-declare module 'fastify' {
-  interface FastifyRequest {
-    tenantId: string;
-    tenantSchema: string;
-  }
-}
-
 export async function tenantMiddleware(
   request: FastifyRequest,
   reply: FastifyReply

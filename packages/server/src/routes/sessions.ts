@@ -1,17 +1,9 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { sessionService } from '../services/session.service.js';
-import { tenantService } from '../services/tenant.service.js';
+import { tenantPlugin } from '../plugins/tenant.plugin.js';
 
 export async function sessionsRouter(fastify: FastifyInstance) {
-  fastify.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
-    const apiKey = request.headers['x-api-key'] as string;
-    if (apiKey) {
-      const tenant = await tenantService.getTenantByApiKey(apiKey);
-      if (tenant) {
-        await tenantService.setSearchPath(tenant.schema);
-      }
-    }
-  });
+  await fastify.register(tenantPlugin);
 
   fastify.addHook('onRequest', fastify.authenticate);
 
