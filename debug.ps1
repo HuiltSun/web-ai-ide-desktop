@@ -1,38 +1,61 @@
 # Web AI IDE 一键调试脚本
 # 适用于 PowerShell 7+ 环境
-
-# 配置
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ProjectRoot = if ($ScriptDir) { $ScriptDir } else { $PWD }
-$ReleaseDir = "$ProjectRoot\release"
-$ServerDir = "$ProjectRoot\packages\server"
-$OpenClaudeDir = "$ProjectRoot\packages\openclaude-temp"
-$ElectronDir = "$ProjectRoot\packages\electron"
+# debug.ps1 第一行
+#Requires -Version 7
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+chcp 65001 | Out-Null
+# ── 配置 ──────────────────────────────────────────────
+$ScriptDir      = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectRoot    = if ($ScriptDir) { $ScriptDir } else { $PWD }
+$ReleaseDir     = "$ProjectRoot\release"
+$ServerDir      = "$ProjectRoot\packages\server"
+$OpenClaudeDir  = "$ProjectRoot\packages\openclaude-temp"
+$ElectronDir    = "$ProjectRoot\packages\electron"   # 统一定义，不再重复
 $DockerContainer = "webaiide-postgres"
-$EnvFile = "$ProjectRoot\.env"
+$EnvFile        = "$ProjectRoot\.env"
 
-# 命令行参数
-$BuildOnly = $false
-if ($args -contains "--build") {
-    $BuildOnly = $true
-    Write-Host "========================================"
-    Write-Host "Web AI IDE 构建模式"
-    Write-Host "========================================"
+# ── 辅助函数 ──────────────────────────────────────────
+
+# 停止占用指定 TCP 端口的进程
+function Stop-ProcessOnPort([int]$Port) {
+    $conn = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
+    if ($conn) {
+        $conn | ForEach-Object {
+            Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue
+        }
+        Start-Sleep -Seconds 1
+        return $true
+    }
+    return $false
 }
 
+# 确保目录下的 npm 依赖已安装
+function Ensure-NodeModules([string]$Dir) {
+    if ((Test-Path "$Dir\package.json") -and (-not (Test-Path "$Dir\node_modules"))) {
+        Write-Host "  安装依赖: $Dir"
+        Push-Location $Dir
+        npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
+        Pop-Location
+    }
+}
+
+# ── 命令行参数 ────────────────────────────────────────
+$BuildOnly = $args -contains "--build"
+
 Write-Host "========================================"
-Write-Host "Web AI IDE 一键调试脚本"
+Write-Host "Web AI IDE $(if ($BuildOnly) { '构建模式' } else { '一键调试脚本' })"
 Write-Host "========================================"
 
-# 读取 .env 文件
+# ── [1] 环境配置 ──────────────────────────────────────
 Write-Host ""
 Write-Host "[1] 检查环境配置..."
 
 if (Test-Path $EnvFile) {
     Write-Host "  读取 .env 文件..."
     Get-Content $EnvFile | ForEach-Object {
-        if ($_ -match '^(.+?)=(.*)$') {
-            $key = $matches[1].Trim()
+        if ($_ -match '^([^#=][^=]*)=(.*)$') {
+            $key   = $matches[1].Trim()
             $value = $matches[2].Trim()
             [Environment]::SetEnvironmentVariable($key, $value, 'Process')
             Write-Host "    $key = ****"
@@ -42,25 +65,20 @@ if (Test-Path $EnvFile) {
     Write-Host "  警告: .env 文件不存在"
 }
 
-# 检查数据库配置
 if (-not $env:POSTGRES_USER -or -not $env:POSTGRES_PASSWORD) {
     Write-Host ""
     Write-Host "错误: 缺少必需的数据库环境变量"
-    Write-Host ""
-    Write-Host "请确保根目录 .env 文件包含:"
-    Write-Host "  POSTGRES_USER=myuser"
-    Write-Host "  POSTGRES_PASSWORD=StrongPass123!"
-    Write-Host "  POSTGRES_DB=webaiide"
+    Write-Host "  请确保根目录 .env 文件包含:"
+    Write-Host "    POSTGRES_USER=myuser"
+    Write-Host "    POSTGRES_PASSWORD=StrongPass123!"
+    Write-Host "    POSTGRES_DB=webaiide"
     exit 1
 }
 
-# 检查加密密钥配置
 if (-not $env:ENCRYPTION_SECRET) {
-    Write-Host ""
-    Write-Host "警告: 未设置 ENCRYPTION_SECRET，将自动生成..."
+    Write-Host "  警告: 未设置 ENCRYPTION_SECRET，将自动生成..."
     $randomBytes = [byte[]]::new(32)
-    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-    $rng.GetBytes($randomBytes)
+    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($randomBytes)
     $env:ENCRYPTION_SECRET = [Convert]::ToBase64String($randomBytes)
     [Environment]::SetEnvironmentVariable("ENCRYPTION_SECRET", $env:ENCRYPTION_SECRET, 'Process')
     Write-Host "  已生成加密密钥 (仅用于开发环境)"
@@ -70,79 +88,97 @@ $env:POSTGRES_DB = if ($env:POSTGRES_DB) { $env:POSTGRES_DB } else { 'webaiide' 
 
 Write-Host "  用户名: $env:POSTGRES_USER"
 Write-Host "  数据库: $env:POSTGRES_DB"
-Write-Host "  加密: 已启用"
+Write-Host "  加密:   已启用"
 
-# 1. 检查依赖安装
-Write-Host ""
-Write-Host "[2] 检查依赖安装..."
+# ── 构建模式：跳过 dev 服务，直接构建后退出 ──────────
+if ($BuildOnly) {
+    Write-Host ""
+    Write-Host "[2] 构建 Electron 应用..."
 
-# 检查 Electron 包依赖
-$ElectronPackagesDir = "$ProjectRoot\packages\electron\"
-if (Test-Path "$ElectronPackagesDir\package.json") {
-    if (-not (Test-Path "$ElectronPackagesDir\node_modules")) {
-        Write-Host "  安装 Electron 依赖..."
-        Push-Location $ElectronPackagesDir -ErrorAction SilentlyContinue
-        npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
-        Pop-Location -ErrorAction SilentlyContinue
-    } else {
-        Write-Host "  Electron 依赖已安装"
+    if (-not (Test-Path "$ElectronDir\package.json")) {
+        Write-Host "  错误: 未找到 electron package.json"
+        exit 1
     }
+
+    Ensure-NodeModules $ElectronDir
+
+    Write-Host "  构建命令: npm run build"
+    Write-Host "  工作目录: $ElectronDir"
+    Push-Location $ElectronDir
+    try {
+        npm run build 2>&1 | ForEach-Object { Write-Host "    $_" }
+        Write-Host "  构建完成！"
+    } catch {
+        Write-Host "  构建失败: $_"
+        exit 1
+    }
+    Pop-Location
+
+    Write-Host ""
+    Write-Host "========================================"
+    Write-Host "构建完成!"
+    Write-Host "  输出目录: $ReleaseDir"
+    Write-Host "  启动应用: 双击 launch.bat"
+    Write-Host "========================================"
+    exit 0
 }
 
-Write-Host "  依赖检查完成"
-Write-Host "  提示: 使用 Electron 包在桌面应用中调试 (npm run dev)"
+# ── 以下仅在调试模式下执行 ────────────────────────────
 
-# 2. 启动 PostgreSQL (Docker)
+# ── [2] 检查依赖 ──────────────────────────────────────
+Write-Host ""
+Write-Host "[2] 检查依赖安装..."
+Ensure-NodeModules $ElectronDir
+Write-Host "  依赖检查完成"
+
+# ── [3] 启动 PostgreSQL ───────────────────────────────
 Write-Host ""
 Write-Host "[3] 启动 PostgreSQL 数据库..."
 
 try {
-    $dockerRunning = docker ps 2>$null
+    docker ps 2>$null | Out-Null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  错误: Docker 未运行，请先启动 Docker Desktop"
         exit 1
     }
 
-    $containerExists = docker ps -a --format '{{.Names}}' | Select-String -Pattern "^$DockerContainer$" -Quiet
-    $containerRunning = docker ps --format '{{.Names}}' | Select-String -Pattern "^$DockerContainer$" -Quiet
+    $containerRunning = docker ps          --format '{{.Names}}' 2>$null | Select-String -Pattern "^$DockerContainer$" -Quiet
+    $containerExists  = docker ps -a       --format '{{.Names}}' 2>$null | Select-String -Pattern "^$DockerContainer$" -Quiet
 
-    if ($containerRunning -eq $true) {
-        Write-Host "  重启容器 $DockerContainer..."
-        docker stop $DockerContainer
-        docker start $DockerContainer
-    } elseif ($containerExists -eq $true) {
-        Write-Host "  重启已有容器 $DockerContainer..."
-        docker stop $DockerContainer
-        docker start $DockerContainer
+    if ($containerRunning) {
+        Write-Host "  重启运行中的容器 $DockerContainer..."
+        docker restart $DockerContainer | Out-Null
+    } elseif ($containerExists) {
+        Write-Host "  启动已有容器 $DockerContainer..."
+        docker start $DockerContainer | Out-Null
     } else {
         Write-Host "  创建并启动新容器..."
         docker run -d --name $DockerContainer `
             -e POSTGRES_USER=$env:POSTGRES_USER `
             -e POSTGRES_PASSWORD=$env:POSTGRES_PASSWORD `
             -e POSTGRES_DB=$env:POSTGRES_DB `
-            -p 5432:5432 postgres:16
+            -p 5432:5432 postgres:16 | Out-Null
     }
 
-    Start-Sleep -Seconds 2
+    # 轮询等待 DB 就绪，最多 30 秒
+    $dbReady = $false
+    for ($i = 1; $i -le 15; $i++) {
+        Start-Sleep -Seconds 2
+        docker exec $DockerContainer pg_isready -U $env:POSTGRES_USER -d $env:POSTGRES_DB 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) { $dbReady = $true; break }
+        Write-Host "    等待数据库就绪... ($i/15)"
+    }
 
-    $dbReady = docker exec $DockerContainer pg_isready -U $env:POSTGRES_USER -d $env:POSTGRES_DB 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    if ($dbReady) {
         Write-Host "  PostgreSQL 就绪 (localhost:5432)"
     } else {
-        Write-Host "  PostgreSQL 启动中，等待 5 秒..."
-        Start-Sleep -Seconds 5
-        $dbReady = docker exec $DockerContainer pg_isready -U $env:POSTGRES_USER -d $env:POSTGRES_DB 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "  PostgreSQL 就绪 (localhost:5432)"
-        } else {
-            Write-Host "  警告: PostgreSQL 可能未就绪"
-        }
+        Write-Host "  警告: PostgreSQL 在 30 秒内未就绪，继续执行..."
     }
 } catch {
     Write-Host "  Docker 操作失败: $_"
 }
 
-# 3. 初始化数据库
+# ── [4] 初始化数据库 ──────────────────────────────────
 Write-Host ""
 Write-Host "[4] 初始化数据库..."
 
@@ -150,9 +186,13 @@ if (Test-Path "$ServerDir\prisma\schema.prisma") {
     Push-Location $ServerDir -ErrorAction SilentlyContinue
     try {
         Write-Host "  生成 Prisma Client..."
-        npx prisma generate 2>$null | Out-Null
+        npx prisma generate
+        if ($LASTEXITCODE -ne 0) { throw "prisma generate 失败" }
+
         Write-Host "  推送数据库 Schema..."
-        npx prisma db push 2>$null | Out-Null
+        npx prisma db push
+        if ($LASTEXITCODE -ne 0) { throw "prisma db push 失败" }
+
         Write-Host "  数据库初始化完成"
     } catch {
         Write-Host "  数据库初始化失败: $_"
@@ -162,201 +202,100 @@ if (Test-Path "$ServerDir\prisma\schema.prisma") {
     Write-Host "  警告: 未找到 prisma schema，跳过数据库初始化"
 }
 
-# 4. 启动后端服务器（新窗口）
+# ── [5] 启动后端服务器 ────────────────────────────────
 Write-Host ""
 Write-Host "[5] 启动后端服务器 (http://localhost:3001)..."
-# 先关闭可能正在运行的后端进程
-Write-Host "  检查并重启已存在的后端进程..."
-$existingNodeProcesses = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object {
-    $_.CommandLine -like "*web-ai-ide*" -or $_.CommandLine -like "*server*"
-}
-if ($existingNodeProcesses) {
-    $existingNodeProcesses | Stop-Process -Force
-    Write-Host "  已关闭现有后端进程，正在重启..."
-    Start-Sleep -Seconds 1
-}
+
 if (-not (Test-Path "$ServerDir\package.json")) {
     Write-Host "  错误: 未找到 server package.json"
 } else {
-    Write-Host "  启动命令: npm run dev"
+    if (Stop-ProcessOnPort 3001) {
+        Write-Host "  已关闭占用 3001 端口的进程"
+    }
+
     Write-Host "  工作目录: $ServerDir"
-
-    # 在新窗口启动后端服务器
     Start-Process cmd.exe -ArgumentList "/k cd /d `"$ServerDir`" && npm run dev"
+    Write-Host "  后端服务器已在新窗口启动，等待就绪..."
 
-    Write-Host "  后端服务器已在新窗口启动"
-    Write-Host "  等待服务器就绪..."
-
-    # 等待服务器启动，最多 20 秒
     $serverReady = $false
-    for ($i = 0; $i -lt 10; $i++) {
+    for ($i = 1; $i -le 10; $i++) {
         Start-Sleep -Seconds 2
         try {
-            $response = Invoke-WebRequest -Uri "http://localhost:3001/api/projects" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+            Invoke-WebRequest -Uri "http://localhost:3001/api/projects" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop | Out-Null
             $serverReady = $true
-            Write-Host "  后端服务器就绪 (http://localhost:3001)"
             break
         } catch {
-            if ($_.Exception.Message -match "Unable to connect" -or $_.Exception.Message -match "No connection could be made") {
-                Write-Host "    检查中... ($($i + 1)/10)"
-            } else {
+            # 非连接错误（如 401/403）说明服务器已在响应
+            if ($_.Exception.Message -notmatch "Unable to connect|No connection could be made") {
                 $serverReady = $true
-                Write-Host "  后端服务器就绪 (http://localhost:3001)"
                 break
             }
+            Write-Host "    检查中... ($i/10)"
         }
     }
 
-    if (-not $serverReady) {
-        Write-Host "  后端服务器启动中（可能需要几秒钟）"
-    }
+    Write-Host $(if ($serverReady) { "  后端服务器就绪 (http://localhost:3001)" } else { "  后端服务器启动中（可能需要几秒钟）" })
 }
 
-# 5. 启动 OpenClaude gRPC 服务器（新窗口）
+# ── [6] 启动 OpenClaude gRPC 服务器 ───────────────────
 Write-Host ""
 Write-Host "[6] 启动 OpenClaude gRPC 服务器 (localhost:50051)..."
 
 if (-not (Test-Path "$OpenClaudeDir\package.json")) {
     Write-Host "  警告: 未找到 openclaude-temp package.json，跳过 gRPC 服务器启动"
 } else {
-    # 先关闭可能正在运行的 gRPC 服务器进程
-    Write-Host "  检查并重启已存在的 gRPC 服务器进程..."
-    $existingBunProcesses = Get-Process -Name "bun" -ErrorAction SilentlyContinue | Where-Object {
-        $_.CommandLine -like "*openclaude*" -or $_.CommandLine -like "*grpc*"
+    if (Stop-ProcessOnPort 50051) {
+        Write-Host "  已关闭占用 50051 端口的进程"
     }
-    if ($existingBunProcesses) {
-        $existingBunProcesses | Stop-Process -Force
-        Write-Host "  已关闭现有 gRPC 服务器进程，正在重启..."
-        Start-Sleep -Seconds 1
-    }
-    Write-Host "  启动命令: bun run dev:grpc"
+
     Write-Host "  工作目录: $OpenClaudeDir"
-
-    # 在新窗口启动 openclaude gRPC 服务器
     Start-Process cmd.exe -ArgumentList "/k cd /d `"$OpenClaudeDir`" && bun run dev:grpc"
+    Write-Host "  OpenClaude gRPC 服务器已在新窗口启动，等待就绪..."
 
-    Write-Host "  OpenClaude gRPC 服务器已在新窗口启动"
-    Write-Host "  等待 gRPC 服务器就绪..."
-
-    # 等待 gRPC 服务器启动，最多 20 秒
     $grpcReady = $false
-    for ($i = 0; $i -lt 10; $i++) {
+    for ($i = 1; $i -le 10; $i++) {
         Start-Sleep -Seconds 2
-        $portCheck = Test-NetConnection -ComputerName "localhost" -Port 50051 -WarningAction SilentlyContinue
-        if ($portCheck.TcpTestSucceeded) {
+        if ((Test-NetConnection -ComputerName "localhost" -Port 50051 -WarningAction SilentlyContinue).TcpTestSucceeded) {
             $grpcReady = $true
-            Write-Host "  OpenClaude gRPC 服务器就绪 (localhost:50051)"
             break
-        } else {
-            Write-Host "    检查中... ($($i + 1)/10)"
         }
+        Write-Host "    检查中... ($i/10)"
     }
 
-    if (-not $grpcReady) {
-        Write-Host "  OpenClaude gRPC 服务器启动中（可能需要几秒钟）"
-    }
+    Write-Host $(if ($grpcReady) { "  OpenClaude gRPC 服务器就绪 (localhost:50051)" } else { "  OpenClaude gRPC 服务器启动中（可能需要几秒钟）" })
 }
 
-# 6. 启动 Electron 桌面应用
+# ── [7] 启动 Electron 桌面应用 ────────────────────────
 Write-Host ""
 Write-Host "[7] 启动 Electron 桌面应用..."
 
-$ElectronDir = "$ProjectRoot\packages\electron"
 if (-not (Test-Path "$ElectronDir\package.json")) {
     Write-Host "  警告: 未找到 electron package.json，跳过 Electron 启动"
 } else {
-    # 先关闭可能正在运行的 Electron 进程
-    Write-Host "  检查并重启已存在的 Electron 进程..."
-    $existingElectronProcesses = Get-Process -Name "electron" -ErrorAction SilentlyContinue
-    if ($existingElectronProcesses) {
-        $existingElectronProcesses | Stop-Process -Force
-        Write-Host "  已关闭现有 Electron 进程，正在重启..."
+    $existingElectron = Get-Process -Name "electron" -ErrorAction SilentlyContinue
+    if ($existingElectron) {
+        $existingElectron | Stop-Process -Force
+        Write-Host "  已关闭现有 Electron 进程"
         Start-Sleep -Seconds 1
     }
 
-    # 检查 npm 依赖
-    if (-not (Test-Path "$ElectronDir\node_modules")) {
-        Write-Host "  安装 Electron 依赖..."
-        Push-Location $ElectronDir
-        npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
-        Pop-Location
-    }
-
-    Write-Host "  启动命令: npm run dev"
+    # node_modules 已在步骤 2 确保安装，此处无需重复检查
     Write-Host "  工作目录: $ElectronDir"
-
-    # 在新窗口启动 Electron
     Start-Process cmd.exe -ArgumentList "/k cd /d `"$ElectronDir`" && npm run dev"
-
-    Write-Host "  Electron 桌面应用已在新窗口启动"
-    Write-Host "  等待 Electron 应用就绪..."
-    Write-Host "  注意: Electron 应用启动可能需要几秒钟时间"
+    Write-Host "  Electron 桌面应用已在新窗口启动（启动需几秒钟）"
 }
 
-# 构建模式处理
-if ($BuildOnly) {
-    Write-Host ""
-    Write-Host "[8] 构建 Electron 应用..."
-    
-    if (-not (Test-Path "$ElectronDir\package.json")) {
-        Write-Host "  错误: 未找到 electron package.json"
-    } else {
-        # 检查 npm 依赖
-        if (-not (Test-Path "$ElectronDir\node_modules")) {
-            Write-Host "  安装 Electron 依赖..."
-            Push-Location $ElectronDir
-            npm install 2>&1 | ForEach-Object { Write-Host "    $_" }
-            Pop-Location
-        }
-
-        Write-Host "  构建命令: npm run build"
-        Write-Host "  工作目录: $ElectronDir"
-
-        # 执行构建
-        Push-Location $ElectronDir
-        try {
-            npm run build 2>&1 | ForEach-Object { Write-Host "    $_" }
-            Write-Host "  构建完成！"
-        } catch {
-            Write-Host "  构建失败: $_"
-        }
-        Pop-Location
-    }
-    
-    # 完成信息
-    Write-Host ""
-    Write-Host "========================================"
-    Write-Host "构建完成!"
-    Write-Host "========================================"
-    Write-Host ""
-    Write-Host "启动应用:"
-    Write-Host "  - 双击：launch.bat"
-    Write-Host ""
-    Write-Host "构建输出目录:"
-    Write-Host "  - $ReleaseDir"
-    Write-Host ""
-    exit 0
-}
-
-# 完成信息
+# ── 完成摘要 ──────────────────────────────────────────
 Write-Host ""
 Write-Host "========================================"
 Write-Host "所有服务已启动:"
-Write-Host "  - PostgreSQL:     localhost:5432"
-Write-Host "  - 后端 API:      http://localhost:3001"
-Write-Host "  - OpenClaude gRPC: localhost:50051"
-Write-Host "  - Electron 桌面应用：已启动"
+Write-Host "  - PostgreSQL:       localhost:5432"
+Write-Host "  - 后端 API:         http://localhost:3001"
+Write-Host "  - OpenClaude gRPC:  localhost:50051"
+Write-Host "  - Electron:         已启动"
 Write-Host "========================================"
 Write-Host ""
-Write-Host "桌面应用调试:"
-Write-Host "  - Electron 应用已在新窗口启动"
-Write-Host ""
-Write-Host "生产构建 (可选):"
-Write-Host "  - 运行：.\debug.ps1 --build"
-Write-Host "  或：cd packages\electron && npm run build"
-Write-Host ""
-Write-Host "启动构建后的应用:"
-Write-Host "  - 双击：launch.bat"
-Write-Host ""
-Write-Host "提示：关闭后端服务器和 gRPC 服务器窗口即可停止服务"
+Write-Host "生产构建:  .\debug.ps1 --build"
+Write-Host "启动构建后的应用: 双击 launch.bat"
+Write-Host "停止服务: 关闭对应的 cmd 窗口"
 Write-Host "========================================"
