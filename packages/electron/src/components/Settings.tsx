@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
-import { CloseIcon, SparklesIcon, DatabaseIcon, CodeIcon, GlobeIcon, PaletteIcon } from './Icons';
+import { CloseIcon, SparklesIcon, DatabaseIcon, PaletteIcon } from './Icons';
 import { SettingsAITab } from './settings/SettingsAITab';
 import { SettingsDatabaseTab } from './settings/SettingsDatabaseTab';
-import { SettingsEditorTab } from './settings/SettingsEditorTab';
-import { SettingsAppearanceTab } from './settings/SettingsAppearanceTab';
-import { SettingsLanguageTab } from './settings/SettingsLanguageTab';
+import { SettingsGeneralTab } from './settings/SettingsGeneralTab';
 
-type Tab = 'ai' | 'database' | 'editor' | 'appearance' | 'language';
+type Tab = 'ai' | 'database' | 'general';
 
 interface SettingsProps {
   isOpen: boolean;
@@ -22,9 +20,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
   const tabs: { id: Tab; icon: React.ReactNode }[] = [
     { id: 'ai', icon: <SparklesIcon size={16} /> },
     { id: 'database', icon: <DatabaseIcon size={16} /> },
-    { id: 'editor', icon: <CodeIcon size={16} /> },
-    { id: 'appearance', icon: <PaletteIcon size={16} /> },
-    { id: 'language', icon: <GlobeIcon size={16} /> },
+    { id: 'general', icon: <PaletteIcon size={16} /> },
   ];
 
   if (!isOpen) return null;
@@ -70,9 +66,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
         <div className="p-6 overflow-y-auto max-h-[calc(85vh-140px)]">
           {activeTab === 'ai' && <SettingsAITab />}
           {activeTab === 'database' && <SettingsDatabaseTab />}
-          {activeTab === 'editor' && <SettingsEditorTab />}
-          {activeTab === 'appearance' && <SettingsAppearanceTab />}
-          {activeTab === 'language' && <SettingsLanguageTab />}
+          {activeTab === 'general' && <SettingsGeneralTab />}
         </div>
       </div>
     </div>

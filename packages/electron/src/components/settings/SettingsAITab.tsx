@@ -40,14 +40,14 @@ export function SettingsAITab() {
           </div>
         </div>
       )}
-      <div className={`space-y-4 ${!isUserLoggedIn ? 'opacity-50 pointer-events-none' : ''}`}>
+      {isUserLoggedIn && (
+        <>
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-[var(--color-text-secondary)]">{t.settings.ai.providers}</h3>
           <div className="relative">
             <button
               onClick={() => setShowPresetDropdown(!showPresetDropdown)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--color-accent)] bg-[var(--color-accent-subtle)] rounded-lg hover:bg-[var(--color-accent)]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!isUserLoggedIn}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--color-accent)] bg-[var(--color-accent-subtle)] rounded-lg hover:bg-[var(--color-accent)]/20 transition-colors"
             >
               <PlusIcon size={14} />
               {t.settings.ai.addProvider}
@@ -94,10 +94,11 @@ export function SettingsAITab() {
             </div>
           ))}
         </div>
-      </div>
+        </>
+      )}
 
-      {selectedProvider && (
-        <div className={`space-y-4 p-4 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] ${!isUserLoggedIn ? 'opacity-50 pointer-events-none' : ''}`}>
+      {isUserLoggedIn && selectedProvider && (
+        <div className="space-y-4 p-4 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
           <div className="grid gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
@@ -107,8 +108,7 @@ export function SettingsAITab() {
                 type="text"
                 value={selectedProvider.name}
                 onChange={e => updateProvider(selectedProvider.id, { name: e.target.value })}
-                disabled={!isUserLoggedIn}
-                className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)]"
               />
             </div>
             <div>
@@ -119,8 +119,7 @@ export function SettingsAITab() {
                 type="text"
                 value={selectedProvider.apiEndpoint}
                 onChange={e => updateProvider(selectedProvider.id, { apiEndpoint: e.target.value })}
-                disabled={!isUserLoggedIn}
-                className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)]"
               />
             </div>
             <div>
@@ -132,8 +131,7 @@ export function SettingsAITab() {
                 value={selectedProvider.apiKey}
                 onChange={e => updateProvider(selectedProvider.id, { apiKey: e.target.value })}
                 placeholder="sk-..."
-                disabled={!isUserLoggedIn}
-                className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[var(--color-accent)]"
               />
             </div>
           </div>
@@ -143,8 +141,7 @@ export function SettingsAITab() {
               <h4 className="text-sm font-medium text-[var(--color-text-secondary)]">{t.settings.ai.models}</h4>
               <button
                 onClick={() => addModel(selectedProvider.id)}
-                disabled={!isUserLoggedIn}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-[var(--color-accent)] bg-[var(--color-accent-subtle)] rounded-md hover:bg-[var(--color-accent)]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-[var(--color-accent)] bg-[var(--color-accent-subtle)] rounded-md hover:bg-[var(--color-accent)]/20 transition-colors"
               >
                 <PlusIcon size={12} />
                 {t.settings.ai.addModel}
@@ -159,8 +156,7 @@ export function SettingsAITab() {
                   <div key={model.id} className="flex items-center gap-2">
                     <button
                       onClick={() => setSelectedModel(model.id)}
-                      disabled={!isUserLoggedIn}
-                      className={`flex-1 p-2 text-left rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                      className={`flex-1 p-2 text-left rounded-md border transition-all ${
                         settings.selectedModel === model.id
                           ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]'
                           : 'border-[var(--color-border)] bg-[var(--color-bg-primary)] hover:border-[var(--color-border-hover)]'
@@ -172,8 +168,7 @@ export function SettingsAITab() {
                     {selectedProvider.models.length > 1 && (
                       <button
                         onClick={() => removeModel(selectedProvider.id, model.id)}
-                        disabled={!isUserLoggedIn}
-                        className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-colors"
                       >
                         <TrashIcon size={14} />
                       </button>
@@ -186,13 +181,14 @@ export function SettingsAITab() {
         </div>
       )}
 
-      <button
-        onClick={handleSave}
-        disabled={!isUserLoggedIn}
-        className="w-full py-2.5 rounded-lg font-medium text-white bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {t.settings.actions.save}
-      </button>
+      {isUserLoggedIn && (
+        <button
+          onClick={handleSave}
+          className="w-full py-2.5 rounded-lg font-medium text-white bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] transition-colors"
+        >
+          {t.settings.actions.save}
+        </button>
+      )}
     </div>
   );
 }

@@ -17,6 +17,7 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, dispatch] = useReducer(settingsReducer, defaultSettings);
   const [t, setT] = useState<Translations>(getTranslation(defaultSettings.language));
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
 
   useEffect(() => {
     setT(getTranslation(settings.language));
@@ -152,8 +153,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const value: SettingsContextValue = {
     settings,
     t,
-    isUserLoggedIn: false,
-    setIsUserLoggedIn: () => {},
+    isUserLoggedIn,
+    setIsUserLoggedIn,
     updateSettings,
     addProvider,
     removeProvider,

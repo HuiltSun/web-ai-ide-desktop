@@ -42,9 +42,7 @@ export const enTranslations: Translations = {
     tabs: {
       ai: 'AI Providers',
       database: 'Database',
-      editor: 'Editor',
-      appearance: 'Appearance',
-      language: 'Language',
+      general: 'General',
     },
     ai: {
       providers: 'AI Providers',

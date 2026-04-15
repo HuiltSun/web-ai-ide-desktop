@@ -42,9 +42,7 @@ export interface Translations {
     tabs: {
       ai: string;
       database: string;
-      editor: string;
-      appearance: string;
-      language: string;
+      general: string;
     };
     ai: {
       providers: string;
@@ -76,7 +74,7 @@ export interface Translations {
       spaces2: string;
       spaces4: string;
     };
-    appearance?: {
+    appearance: {
       uiStyleTitle: string;
       uiStyleDescription: string;
       iosStyle: string;

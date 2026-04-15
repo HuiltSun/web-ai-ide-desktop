@@ -42,9 +42,7 @@ export const zhTranslations: Translations = {
     tabs: {
       ai: 'AI 提供商',
       database: '数据库',
-      editor: '编辑器',
-      appearance: '外观',
-      language: '语言',
+      general: '通用',
     },
     ai: {
       providers: 'AI 提供商',
