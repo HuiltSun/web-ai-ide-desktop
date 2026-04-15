@@ -69,6 +69,25 @@ export default [
     },
   },
   {
+    files: ['**/*.js'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        require: 'readonly',
+        module: 'readonly',
+        exports: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        Buffer: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+      },
+    },
+  },
+  {
     ignores: ['dist/**', 'dist-electron/**', 'node_modules/**', 'release5/**'],
   },
 ];
