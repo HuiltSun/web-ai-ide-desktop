@@ -20,6 +20,9 @@ export interface SessionStrategy {
   write(sessionId: string, data: string): void;
   resize(sessionId: string, cols: number, rows: number): void;
   kill(sessionId: string): void;
+  list(): string[];
+  get(sessionId: string): PTYProcess | undefined;
+  has(sessionId: string): boolean;
 }
 
 class LocalShellStrategy implements SessionStrategy {
@@ -294,24 +297,24 @@ export class PTYService extends EventEmitter {
 
   list(shellType: ShellType): string[] {
     const strategy = this.strategies.get(shellType);
-    if (strategy && 'list' in strategy) {
-      return (strategy as LocalShellStrategy).list();
+    if (strategy) {
+      return strategy.list();
     }
     return [];
   }
 
   get(sessionId: string, shellType: ShellType): PTYProcess | undefined {
     const strategy = this.strategies.get(shellType);
-    if (strategy && 'get' in strategy) {
-      return (strategy as LocalShellStrategy).get(sessionId);
+    if (strategy) {
+      return strategy.get(sessionId);
     }
     return undefined;
   }
 
   has(sessionId: string, shellType: ShellType): boolean {
     const strategy = this.strategies.get(shellType);
-    if (strategy && 'has' in strategy) {
-      return (strategy as LocalShellStrategy).has(sessionId);
+    if (strategy) {
+      return strategy.has(sessionId);
     }
     return false;
   }
