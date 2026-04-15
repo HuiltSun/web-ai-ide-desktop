@@ -20,9 +20,11 @@ export function Chat({ sessionId }: ChatProps) {
     isLoading,
     isGenerating,
     generatingElapsed,
+    errorMessage,
     sendMessage,
     approveTool,
     rejectTool,
+    clearError,
   } = useChat(sessionId);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -34,6 +36,12 @@ export function Chat({ sessionId }: ChatProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages, streamingContent]);
+
+  useEffect(() => {
+    if (!errorMessage) return;
+    const timer = setTimeout(clearError, 5000);
+    return () => clearTimeout(timer);
+  }, [errorMessage, clearError]);
 
   if (isLoading) {
     return (
@@ -78,7 +86,7 @@ export function Chat({ sessionId }: ChatProps) {
         )}
 
         {messages.map((message, index) => (
-          <ChatMessage key={index} message={message} />
+          <ChatMessage key={message.id || `msg-${index}`} message={message} />
         ))}
 
         {isGenerating && !streamingContent && (
@@ -114,6 +122,25 @@ export function Chat({ sessionId }: ChatProps) {
             onApprove={() => approveTool(pendingToolCall.id)}
             onReject={() => rejectTool(pendingToolCall.id)}
           />
+        )}
+
+        {errorMessage && (
+          <div className="flex justify-center animate-in slide-in-from-bottom-2 duration-200">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-red-500/10 to-rose-500/10 border border-red-500/20 shadow-lg max-w-[90%]">
+              <span className="text-sm text-red-400">
+                {t.chat.errorPrefix}{errorMessage}
+              </span>
+              <button
+                onClick={clearError}
+                aria-label={t.chat.dismiss}
+                className="flex-shrink-0 p-1 rounded-lg text-red-400/60 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
         )}
 
         <div ref={messagesEndRef} />

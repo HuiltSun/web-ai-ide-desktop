@@ -107,9 +107,12 @@ try {
     $containerRunning = docker ps --format '{{.Names}}' | Select-String -Pattern "^$DockerContainer$" -Quiet
 
     if ($containerRunning -eq $true) {
-        Write-Host "  容器 $DockerContainer 已在运行"
+        Write-Host "  重启容器 $DockerContainer..."
+        docker stop $DockerContainer
+        docker start $DockerContainer
     } elseif ($containerExists -eq $true) {
-        Write-Host "  启动已有容器 $DockerContainer..."
+        Write-Host "  重启已有容器 $DockerContainer..."
+        docker stop $DockerContainer
         docker start $DockerContainer
     } else {
         Write-Host "  创建并启动新容器..."
@@ -163,13 +166,13 @@ if (Test-Path "$ServerDir\prisma\schema.prisma") {
 Write-Host ""
 Write-Host "[5] 启动后端服务器 (http://localhost:3001)..."
 # 先关闭可能正在运行的后端进程
-Write-Host "  检查并关闭已存在的后端进程..."
+Write-Host "  检查并重启已存在的后端进程..."
 $existingNodeProcesses = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object {
     $_.CommandLine -like "*web-ai-ide*" -or $_.CommandLine -like "*server*"
 }
 if ($existingNodeProcesses) {
     $existingNodeProcesses | Stop-Process -Force
-    Write-Host "  已关闭现有后端进程"
+    Write-Host "  已关闭现有后端进程，正在重启..."
     Start-Sleep -Seconds 1
 }
 if (-not (Test-Path "$ServerDir\package.json")) {
@@ -216,6 +219,16 @@ Write-Host "[6] 启动 OpenClaude gRPC 服务器 (localhost:50051)..."
 if (-not (Test-Path "$OpenClaudeDir\package.json")) {
     Write-Host "  警告: 未找到 openclaude-temp package.json，跳过 gRPC 服务器启动"
 } else {
+    # 先关闭可能正在运行的 gRPC 服务器进程
+    Write-Host "  检查并重启已存在的 gRPC 服务器进程..."
+    $existingBunProcesses = Get-Process -Name "bun" -ErrorAction SilentlyContinue | Where-Object {
+        $_.CommandLine -like "*openclaude*" -or $_.CommandLine -like "*grpc*"
+    }
+    if ($existingBunProcesses) {
+        $existingBunProcesses | Stop-Process -Force
+        Write-Host "  已关闭现有 gRPC 服务器进程，正在重启..."
+        Start-Sleep -Seconds 1
+    }
     Write-Host "  启动命令: bun run dev:grpc"
     Write-Host "  工作目录: $OpenClaudeDir"
 
@@ -252,6 +265,15 @@ $ElectronDir = "$ProjectRoot\packages\electron"
 if (-not (Test-Path "$ElectronDir\package.json")) {
     Write-Host "  警告: 未找到 electron package.json，跳过 Electron 启动"
 } else {
+    # 先关闭可能正在运行的 Electron 进程
+    Write-Host "  检查并重启已存在的 Electron 进程..."
+    $existingElectronProcesses = Get-Process -Name "electron" -ErrorAction SilentlyContinue
+    if ($existingElectronProcesses) {
+        $existingElectronProcesses | Stop-Process -Force
+        Write-Host "  已关闭现有 Electron 进程，正在重启..."
+        Start-Sleep -Seconds 1
+    }
+
     # 检查 npm 依赖
     if (-not (Test-Path "$ElectronDir\node_modules")) {
         Write-Host "  安装 Electron 依赖..."

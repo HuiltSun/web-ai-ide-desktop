@@ -1,5 +1,16 @@
 import type { Project, ProjectWithSession } from '../types';
-import { relative as pathRelative } from 'path';
+
+function pathRelative(from: string, to: string): string {
+  const fromParts = from.split('/').filter(Boolean);
+  const toParts = to.split('/').filter(Boolean);
+  let i = 0;
+  while (i < fromParts.length && i < toParts.length && fromParts[i] === toParts[i]) {
+    i++;
+  }
+  const upCount = fromParts.length - i;
+  const downParts = toParts.slice(i);
+  return [...Array(upCount).fill('..'), ...downParts].join('/');
+}
 
 export interface FileNode {
   name: string;
@@ -25,7 +36,7 @@ function handleApiError(response: Response, defaultMessage: string): never {
   throw new Error(`${defaultMessage}: ${response.status} ${response.statusText}`);
 }
 
-export interface AuthHeaders extends Record<string, string> {}
+export type AuthHeaders = Record<string, string>;
 
 export const api = {
   setAuthToken(token: string | null) {

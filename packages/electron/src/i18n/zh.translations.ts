@@ -166,6 +166,9 @@ export const zhTranslations: Translations = {
     thinking: '思考中...',
     generating: '正在生成回复...',
     disconnected: '连接已断开，正在重新连接...',
+    you: '你',
+    errorPrefix: '发生错误：',
+    dismiss: '关闭',
   },
   welcome: {
     title: '欢迎使用 Web AI IDE',

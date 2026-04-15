@@ -1,11 +1,13 @@
 import { BotIcon, UserIcon } from './Icons';
 import type { ChatMessage as ChatMessageType } from '../types';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface ChatMessageProps {
   message: ChatMessageType;
 }
 
 export function ChatMessage({ message }: ChatMessageProps) {
+  const { t } = useSettings();
   const isUser = message.role === 'user';
 
   return (
@@ -31,7 +33,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             {message.content}
           </div>
           {isUser && (
-            <div className="mt-1 text-[10px] text-white/50 text-right">You</div>
+            <div className="mt-1 text-[10px] text-white/50 text-right">{t.chat.you}</div>
           )}
         </div>
       </div>

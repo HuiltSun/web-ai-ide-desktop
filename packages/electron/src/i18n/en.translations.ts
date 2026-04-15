@@ -166,6 +166,9 @@ export const enTranslations: Translations = {
     thinking: 'Thinking...',
     generating: 'Generating response...',
     disconnected: 'Disconnected. Reconnecting...',
+    you: 'You',
+    errorPrefix: 'Error: ',
+    dismiss: 'Dismiss',
   },
   welcome: {
     title: 'Welcome to Web AI IDE',

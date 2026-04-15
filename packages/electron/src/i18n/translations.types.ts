@@ -166,6 +166,9 @@ export interface Translations {
     thinking: string;
     generating: string;
     disconnected: string;
+    you: string;
+    errorPrefix: string;
+    dismiss: string;
   };
   welcome: {
     title: string;

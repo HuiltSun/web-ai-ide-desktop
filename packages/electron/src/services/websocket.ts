@@ -40,8 +40,15 @@ class WebSocketService {
   private handlers: Set<MessageHandler> = new Set();
   private openHandlers: Set<OpenHandler> = new Set();
   private sessionId: string | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts: number = 0;
+  private manualClose: boolean = false;
+  private readonly initialReconnectDelay: number = 1000;
+  private readonly maxReconnectDelay: number = 30000;
+  private closeHandlers: Set<OpenHandler> = new Set();
 
   connect(sessionId: string) {
+    this.manualClose = false;
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.disconnect();
     }
@@ -54,6 +61,11 @@ class WebSocketService {
 
     this.ws.onopen = () => {
       console.log('WebSocket connected');
+      this.reconnectAttempts = 0;
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
       this.openHandlers.forEach((h) => h());
     };
 
@@ -69,6 +81,8 @@ class WebSocketService {
 
     this.ws.onclose = () => {
       console.log('WebSocket disconnected');
+      this.closeHandlers.forEach((h) => h());
+      this.scheduleReconnect();
     };
 
     this.ws.onerror = (error) => {
@@ -104,12 +118,42 @@ class WebSocketService {
     return () => this.openHandlers.delete(handler);
   }
 
+  onClose(handler: OpenHandler) {
+    this.closeHandlers.add(handler);
+    return () => this.closeHandlers.delete(handler);
+  }
+
+  private scheduleReconnect() {
+    if (this.manualClose || !this.sessionId) return;
+
+    const delay = Math.min(
+      this.initialReconnectDelay * Math.pow(2, this.reconnectAttempts),
+      this.maxReconnectDelay
+    ) + Math.random() * 500;
+
+    this.reconnectAttempts++;
+    console.log(`WebSocket reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempts})`);
+
+    this.reconnectTimer = setTimeout(() => {
+      if (this.sessionId && !this.manualClose) {
+        this.connect(this.sessionId);
+      }
+    }, delay);
+  }
+
   disconnect() {
+    this.manualClose = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     this.ws?.close();
     this.ws = null;
     this.sessionId = null;
+    this.reconnectAttempts = 0;
     this.handlers.clear();
     this.openHandlers.clear();
+    this.closeHandlers.clear();
   }
 
   get isConnected() {

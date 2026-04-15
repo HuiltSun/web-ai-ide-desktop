@@ -8,7 +8,11 @@ async function fetchMessages(sessionId: string): Promise<ChatMessage[]> {
     headers: api.getAuthHeaders(),
   });
   if (!response.ok) throw new Error('Failed to fetch messages');
-  return response.json();
+  const messages: ChatMessage[] = await response.json();
+  return messages.map((msg, index) => ({
+    ...msg,
+    id: msg.id || `hist-${index}`,
+  }));
 }
 
 export function useChat(sessionId: string | null) {
@@ -18,6 +22,7 @@ export function useChat(sessionId: string | null) {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [generatingElapsed, setGeneratingElapsed] = useState(0);
   const [_waitingForFirstResponse, _setWaitingForFirstResponse] = useState(false); // 保留供后续开发使用
   const streamingContentRef = useRef('');
@@ -51,6 +56,7 @@ export function useChat(sessionId: string | null) {
     streamingContentRef.current = '';
     setStreamingContent('');
     setPendingToolCall(null);
+    setErrorMessage(null);
 
     fetchMessages(sessionId)
       .then((history) => {
@@ -70,6 +76,11 @@ export function useChat(sessionId: string | null) {
     const unsubOpen = wsService.onOpen(() => {
       if (!cancelled && sessionIdRef.current === sessionId) {
         setIsConnected(true);
+      }
+    });
+    const unsubClose = wsService.onClose(() => {
+      if (!cancelled && sessionIdRef.current === sessionId) {
+        setIsConnected(false);
       }
     });
     wsService.connect(sessionId);
@@ -120,16 +131,18 @@ export function useChat(sessionId: string | null) {
           const fromServer = (typeof event.fullText === 'string' ? event.fullText : '').trim();
           const assistantContent = fromChunks || fromServer;
           if (assistantContent) {
-            setMessages((prev) => [...prev, { role: 'assistant', content: assistantContent }]);
+            setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: assistantContent }]);
           }
           streamingContentRef.current = '';
           setStreamingContent('');
           setPendingToolCall(null);
+          setErrorMessage(null);
           setIsGenerating(false);
           break;
         }
         case 'error':
           console.error('Chat error:', event.content);
+          setErrorMessage(event.content || 'Unknown error');
           streamingContentRef.current = '';
           setStreamingContent('');
           setIsGenerating(false);
@@ -140,6 +153,7 @@ export function useChat(sessionId: string | null) {
     return () => {
       cancelled = true;
       unsubOpen();
+      unsubClose();
       unsubscribe();
       wsService.disconnect();
       setIsConnected(false);
@@ -148,8 +162,9 @@ export function useChat(sessionId: string | null) {
   }, [sessionId]);
 
   const sendMessage = useCallback((content: string) => {
-    const userMessage: ChatMessage = { role: 'user', content };
+    const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content };
     setMessages((prev) => [...prev, userMessage]);
+    setErrorMessage(null);
     setIsGenerating(true);
     wsService.sendMessage(content);
   }, []);
@@ -162,6 +177,10 @@ export function useChat(sessionId: string | null) {
     wsService.rejectTool(toolCallId);
   }, []);
 
+  const clearError = useCallback(() => {
+    setErrorMessage(null);
+  }, []);
+
   return {
     messages,
     streamingContent,
@@ -170,8 +189,10 @@ export function useChat(sessionId: string | null) {
     isLoading,
     isGenerating,
     generatingElapsed,
+    errorMessage,
     sendMessage,
     approveTool,
     rejectTool,
+    clearError,
   };
 }
