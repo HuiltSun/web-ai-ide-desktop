@@ -1,57 +1,33 @@
-import { PTYService } from './pty.service.js';
+import { ptyService } from './pty.service.js';
 import type { ShellType, CreateSessionPayload } from '@web-ai-ide/shared';
 
 export class ShellRegistry {
-  private ptyService: PTYService;
-
-  constructor() {
-    this.ptyService = new PTYService();
-  }
-
-  getPTYService(): PTYService {
-    return this.ptyService;
-  }
-
-  async createSession(sessionId: string, payload: CreateSessionPayload): Promise<void> {
-    switch (payload.shellType) {
-      case 'local':
-        this.ptyService.createSession(
-          sessionId,
-          payload.shell,
-          payload.cols || 80,
-          payload.rows || 24
-        );
-        break;
-      case 'ssh':
-      case 'webcontainer':
-        throw new Error(`Shell type ${payload.shellType} not implemented yet`);
-      default:
-        throw new Error(`Unknown shell type: ${payload.shellType}`);
-    }
+  createSession(sessionId: string, payload: CreateSessionPayload): { success: boolean; error?: string } {
+    return ptyService.createSession(
+      sessionId,
+      payload.shellType,
+      payload.cols || 80,
+      payload.rows || 24,
+      process.env as Record<string, string>,
+      payload.shell
+    );
   }
 
   write(sessionId: string, type: ShellType, data: string): void {
-    if (type === 'local') {
-      this.ptyService.write(sessionId, data);
-    }
+    ptyService.write(sessionId, type, data);
   }
 
   resize(sessionId: string, type: ShellType, cols: number, rows: number): void {
-    if (type === 'local') {
-      this.ptyService.resize(sessionId, cols, rows);
-    }
+    ptyService.resize(sessionId, type, cols, rows);
   }
 
   kill(sessionId: string, type: ShellType): void {
-    if (type === 'local') {
-      this.ptyService.kill(sessionId);
-    }
+    ptyService.kill(sessionId, type);
   }
 
   list(type: ShellType): string[] {
-    if (type === 'local') {
-      return this.ptyService.list();
-    }
-    return [];
+    return ptyService.list(type);
   }
 }
+
+export const shellRegistry = new ShellRegistry();

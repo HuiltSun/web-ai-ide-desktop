@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { WebSocket } from 'ws';
-import { ptyManager } from '../services/pty-manager.js';
+import { ptyService } from '../services/pty.service.js';
 
 interface PTYMessage {
   type: 'create' | 'input' | 'resize' | 'kill' | 'list';
@@ -37,7 +37,7 @@ function send(socket: WebSocket, data: object): void {
 export async function ptyRoutes(fastify: FastifyInstance): Promise<void> {
   const clientSessions = new Map<WebSocket, Set<string>>();
 
-  ptyManager.on('output', ({ sessionId, data }: { sessionId: string; data: string }) => {
+  ptyService.on('output', ({ sessionId, data }: { sessionId: string; data: string }) => {
     clientSessions.forEach((sessions, socket) => {
       if (sessions.has(sessionId)) {
         send(socket, { type: 'output', sessionId, payload: { sessionId, data } });
@@ -45,7 +45,7 @@ export async function ptyRoutes(fastify: FastifyInstance): Promise<void> {
     });
   });
 
-  ptyManager.on('exit', ({ sessionId, exitCode }: { sessionId: string; exitCode: number }) => {
+  ptyService.on('exit', ({ sessionId, exitCode }: { sessionId: string; exitCode: number }) => {
     clientSessions.forEach((sessions, socket) => {
       if (sessions.has(sessionId)) {
         send(socket, { type: 'exit', sessionId, payload: { sessionId, exitCode } });
@@ -70,7 +70,7 @@ export async function ptyRoutes(fastify: FastifyInstance): Promise<void> {
     socket.on('close', () => {
       socketSessions.forEach((sessionId) => {
         try {
-          ptyManager.kill(sessionId);
+          ptyService.kill(sessionId, 'openclaude');
         } catch {
         }
       });
@@ -92,7 +92,7 @@ export async function ptyRoutes(fastify: FastifyInstance): Promise<void> {
         const payload = message.payload as CreatePayload;
         const newSessionId = generateSessionId();
 
-        const result = ptyManager.createOpenClaudeSession(
+        const result = ptyService.createOpenClaudeSession(
           newSessionId,
           payload?.cols || 80,
           payload?.rows || 24
@@ -110,7 +110,7 @@ export async function ptyRoutes(fastify: FastifyInstance): Promise<void> {
       case 'input': {
         const payload = message.payload as InputPayload;
         if (payload.sessionId && payload.data) {
-          ptyManager.write(payload.sessionId, payload.data);
+          ptyService.write(payload.sessionId, 'openclaude', payload.data);
         }
         break;
       }
@@ -118,7 +118,7 @@ export async function ptyRoutes(fastify: FastifyInstance): Promise<void> {
       case 'resize': {
         const payload = message.payload as ResizePayload;
         if (payload.sessionId) {
-          ptyManager.resize(payload.sessionId, payload.cols, payload.rows);
+          ptyService.resize(payload.sessionId, 'openclaude', payload.cols, payload.rows);
         }
         break;
       }
@@ -126,7 +126,7 @@ export async function ptyRoutes(fastify: FastifyInstance): Promise<void> {
       case 'kill': {
         const payload = message.payload as { sessionId: string };
         if (payload.sessionId) {
-          ptyManager.kill(payload.sessionId);
+          ptyService.kill(payload.sessionId, 'openclaude');
           socketSessions.delete(payload.sessionId);
           send(socket, { type: 'exit', sessionId: payload.sessionId, payload: { sessionId: payload.sessionId, exitCode: 0 } });
         }
@@ -134,7 +134,7 @@ export async function ptyRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       case 'list': {
-        const sessions = ptyManager.list();
+        const sessions = ptyService.list('openclaude');
         send(socket, { type: 'list', payload: { sessions } });
         break;
       }

@@ -54,7 +54,7 @@ export interface ChatStreamEvent {
   toolCall?: ToolCall;
 }
 
-export type ShellType = 'local' | 'ssh' | 'webcontainer';
+export type ShellType = 'local' | 'ssh' | 'webcontainer' | 'openclaude';
 
 export type TerminalMessageType =
   | 'create'

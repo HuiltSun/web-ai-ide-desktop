@@ -1,16 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { WebSocket } from 'ws';
-import { ShellRegistry } from '../services/shellRegistry.js';
+import { shellRegistry } from '../services/shellRegistry.js';
+import { ptyService } from '../services/pty.service.js';
 import type { TerminalMessage, CreateSessionPayload, InputPayload, ResizePayload } from '@web-ai-ide/shared';
-
-let shellRegistry: ShellRegistry | null = null;
-
-export function getShellRegistry(): ShellRegistry {
-  if (!shellRegistry) {
-    shellRegistry = new ShellRegistry();
-  }
-  return shellRegistry;
-}
 
 function generateSessionId(): string {
   return `term_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -23,9 +15,6 @@ function send(socket: WebSocket, data: object): void {
 }
 
 export async function terminalRoutes(fastify: FastifyInstance): Promise<void> {
-  const registry = getShellRegistry();
-  const ptyService = registry.getPTYService();
-
   const clientSessions = new Map<WebSocket, Set<string>>();
 
   ptyService.on('output', ({ sessionId, data }: { sessionId: string; data: string }) => {
@@ -52,7 +41,7 @@ export async function terminalRoutes(fastify: FastifyInstance): Promise<void> {
     socket.on('message', (data) => {
       try {
         const message: TerminalMessage = JSON.parse(data.toString());
-        handleMessage(socket, message, registry, socketSessions);
+        handleMessage(socket, message, socketSessions);
       } catch (error) {
         send(socket, { type: 'error', payload: { error: 'Invalid message format' } });
       }
@@ -61,7 +50,7 @@ export async function terminalRoutes(fastify: FastifyInstance): Promise<void> {
     socket.on('close', () => {
       socketSessions.forEach((sessionId) => {
         try {
-          registry.kill(sessionId, 'local');
+          shellRegistry.kill(sessionId, 'local');
         } catch {
         }
       });
@@ -73,25 +62,25 @@ export async function terminalRoutes(fastify: FastifyInstance): Promise<void> {
     });
   });
 
-  async function handleMessage(
+  function handleMessage(
     socket: WebSocket,
     message: TerminalMessage,
-    registry: ShellRegistry,
     socketSessions: Set<string>
-  ): Promise<void> {
+  ): void {
     switch (message.type) {
       case 'create': {
         const payload = message.payload as CreateSessionPayload;
         const newSessionId = generateSessionId();
 
-        try {
-          await registry.createSession(newSessionId, payload);
+        const result = shellRegistry.createSession(newSessionId, payload);
+
+        if (result.success) {
           socketSessions.add(newSessionId);
           send(socket, { type: 'created', sessionId: newSessionId, payload: { success: true } });
-        } catch (error) {
+        } else {
           send(socket, {
             type: 'error',
-            payload: { error: error instanceof Error ? error.message : 'Failed to create session' }
+            payload: { error: result.error || 'Failed to create session' }
           });
         }
         break;
@@ -100,7 +89,7 @@ export async function terminalRoutes(fastify: FastifyInstance): Promise<void> {
       case 'input': {
         const payload = message.payload as InputPayload;
         if (payload.sessionId && payload.data) {
-          registry.write(payload.sessionId, 'local', payload.data);
+          shellRegistry.write(payload.sessionId, 'local', payload.data);
         }
         break;
       }
@@ -108,7 +97,7 @@ export async function terminalRoutes(fastify: FastifyInstance): Promise<void> {
       case 'resize': {
         const payload = message.payload as ResizePayload;
         if (payload.sessionId) {
-          registry.resize(payload.sessionId, 'local', payload.cols, payload.rows);
+          shellRegistry.resize(payload.sessionId, 'local', payload.cols, payload.rows);
         }
         break;
       }
@@ -116,7 +105,7 @@ export async function terminalRoutes(fastify: FastifyInstance): Promise<void> {
       case 'kill': {
         const payload = message.payload as { sessionId: string };
         if (payload.sessionId) {
-          registry.kill(payload.sessionId, 'local');
+          shellRegistry.kill(payload.sessionId, 'local');
           socketSessions.delete(payload.sessionId);
           send(socket, { type: 'exit', sessionId: payload.sessionId, payload: { sessionId: payload.sessionId, exitCode: 0 } });
         }
@@ -124,7 +113,7 @@ export async function terminalRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       case 'list': {
-        const sessions = registry.list('local');
+        const sessions = shellRegistry.list('local');
         send(socket, { type: 'list', payload: { sessions } });
         break;
       }
