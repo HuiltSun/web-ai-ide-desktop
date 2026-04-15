@@ -92,7 +92,9 @@ export const zhTranslations: Translations = {
       description: '选择您喜欢的界面语言。',
       selectLanguage: '选择语言',
       english: 'English (英语)',
+      englishSubtitle: 'English',
       chinese: '中文',
+      chineseSubtitle: '中文',
     },
     actions: {
       save: '保存更改',

@@ -214,7 +214,7 @@ export function SettingsGeneralTab() {
             <div className="flex items-center justify-between">
               <div className="text-left">
                 <div className="font-medium text-[var(--color-text-primary)]">{t.settings.language.english}</div>
-                <div className="text-sm text-[var(--color-text-muted)]">English</div>
+                <div className="text-sm text-[var(--color-text-muted)]">{t.settings.language.englishSubtitle}</div>
               </div>
               {settings.language === 'en' && (
                 <span className="text-[var(--color-accent)]">✓</span>
@@ -233,7 +233,7 @@ export function SettingsGeneralTab() {
             <div className="flex items-center justify-between">
               <div className="text-left">
                 <div className="font-medium text-[var(--color-text-primary)]">{t.settings.language.chinese}</div>
-                <div className="text-sm text-[var(--color-text-muted)]">中文</div>
+                <div className="text-sm text-[var(--color-text-muted)]">{t.settings.language.chineseSubtitle}</div>
               </div>
               {settings.language === 'zh' && (
                 <span className="text-[var(--color-accent)]">✓</span>

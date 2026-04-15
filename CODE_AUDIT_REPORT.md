@@ -137,7 +137,7 @@ JWT_SECRET=your-secret-key-change-in-production
 
 ### 2.2 🟠 中等问题
 
-#### 2.2.1 密码验证不一致
+#### 2.2.1 密码验证不一致（已修复）
 
 **文件**：
 - `packages/server/src/routes/auth.ts` (第 16 行)

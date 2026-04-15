@@ -92,7 +92,9 @@ export const enTranslations: Translations = {
       description: 'Choose your preferred language for the interface.',
       selectLanguage: 'Select Language',
       english: 'English',
+      englishSubtitle: 'English',
       chinese: '中文 (Chinese)',
+      chineseSubtitle: 'Chinese',
     },
     actions: {
       save: 'Save Changes',

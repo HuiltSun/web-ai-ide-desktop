@@ -92,7 +92,9 @@ export interface Translations {
       description: string;
       selectLanguage: string;
       english: string;
+      englishSubtitle: string;
       chinese: string;
+      chineseSubtitle: string;
     };
     actions: {
       save: string;
