@@ -41,7 +41,6 @@ export const zhTranslations: Translations = {
     subtitle: '配置您的 AI IDE',
     tabs: {
       ai: 'AI 提供商',
-      database: '数据库',
       general: '通用',
     },
     ai: {
@@ -58,14 +57,6 @@ export const zhTranslations: Translations = {
       selectProvider: '选择一个提供商进行配置',
       loginRequiredTitle: '需要登录',
       loginRequiredMessage: 'AI 设置需要登录后才能配置。请先登录以管理您的 AI 提供商和模型设置。',
-    },
-    database: {
-      title: '数据库连接',
-      connected: '已连接',
-      host: '主机：localhost:5432',
-      database: '数据库：webaiide',
-      status: '状态：就绪',
-      loginRequiredMessage: '数据库设置需要登录后才能查看和配置。',
     },
     editor: {
       title: '编辑器设置',

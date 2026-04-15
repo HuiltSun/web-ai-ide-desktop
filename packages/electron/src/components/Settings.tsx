@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
-import { CloseIcon, SparklesIcon, DatabaseIcon, PaletteIcon } from './Icons';
+import { CloseIcon, SparklesIcon, PaletteIcon } from './Icons';
 import { SettingsAITab } from './settings/SettingsAITab';
-import { SettingsDatabaseTab } from './settings/SettingsDatabaseTab';
 import { SettingsGeneralTab } from './settings/SettingsGeneralTab';
 
-type Tab = 'ai' | 'database' | 'general';
+type Tab = 'ai' | 'general';
 
 interface SettingsProps {
   isOpen: boolean;
@@ -19,7 +18,6 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
 
   const tabs: { id: Tab; icon: React.ReactNode }[] = [
     { id: 'ai', icon: <SparklesIcon size={16} /> },
-    { id: 'database', icon: <DatabaseIcon size={16} /> },
     { id: 'general', icon: <PaletteIcon size={16} /> },
   ];
 
@@ -65,7 +63,6 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
 
         <div className="p-6 overflow-y-auto max-h-[calc(85vh-140px)]">
           {activeTab === 'ai' && <SettingsAITab />}
-          {activeTab === 'database' && <SettingsDatabaseTab />}
           {activeTab === 'general' && <SettingsGeneralTab />}
         </div>
       </div>

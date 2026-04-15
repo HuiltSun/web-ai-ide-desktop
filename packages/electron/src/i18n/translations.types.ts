@@ -41,7 +41,6 @@ export interface Translations {
     subtitle: string;
     tabs: {
       ai: string;
-      database: string;
       general: string;
     };
     ai: {
@@ -57,14 +56,6 @@ export interface Translations {
       noModels: string;
       selectProvider: string;
       loginRequiredTitle: string;
-      loginRequiredMessage: string;
-    };
-    database: {
-      title: string;
-      connected: string;
-      host: string;
-      database: string;
-      status: string;
       loginRequiredMessage: string;
     };
     editor: {

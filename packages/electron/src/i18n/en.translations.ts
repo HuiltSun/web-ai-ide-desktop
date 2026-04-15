@@ -41,7 +41,6 @@ export const enTranslations: Translations = {
     subtitle: 'Configure your AI IDE',
     tabs: {
       ai: 'AI Providers',
-      database: 'Database',
       general: 'General',
     },
     ai: {
@@ -58,14 +57,6 @@ export const enTranslations: Translations = {
       selectProvider: 'Select a provider to configure',
       loginRequiredTitle: 'Login Required',
       loginRequiredMessage: 'AI settings require login to configure. Please sign in to manage your AI providers and model settings.',
-    },
-    database: {
-      title: 'Database Connection',
-      connected: 'Connected',
-      host: 'Host: localhost:5432',
-      database: 'Database: webaiide',
-      status: 'Status: Ready',
-      loginRequiredMessage: 'Database settings require login to view and configure.',
     },
     editor: {
       title: 'Editor Settings',
