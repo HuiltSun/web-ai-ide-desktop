@@ -15,7 +15,7 @@ export async function tenantPlugin(fastify: FastifyInstance): Promise<void> {
   fastify.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
     const apiKey = request.headers['x-api-key'] as string | undefined;
 
-    if (!apiKey) {
+    if (!apiKey || !apiKey.startsWith('sk_') || apiKey.length !== 40) {
       return;
     }
 
