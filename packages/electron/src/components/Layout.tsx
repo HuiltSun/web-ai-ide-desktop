@@ -1,6 +1,7 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useCallback } from 'react';
 import { MenuBar } from './MenuBar';
 import { useSettings } from '../contexts/SettingsContext';
+import { ResizeHandle } from './ResizeHandle';
 
 interface MenuItem {
   id?: string;
@@ -25,6 +26,25 @@ interface LayoutProps {
 
 export function Layout({ header, sidebar, children, onMenuClick, terminal }: LayoutProps) {
   const { t } = useSettings();
+
+  const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [terminalHeight, setTerminalHeight] = useState(320);
+
+  const handleSidebarResize = useCallback((delta: number) => {
+    setSidebarWidth((prev) => {
+      const newWidth = prev + delta;
+      if (newWidth < 120 || newWidth > 400) return prev;
+      return newWidth;
+    });
+  }, []);
+
+  const handleTerminalResize = useCallback((delta: number) => {
+    setTerminalHeight((prev) => {
+      const newHeight = prev - delta;
+      if (newHeight < 100 || newHeight > 600) return prev;
+      return newHeight;
+    });
+  }, []);
 
   const menus: Menu[] = [
     {
@@ -142,9 +162,14 @@ export function Layout({ header, sidebar, children, onMenuClick, terminal }: Lay
       </header>
 
       <div className="flex-1 flex overflow-hidden relative z-10">
-        <aside className="w-64 glass-panel border-r border-[var(--color-border)] overflow-y-auto">
+        <aside style={{ width: sidebarWidth }} className="glass-panel border-r border-[var(--color-border)] overflow-y-auto flex-shrink-0">
           {sidebar}
         </aside>
+
+        <ResizeHandle
+          direction="horizontal"
+          onResize={handleSidebarResize}
+        />
 
         <main className="flex-1 overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10 pointer-events-none" />
@@ -153,9 +178,15 @@ export function Layout({ header, sidebar, children, onMenuClick, terminal }: Lay
               {children}
             </div>
             {terminal && (
-              <div className="h-80 border-t border-[var(--color-border)]">
-                {terminal}
-              </div>
+              <>
+                <ResizeHandle
+                  direction="vertical"
+                  onResize={handleTerminalResize}
+                />
+                <div style={{ height: terminalHeight }} className="border-t border-[var(--color-border)] flex-shrink-0">
+                  {terminal}
+                </div>
+              </>
             )}
           </div>
         </main>
