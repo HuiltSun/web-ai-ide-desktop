@@ -26,33 +26,40 @@ export function usePTY(options: UsePTYOptions = {}) {
     setIsConnecting(true);
     setError(null);
 
-    const client = new PTYClient({
-      onConnect: () => {
-        setIsConnected(true);
-        setIsConnecting(false);
-      },
-      onOutput: (data) => {
-        onOutputRef.current?.(data);
-      },
-      onExit: (code) => {
-        setExitCode(code);
-        setIsConnected(false);
-      },
-      onError: (err) => {
-        setError(err);
-        setIsConnecting(false);
-        setIsConnected(false);
-      },
-    });
+    try {
+      const client = new PTYClient({
+        onConnect: () => {
+          setIsConnected(true);
+          setIsConnecting(false);
+        },
+        onOutput: (data) => {
+          onOutputRef.current?.(data);
+        },
+        onExit: (code) => {
+          setExitCode(code);
+          setIsConnected(false);
+        },
+        onError: (err) => {
+          setError(err);
+          setIsConnecting(false);
+          setIsConnected(false);
+        },
+      });
 
-    clientRef.current = client;
+      clientRef.current = client;
 
-    client.connect({
-      cols: optionsRef.current.cols,
-      rows: optionsRef.current.rows,
-      shellType: optionsRef.current.shellType,
-      shell: optionsRef.current.shell,
-    });
+      client.connect({
+        cols: optionsRef.current.cols,
+        rows: optionsRef.current.rows,
+        shellType: optionsRef.current.shellType,
+        shell: optionsRef.current.shell,
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to connect to terminal';
+      setError(errorMessage);
+      setIsConnecting(false);
+      setIsConnected(false);
+    }
   }, []);
 
   const disconnect = useCallback(() => {
