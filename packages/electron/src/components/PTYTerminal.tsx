@@ -16,14 +16,14 @@ export function PTYTerminal({ onClose }: PTYTerminalProps) {
   const terminalInstanceRef = useRef<Terminal | null>(null);
   const isInitializedRef = useRef(false);
 
-  const { isConnected, isConnecting, error, connect, write, resize, onOutput } = usePTY({
+  const { isConnected, isConnecting, error, connect, create, write, resize, onOutput } = usePTY({
     cols: 80,
     rows: 24,
   });
 
   const handleData = useCallback(
     (data: string) => {
-      write(data);
+      write('default', data);
     },
     [write]
   );
@@ -86,12 +86,14 @@ export function PTYTerminal({ onClose }: PTYTerminalProps) {
 
     terminal.onResize(handleTerminalResize);
 
-    const unsubscribe = onOutput((data) => {
+    const unsubscribe = onOutput((_id, data) => {
       terminal.write(data);
     });
 
     terminal.onData(handleData);
 
+    // 创建 PTY 会话
+    create('default', 80, 24);
     connect();
 
     return () => {
@@ -102,7 +104,7 @@ export function PTYTerminal({ onClose }: PTYTerminalProps) {
       }
       isInitializedRef.current = false;
     };
-  }, [connect, handleData, onOutput, resize]);
+  }, [connect, create, handleData, onOutput, resize]);
 
   return (
     <div className="h-full flex flex-col bg-[var(--color-bg-primary)] border-t border-[var(--color-border)]">
