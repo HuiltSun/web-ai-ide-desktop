@@ -28,7 +28,7 @@ export async function terminalRoutes(fastify: FastifyInstance): Promise<void> {
   ptyService.on('exit', ({ sessionId, exitCode }: { sessionId: string; exitCode: number }) => {
     clientSessions.forEach((sessions, socket) => {
       if (sessions.has(sessionId)) {
-        send(socket, { type: 'exit', sessionId, payload: { sessionId, exitCode } });
+        send(socket, { type: 'exit', sessionId, payload: { sessionId, code: exitCode } });
         sessions.delete(sessionId);
       }
     });

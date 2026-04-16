@@ -8,11 +8,14 @@ A browser-based + Electron desktop AI-assisted coding environment with multi-AI 
 
 | Module | Technology | Version |
 |--------|------------|---------|
-| Frontend | React, TypeScript, Vite, TailwindCSS | React 18, TypeScript 5.x |
-| Desktop | Electron | 30.x |
-| Code Editor | Monaco Editor | Latest stable |
-| Backend | Fastify, Node.js | Fastify 4 |
-| Database | PostgreSQL, Prisma ORM | PostgreSQL 16 |
+| Frontend | React, TypeScript, Vite, TailwindCSS | React 18.3, TypeScript 5.4, Vite 5.4, TailwindCSS 3.4 |
+| Desktop | Electron | 30.5 |
+| Code Editor | Monaco Editor | @monaco-editor/react 4.6 |
+| Terminal | xterm.js | @xterm/xterm 5.5 |
+| Backend | Fastify, Node.js | Fastify 4.28 |
+| Database | PostgreSQL, Prisma ORM | Prisma 5.14 |
+| Message Queue | RabbitMQ, amqplib | amqplib 0.10 |
+| Cache | Redis, ioredis | ioredis 5.4 |
 | Container | Docker, Docker Compose | - |
 
 ---
@@ -44,6 +47,11 @@ web-ai-ide/
 │   │   │   │   ├── MenuBar.tsx           # Menu bar
 │   │   │   │   ├── Sidebar.tsx           # Sidebar
 │   │   │   │   ├── PTYTerminal.tsx        # WebSocket PTY terminal
+│   │   │   │   ├── TerminalPanel.tsx      # Terminal panel with multi-tab support
+│   │   │   │   ├── terminal/              # Terminal sub-components
+│   │   │   │   │   ├── TerminalContent.tsx  # Terminal content area, manages PTY connection
+│   │   │   │   │   └── TerminalRenderer.tsx # xterm.js renderer, manages Terminal instance
+│   │   │   │   ├── ResizeHandle.tsx      # Drag resize handle (horizontal/vertical)
 │   │   │   │   ├── LoginModal.tsx         # Login modal
 │   │   │   │   ├── Settings.tsx           # Settings panel
 │   │   │   │   ├── WelcomeScreen.tsx     # Welcome screen
@@ -53,11 +61,8 @@ web-ai-ide/
 │   │   │   │   ├── ErrorBoundary.tsx      # Error boundary
 │   │   │   │   ├── Icons.tsx              # SVG icons
 │   │   │   │   └── settings/              # Settings sub-panels
-│   │   │   │       ├── SettingsAITab.tsx         # AI settings
-│   │   │   │       ├── SettingsAppearanceTab.tsx # Appearance settings
-│   │   │   │       ├── SettingsDatabaseTab.tsx  # Database settings
-│   │   │   │       ├── SettingsEditorTab.tsx    # Editor settings
-│   │   │   │       ├── SettingsLanguageTab.tsx  # Language settings
+│   │   │   │       ├── SettingsAITab.tsx         # AI settings (provider, API key, model)
+│   │   │   │       ├── SettingsGeneralTab.tsx    # General settings (editor font/tab, UI style, color mode, language)
 │   │   │   │       └── index.ts
 │   │   │   ├── contexts/                  # React Context
 │   │   │   │   ├── SettingsContext.tsx    # Settings context (Reducer pattern)
@@ -73,10 +78,14 @@ web-ai-ide/
 │   │   │   ├── services/                  # Client services
 │   │   │   │   ├── api.ts                # REST API client
 │   │   │   │   ├── websocket.ts          # WebSocket client
-│   │   │   │   └── pty-client.ts         # PTY WebSocket client
+│   │   │   │   └── pty/                  # PTY module (4 files)
+│   │   │   │       ├── index.ts              # PTY module entry
+│   │   │   │       ├── message-parser.ts     # PTY message protocol parser
+│   │   │   │       ├── pty-connection.ts     # PTY connection manager
+│   │   │   │       └── websocket-client.ts   # WebSocket client with auto-reconnect
 │   │   │   ├── config/                    # Config files
 │   │   │   │   ├── providerPresets.ts    # AI provider presets
-│   │   │   │   └── provider-presets.json
+│   │   │   │   └── provider-presets.json # Provider preset data
 │   │   │   └── i18n/                     # Internationalization
 │   │   │       ├── translations.ts        # Translation entry
 │   │   │       ├── translations.types.ts  # Translation type definitions
@@ -84,7 +93,8 @@ web-ai-ide/
 │   │   │       ├── en.translations.ts     # English translations
 │   │   │       └── zh.translations.ts      # Chinese translations
 │   │   ├── public/                        # Static assets
-│   │   │   ├── favicon.svg               # Favicon
+│   │   │   ├── favicon.ico               # Favicon (ICO format)
+│   │   │   ├── favicon.svg               # Favicon (SVG format)
 │   │   │   └── sw.js                     # Service Worker
 │   │   ├── scripts/                       # Build scripts
 │   │   ├── index.html                     # HTML template
@@ -101,6 +111,7 @@ web-ai-ide/
 │   │       └── types.ts                  # Type definitions
 │   ├── core/                            # AI core logic
 │   │   └── src/
+│   │       ├── index.ts                 # Module entry, exports AIGateway, providers, tools
 │   │       ├── ai/
 │   │       │   ├── gateway.ts             # AI gateway (unified interface)
 │   │       │   └── providers/             # AI Provider implementations
@@ -120,18 +131,59 @@ web-ai-ide/
 │   ├── openclaude-temp/                 # AI Agent gRPC service (external dependency)
 │   │   ├── src/                        # Service source code
 │   │   ├── python/                     # Python Provider
-│   │   ├── scripts/                    # Startup scripts
-│   │   └── proto/                      # gRPC protocol definition
+│   │   └── scripts/                    # Startup scripts
 │   ├── server/                         # Fastify backend API
+│   │   ├── prisma/                     # Database schema and migrations
+│   │   │   ├── schema.prisma           # Prisma schema
+│   │   │   └── migrations/             # Database migrations
+│   │   ├── scripts/                    # Admin scripts
+│   │   │   ├── add-admin.ts            # Create admin user
+│   │   │   └── agent-grpc-sidecar.ts   # gRPC sidecar launcher
 │   │   └── src/
-│   │       └── ...                    # Backend routes, Services, Prisma Schema
+│   │       ├── index.ts                # Server entry
+│   │       ├── routes/                 # API routes
+│   │       │   ├── auth.ts             # Authentication
+│   │       │   ├── projects.ts         # Projects CRUD
+│   │       │   ├── sessions.ts         # Sessions CRUD
+│   │       │   ├── chat.ts             # Chat WebSocket
+│   │       │   ├── files.ts            # File operations
+│   │       │   ├── terminal.ts         # Terminal WebSocket
+│   │       │   └── pty.ts              # PTY WebSocket
+│   │       ├── services/               # Business logic
+│   │       │   ├── auth.service.ts
+│   │       │   ├── project.service.ts
+│   │       │   ├── session.service.ts
+│   │       │   ├── session-cache.service.ts
+│   │       │   ├── tenant.service.ts
+│   │       │   ├── pty.service.ts
+│   │       │   ├── queue.service.ts
+│   │       │   ├── tool-whitelist.ts
+│   │       │   ├── shellRegistry.ts
+│   │       │   ├── agent-session-manager.ts
+│   │       │   ├── agent-process-manager.ts
+│   │       │   └── bun-grpc-chat-bridge.ts
+│   │       ├── middleware/             # Middleware
+│   │       │   └── tenant.ts           # Tenant middleware
+│   │       ├── plugins/                # Fastify plugins
+│   │       │   └── tenant.plugin.ts    # Tenant plugin
+│   │       ├── utils/                  # Utilities
+│   │       │   ├── encryption.ts       # AES-256-GCM encryption
+│   │       │   ├── prisma.ts           # Prisma client
+│   │       │   ├── redis.ts            # Redis client
+│   │       │   └── rabbitmq.ts         # RabbitMQ client
+│   │       └── types/                  # Type definitions
+│   │           └── grpc.ts             # gRPC type definitions
+│   ├── worker/                         # RabbitMQ worker process
+│   │   └── src/
+│   │       └── index.ts                # Worker entry, consumes AI task queue
 │   └── shared/                         # Shared type definitions
-│       └── ...
+│       └── src/
+│           ├── index.ts                # Shared exports
+│           └── types.ts                # Shared types
 ├── docs/                               # Design documents
 │   ├── frontend_zh.md                  # Frontend design doc
-│   ├── websocket-protocol.md            # WebSocket protocol
+│   ├── websocket-protocol.md           # WebSocket protocol
 │   └── ...
-├── release/                            # Build output
 ├── docker-compose.yml                  # Docker orchestration
 ├── debug.ps1                          # One-click startup script
 ├── Dockerfile                         # Docker image
@@ -243,8 +295,9 @@ Supports OpenAI GPT, Anthropic Claude, Qwen, and more.
 
 ```typescript
 // Configure API Key in Settings panel
-// Or via environment variable
-env OPENAI_API_KEY=sk-...
+// Or via environment variable:
+// bash: export OPENAI_API_KEY=sk-...
+// PowerShell: $env:OPENAI_API_KEY="sk-..."
 ```
 
 ---
@@ -253,11 +306,40 @@ env OPENAI_API_KEY=sk-...
 
 ### REST Endpoints
 
+#### POST /api/auth/register
+
+Register a new user.
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| email | string | Yes | Valid email address |
+| password | string | Yes | Min 8 characters |
+| name | string | No | Display name |
+
+Returns: `{ user }` - Created user object
+
+#### POST /api/auth/login
+
+Login and get JWT token.
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| email | string | Yes | Email address |
+| password | string | Yes | Password |
+
+Returns: `{ user, token }` - User object and JWT token
+
+#### GET /api/auth/me
+
+Get current user info (requires authentication).
+
+Returns: `{ user }` - Current user object
+
 #### GET /api/projects
 
 List all user projects.
 
-Returns：`Project[]` — Array of projects
+Returns: `Project[]` — Array of projects
 
 **Example**
 ```typescript
@@ -277,7 +359,7 @@ Create a new project.
 | path | string | Yes | Project path |
 | userId | string | Yes | User ID |
 
-Returns：`Project` — Created project object
+Returns: `Project` — Created project object
 
 **Example**
 ```typescript
@@ -297,7 +379,7 @@ Delete a project.
 |-------|------|----------|-------------|
 | id | string | Yes | Project ID |
 
-Returns：`{ success: boolean }`
+Returns: `{ success: boolean }`
 
 #### GET /api/sessions/:id
 
@@ -307,7 +389,7 @@ Get session details.
 |-------|------|----------|-------------|
 | id | string | Yes | Session ID |
 
-Returns：`Session` — Session object
+Returns: `Session` — Session object
 
 #### POST /api/sessions
 
@@ -317,7 +399,18 @@ Create a new session.
 |-------|------|----------|-------------|
 | projectId | string | Yes | Associated project ID |
 
-Returns：`Session` — Created session object
+Returns: `Session` — Created session object
+
+#### GET /api/files/:projectId/*
+
+Read file contents from a project (requires authentication).
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| projectId | string | Yes | Project ID (path param) |
+| * | string | Yes | File path within project |
+
+Returns: File content or metadata
 
 ### WebSocket Events
 
@@ -381,7 +474,7 @@ Reject tool call.
 
 Built-in terminal emulator, connecting to PTY service via WebSocket.
 
-**Endpoint**：`ws://localhost:3001/ws/pty`
+**Endpoint**: `ws://localhost:3001/ws/pty`
 
 #### Create Session (Client → Server)
 
@@ -437,6 +530,28 @@ ws.send(JSON.stringify({
 | type | string | Fixed `"kill"` |
 | payload.sessionId | string | Session ID |
 
+#### List Sessions (Client → Server)
+
+| Param | Type | Description |
+|-------|------|-------------|
+| type | string | Fixed `"list"` |
+
+#### Session Exit (Server → Client)
+
+| Param | Type | Description |
+|-------|------|-------------|
+| type | string | Fixed `"exit"` |
+| payload.sessionId | string | Session ID |
+| payload.exitCode | number | Exit code |
+
+#### Error (Server → Client)
+
+| Param | Type | Description |
+|-------|------|-------------|
+| type | string | Fixed `"error"` |
+| payload.sessionId | string | Session ID |
+| payload.message | string | Error message |
+
 ### gRPC Interface
 
 ```protobuf
@@ -470,6 +585,12 @@ Sensitive fields are encrypted with AES-256-GCM:
 | path | Project |
 | cwd | Session |
 | content, systemPayload | Message |
+
+---
+
+## Worker
+
+The `packages/worker` package is a RabbitMQ consumer process that handles AI task processing asynchronously. It listens on the `ai.tasks` queue, processes incoming AI requests, and publishes results to the `ai.results` queue. This decouples AI inference from the main server, enabling horizontal scaling of AI processing capacity.
 
 ---
 

@@ -21,8 +21,6 @@ interface TerminalContentProps {
   onConnectionChange: (connected: boolean) => void;
 }
 
-const hasConnectedMap = new WeakMap<Terminal, boolean>();
-
 export function TerminalContent({
   tab,
   isActive,
@@ -32,17 +30,21 @@ export function TerminalContent({
 }: TerminalContentProps) {
   const { t } = useSettings();
   const onConnectionChangeRef = useRef(onConnectionChange);
+  const hasConnectedRef = useRef(false);
+  const hasCreatedRef = useRef(false);
+  const isWindows = navigator.userAgent.includes('Windows') || navigator.platform.startsWith('Win');
+  const shell = isWindows ? 'powershell.exe' : 'bash';
   
-  const { isConnected, isConnecting, error, connect, create, write, resize, onOutput } = usePTY({
+  const { isConnected, isConnecting, error, connect, create, write, resize, onOutput, onCreated } = usePTY({
     cols: 80,
     rows: 24,
   });
 
   const handleData = useCallback(
     (data: string) => {
-      write(tab.id, data);
+      write(data);
     },
-    [write, tab.id]
+    [write]
   );
 
   const handleResize = useCallback(
@@ -64,18 +66,28 @@ export function TerminalContent({
   }, [onConnectionChange]);
 
   useEffect(() => {
-    onConnectionChangeRef.current(isConnected);
+    onConnectionChangeRef.current?.(isConnected);
   }, [isConnected]);
 
   useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn || hasConnectedRef.current) return;
 
-    if (!hasConnectedMap.has(tab.terminal)) {
-      hasConnectedMap.set(tab.terminal, true);
-      create(tab.id, 80, 24);
-      connect();
+    hasConnectedRef.current = true;
+    connect(tab.id);
+  }, [tab.id, isLoggedIn]);
+
+  useEffect(() => {
+    if (isConnected && !hasCreatedRef.current) {
+      hasCreatedRef.current = true;
+      create(tab.id, 80, 24, { shellType: 'local', shell });
     }
-  }, [tab.id, tab.terminal, isLoggedIn, connect, create]);
+  }, [isConnected, tab.id]);
+
+  useEffect(() => {
+    onCreated((sessionId) => {
+      console.log(`Session created: ${sessionId}`);
+    });
+  }, [onCreated]);
 
   return (
     <div className="h-full terminal-xterm relative">
@@ -120,7 +132,7 @@ export function TerminalContent({
           <div className="text-center">
             <p className="text-[var(--color-error)] text-sm mb-2">{error}</p>
             <button
-              onClick={connect}
+              onClick={() => connect(tab.id)}
               className="px-3 py-1.5 bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] rounded text-sm text-[var(--color-text-secondary)] transition-colors"
             >
               {t.terminal.retry}

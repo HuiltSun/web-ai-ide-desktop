@@ -12,6 +12,7 @@ export enum MessageType {
   LIST = 'list',
   EXIT = 'exit',
   ERROR = 'error',
+  CREATED = 'created',
 }
 
 export interface BaseMessage {
@@ -20,52 +21,87 @@ export interface BaseMessage {
 
 export interface CreateMessage extends BaseMessage {
   type: MessageType.CREATE;
-  id: string;
-  cols: number;
-  rows: number;
-  cwd?: string;
-  command?: string;
-  args?: string[];
-  env?: Record<string, string>;
+  sessionId: string;
+  payload: {
+    shellType?: 'local' | 'openclaude';
+    shell?: string;
+    cols: number;
+    rows: number;
+    cwd?: string;
+    command?: string;
+    args?: string[];
+    env?: Record<string, string>;
+  };
 }
 
 export interface InputMessage extends BaseMessage {
   type: MessageType.INPUT;
-  id: string;
-  data: string;
+  sessionId: string;
+  payload: {
+    sessionId: string;
+    data: string;
+  };
 }
 
 export interface OutputMessage extends BaseMessage {
   type: MessageType.OUTPUT;
-  id: string;
-  data: string;
+  sessionId: string;
+  payload: {
+    sessionId: string;
+    data: string;
+  };
 }
 
 export interface ExitMessage extends BaseMessage {
   type: MessageType.EXIT;
-  id: string;
-  code?: number;
-  signal?: number;
+  sessionId: string;
+  payload: {
+    sessionId: string;
+    code?: number;
+    signal?: number;
+  };
 }
 
 export interface ListMessage extends BaseMessage {
   type: MessageType.LIST;
+  payload?: {
+    sessions?: string[];
+  };
 }
 
 export interface ResizeMessage extends BaseMessage {
   type: MessageType.RESIZE;
-  cols: number;
-  rows: number;
+  sessionId: string;
+  payload: {
+    sessionId: string;
+    cols: number;
+    rows: number;
+  };
 }
 
 export interface KillMessage extends BaseMessage {
   type: MessageType.KILL;
-  signal?: number;
+  sessionId?: string;
+  payload?: {
+    sessionId?: string;
+    signal?: number;
+  };
 }
 
 export interface ErrorMessage extends BaseMessage {
   type: MessageType.ERROR;
-  message: string;
+  message?: string;
+  payload?: {
+    error?: string;
+  };
+}
+
+export interface CreatedMessage extends BaseMessage {
+  type: MessageType.CREATED;
+  sessionId: string;
+  payload?: {
+    success?: boolean;
+  };
 }
 
 export type PTYMessage =
@@ -76,7 +112,8 @@ export type PTYMessage =
   | KillMessage
   | ListMessage
   | ExitMessage
-  | ErrorMessage;
+  | ErrorMessage
+  | CreatedMessage;
 
 export function parseMessage(raw: string): PTYMessage {
   try {
@@ -99,33 +136,74 @@ export function createCreateMessage(
   id: string,
   cols: number,
   rows: number,
-  options?: { cwd?: string; command?: string; args?: string[]; env?: Record<string, string> }
-): CreateMessage {
-  return { type: MessageType.CREATE, id, cols, rows, ...options };
+  options?: { shellType?: 'local' | 'openclaude'; shell?: string; cwd?: string; command?: string; args?: string[]; env?: Record<string, string> }
+): { type: MessageType.CREATE; sessionId: string; payload: { shellType?: 'local' | 'openclaude'; shell?: string; cols: number; rows: number; cwd?: string; command?: string; args?: string[]; env?: Record<string, string> } } {
+  return {
+    type: MessageType.CREATE,
+    sessionId: id,
+    payload: {
+      shellType: options?.shellType || 'local',
+      shell: options?.shell,
+      cols,
+      rows,
+      cwd: options?.cwd,
+      command: options?.command,
+      args: options?.args,
+      env: options?.env,
+    },
+  };
 }
 
-export function createInputMessage(id: string, data: string): InputMessage {
-  return { type: MessageType.INPUT, id, data };
+export function createInputMessage(sessionId: string, data: string): InputMessage {
+  return { 
+    type: MessageType.INPUT, 
+    sessionId,
+    payload: { sessionId, data }
+  };
 }
 
-export function createOutputMessage(id: string, data: string): OutputMessage {
-  return { type: MessageType.OUTPUT, id, data };
+export function createOutputMessage(sessionId: string, data: string): OutputMessage {
+  return { 
+    type: MessageType.OUTPUT, 
+    sessionId,
+    payload: { sessionId, data }
+  };
 }
 
-export function createResizeMessage(cols: number, rows: number): ResizeMessage {
-  return { type: MessageType.RESIZE, cols, rows };
+export function createResizeMessage(sessionId: string, cols: number, rows: number): ResizeMessage {
+  return { 
+    type: MessageType.RESIZE, 
+    sessionId,
+    payload: { sessionId, cols, rows }
+  };
 }
 
-export function createKillMessage(signal?: number): KillMessage {
-  return { type: MessageType.KILL, signal };
+export function createKillMessage(sessionId: string, signal?: number): KillMessage {
+  return { 
+    type: MessageType.KILL, 
+    sessionId,
+    payload: { sessionId, signal }
+  };
 }
 
 export function createListMessage(): ListMessage {
   return { type: MessageType.LIST };
 }
 
-export function createExitMessage(id: string, code?: number, signal?: number): ExitMessage {
-  return { type: MessageType.EXIT, id, code, signal };
+export function createExitMessage(sessionId: string, code?: number, signal?: number): ExitMessage {
+  return { 
+    type: MessageType.EXIT, 
+    sessionId,
+    payload: { sessionId, code, signal }
+  };
+}
+
+export function createCreatedMessage(sessionId: string, success?: boolean): CreatedMessage {
+  return {
+    type: MessageType.CREATED,
+    sessionId,
+    payload: { success }
+  };
 }
 
 export function isCreateMessage(msg: PTYMessage): msg is CreateMessage {
@@ -168,21 +246,23 @@ function isValidMessage(msg: unknown): msg is PTYMessage {
   
   switch (m.type) {
     case MessageType.CREATE:
-      return typeof m.id === 'string' && typeof m.cols === 'number' && typeof m.rows === 'number';
+      return typeof m.sessionId === 'string' && typeof m.payload === 'object' && m.payload !== null && typeof (m.payload as Record<string, unknown>).cols === 'number' && typeof (m.payload as Record<string, unknown>).rows === 'number';
     case MessageType.INPUT:
-      return typeof m.id === 'string' && typeof m.data === 'string';
+      return typeof m.sessionId === 'string' && typeof m.payload === 'object' && m.payload !== null && typeof (m.payload as Record<string, unknown>).sessionId === 'string' && typeof (m.payload as Record<string, unknown>).data === 'string';
     case MessageType.OUTPUT:
-      return typeof m.id === 'string' && typeof m.data === 'string';
+      return typeof m.sessionId === 'string' && typeof m.payload === 'object' && m.payload !== null && typeof (m.payload as Record<string, unknown>).data === 'string';
     case MessageType.RESIZE:
-      return typeof m.cols === 'number' && typeof m.rows === 'number';
+      return typeof m.sessionId === 'string' && typeof m.payload === 'object' && m.payload !== null && typeof (m.payload as Record<string, unknown>).cols === 'number' && typeof (m.payload as Record<string, unknown>).rows === 'number';
     case MessageType.KILL:
-      return m.signal === undefined || typeof m.signal === 'number';
+      return typeof m.sessionId === 'string';
     case MessageType.LIST:
       return true;
     case MessageType.EXIT:
-      return typeof m.id === 'string' && (m.code === undefined || typeof m.code === 'number') && (m.signal === undefined || typeof m.signal === 'number');
+      return typeof m.sessionId === 'string' && typeof m.payload === 'object' && m.payload !== null;
     case MessageType.ERROR:
-      return typeof m.message === 'string';
+      return typeof m.message === 'string' || (typeof m.payload === 'object' && m.payload !== null && typeof (m.payload as Record<string, unknown>).error === 'string');
+    case MessageType.CREATED:
+      return typeof m.sessionId === 'string';
     default:
       return false;
   }

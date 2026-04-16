@@ -24,17 +24,23 @@ export interface PTYConnectionOptions {
   onError?: (error: string) => void;
   onExit?: (id: string, code?: number, signal?: number) => void;
   onStateChange?: (state: PTYConnectionState) => void;
+  onCreated?: (sessionId: string) => void;
 }
 
 export class PTYConnection {
   private client: WebSocketClient;
   private state: PTYConnectionState = 'disconnected';
   private options: PTYConnectionOptions;
+  private createdCallbacks: Set<(sessionId: string) => void> = new Set();
 
   constructor(options: PTYConnectionOptions) {
     this.options = options;
     this.client = new WebSocketClient(options.url);
     this.setupEventListeners();
+  }
+
+  onCreated(callback: (sessionId: string) => void): void {
+    this.createdCallbacks.add(callback);
   }
 
   private setupEventListeners(): void {
@@ -58,12 +64,15 @@ export class PTYConnection {
   private handleMessage(raw: string): void {
     const message = parseMessage(raw);
 
-    if (isOutputMessage(message)) {
-      this.options.onOutput?.(message.id, message.data);
+    if (message.type === MessageType.CREATED && message.sessionId) {
+      this.createdCallbacks.forEach(cb => cb(message.sessionId!));
+      this.options.onCreated?.(message.sessionId);
+    } else if (isOutputMessage(message)) {
+      this.options.onOutput?.(message.sessionId, message.payload.data);
     } else if (isExitMessage(message)) {
-      this.options.onExit?.(message.id, message.code, message.signal);
+      this.options.onExit?.(message.sessionId, message.payload.code, message.payload.signal);
     } else if (isErrorMessage(message)) {
-      this.options.onError?.(message.message);
+      this.options.onError?.(message.message || message.payload?.error || 'Unknown error');
     }
   }
 
@@ -103,7 +112,7 @@ export class PTYConnection {
     this.setState('disconnected');
   }
 
-  create(id: string, cols: number, rows: number, options?: { cwd?: string; command?: string; args?: string[]; env?: Record<string, string> }): void {
+  create(id: string, cols: number, rows: number, options?: { shellType?: 'local' | 'openclaude'; shell?: string; cwd?: string; command?: string; args?: string[]; env?: Record<string, string> }): void {
     if (this.state !== 'connected') {
       throw new Error('PTY 未连接');
     }
@@ -111,27 +120,27 @@ export class PTYConnection {
     this.client.send(message);
   }
 
-  write(id: string, data: string): void {
+  write(sessionId: string, data: string): void {
     if (this.state !== 'connected') {
       throw new Error('PTY 未连接');
     }
-    const message = JSON.stringify(createInputMessage(id, data));
+    const message = JSON.stringify(createInputMessage(sessionId, data));
     this.client.send(message);
   }
 
-  resize(cols: number, rows: number): void {
+  resize(sessionId: string, cols: number, rows: number): void {
     if (this.state !== 'connected') {
       throw new Error('PTY 未连接');
     }
-    const message = JSON.stringify(createResizeMessage(cols, rows));
+    const message = JSON.stringify(createResizeMessage(sessionId, cols, rows));
     this.client.send(message);
   }
 
-  kill(signal?: number): void {
+  kill(sessionId?: string, signal?: number): void {
     if (this.state !== 'connected') {
       throw new Error('PTY 未连接');
     }
-    const message = JSON.stringify(createKillMessage(signal));
+    const message = JSON.stringify(createKillMessage(sessionId ?? '', signal));
     this.client.send(message);
   }
 
