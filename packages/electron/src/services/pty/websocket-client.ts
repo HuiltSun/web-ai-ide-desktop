@@ -13,7 +13,7 @@ export type WebSocketEventMap = {
 export class WebSocketClient {
   private ws: WebSocket | null = null;
   private url: string;
-  private eventListeners: Map<keyof WebSocketEventMap, Set<Function>> = new Map();
+  private eventListeners: Map<keyof WebSocketEventMap, Set<(...args: unknown[]) => void>> = new Map();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 3;
   private reconnectDelay = 1000;
@@ -71,13 +71,13 @@ export class WebSocketClient {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, new Set());
     }
-    this.eventListeners.get(event)!.add(callback as Function);
+    this.eventListeners.get(event)!.add(callback as (...args: unknown[]) => void);
   }
 
   off<K extends keyof WebSocketEventMap>(event: K, callback: WebSocketEventMap[K]): void {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
-      listeners.delete(callback as Function);
+      listeners.delete(callback as (...args: unknown[]) => void);
     }
   }
 
@@ -91,6 +91,7 @@ export class WebSocketClient {
   private handleReconnect(): void {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
+      this.disconnect();
       setTimeout(() => this.connect(), this.reconnectDelay * this.reconnectAttempts);
     }
   }

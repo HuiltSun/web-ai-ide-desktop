@@ -8,8 +8,8 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-const ADMIN_EMAIL = 'admin';
-const ADMIN_PASSWORD = '1234567890';
+const ADMIN_EMAIL = 'admin@web.local';
+const ADMIN_PASSWORD = '123456789';
 const ADMIN_NAME = 'Administrator';
 
 async function addAdmin() {
