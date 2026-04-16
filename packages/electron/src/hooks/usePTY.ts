@@ -56,6 +56,7 @@ export function usePTY(options: UsePTYOptions = {}) {
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to connect to terminal';
+      console.error('PTY connection failed:', err);
       setError(errorMessage);
       setIsConnecting(false);
       setIsConnected(false);
