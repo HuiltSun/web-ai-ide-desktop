@@ -10,7 +10,7 @@ import { Settings } from './components/Settings';
 import { LoginModal } from './components/LoginModal';
 import { AboutDialog } from './components/AboutDialog';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { PTYTerminal } from './components/PTYTerminal';
+import { TerminalPanel } from './components/TerminalPanel';
 import { BotIcon } from './components/Icons';
 import { WelcomeScreen } from './components/WelcomeScreen';
 
@@ -306,7 +306,9 @@ function App() {
             onDeleteProject={handleDeleteProject}
           />
         }
-        terminal={terminalOpen ? <PTYTerminal onClose={() => setTerminalOpen(false)} /> : null}
+        terminal={terminalOpen ? <TerminalPanel onClose={() => setTerminalOpen(false)} /> : null}
+        isTerminalOpen={terminalOpen}
+        onToggleTerminal={() => setTerminalOpen(!terminalOpen)}
       >
         <div className="h-full flex flex-col">
           <div className="flex-1 overflow-hidden">

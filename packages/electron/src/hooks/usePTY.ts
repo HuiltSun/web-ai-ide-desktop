@@ -4,6 +4,8 @@ import { PTYClient } from '../services/pty-client';
 export interface UsePTYOptions {
   cols?: number;
   rows?: number;
+  shellType?: 'local' | 'openclaude';
+  shell?: string;
 }
 
 export function usePTY(options: UsePTYOptions = {}) {
@@ -16,7 +18,7 @@ export function usePTY(options: UsePTYOptions = {}) {
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(() => {
     if (clientRef.current?.isConnected) {
       return;
     }
@@ -45,12 +47,12 @@ export function usePTY(options: UsePTYOptions = {}) {
 
     clientRef.current = client;
 
-    try {
-      await client.connect(optionsRef.current);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect');
-      setIsConnecting(false);
-    }
+    client.connect({
+      cols: optionsRef.current.cols,
+      rows: optionsRef.current.rows,
+      shellType: optionsRef.current.shellType,
+      shell: optionsRef.current.shell,
+    });
   }, []);
 
   const disconnect = useCallback(() => {

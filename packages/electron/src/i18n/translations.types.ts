@@ -26,9 +26,20 @@ export interface Translations {
   };
   terminal: {
     title: string;
+    terminal: string;
     connecting: string;
     connected: string;
     closeTerminal: string;
+    newTerminal: string;
+    maximize: string;
+    restore: string;
+    collapse: string;
+    expand: string;
+    hideTerminal: string;
+    showTerminal: string;
+    retry: string;
+    loginRequired: string;
+    loginRequiredHint: string;
   };
   app: {
     selectProject: string;

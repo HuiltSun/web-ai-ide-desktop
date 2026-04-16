@@ -10,87 +10,85 @@ export interface PTYClientOptions {
 export interface PTYClientConnectOptions {
   cols?: number;
   rows?: number;
+  shellType?: 'local' | 'openclaude';
+  shell?: string;
 }
 
 export class PTYClient {
   private ws: WebSocket | null = null;
   private sessionId: string | null = null;
   private options: PTYClientOptions;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 3;
+  private shellType: 'local' | 'openclaude';
 
   constructor(options: PTYClientOptions = {}) {
     this.options = options;
+    this.shellType = 'local';
   }
 
-  connect(connectOptions: PTYClientConnectOptions = {}): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const wsUrl = API_BASE.replace(/^http/, 'ws');
-      this.ws = new WebSocket(`${wsUrl}/ws/pty`);
+  connect(connectOptions: PTYClientConnectOptions = {}): void {
+    this.shellType = connectOptions.shellType || 'local';
+    const wsUrl = API_BASE.replace(/^http/, 'ws');
+    const wsPath = this.shellType === 'openclaude' ? '/ws/pty' : '/ws/terminal';
 
-      this.ws.onopen = () => {
-        this.reconnectAttempts = 0;
-        this.options.onConnect?.();
-        this.ws?.send(
-          JSON.stringify({
-            type: 'create',
-            payload: {
-              cols: connectOptions.cols || 80,
-              rows: connectOptions.rows || 24,
-            },
-          })
-        );
-      };
+    this.ws = new WebSocket(`${wsUrl}${wsPath}`);
 
-      this.ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          this.handleMessage(message, resolve, reject);
-        } catch (error) {
-          console.error('Failed to parse PTY message:', error);
-        }
-      };
+    this.ws.onopen = () => {
+      this.ws?.send(
+        JSON.stringify({
+          type: 'create',
+          payload: {
+            cols: connectOptions.cols || 80,
+            rows: connectOptions.rows || 24,
+            shellType: this.shellType,
+            shell: connectOptions.shell,
+          },
+        })
+      );
+    };
 
-      this.ws.onerror = () => {
-        if (this.reconnectAttempts < this.maxReconnectAttempts) {
-          this.reconnectAttempts++;
-          setTimeout(() => this.connect(connectOptions), 1000 * this.reconnectAttempts);
-        } else {
-          this.options.onError?.('Connection failed');
-          reject(new Error('Failed to connect to PTY server'));
-        }
-      };
+    this.ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        this.handleMessage(message);
+      } catch (error) {
+        console.error('Failed to parse PTY message:', error);
+      }
+    };
 
-      this.ws.onclose = () => {
-        this.ws = null;
-      };
-    });
+    this.ws.onerror = () => {
+      this.options.onError?.('Connection failed');
+    };
+
+    this.ws.onclose = () => {
+      this.ws = null;
+    };
   }
 
   private handleMessage(
-    message: any,
-    resolve: (sessionId: string) => void,
-    reject: (error: Error) => void
+    message: { type: string; sessionId?: string; payload?: { data?: string; exitCode?: number; error?: string; success?: boolean } }
   ): void {
     switch (message.type) {
       case 'created':
-        this.sessionId = message.sessionId;
-        resolve(message.sessionId);
+        this.sessionId = message.sessionId || null;
+        if (this.sessionId) {
+          this.options.onConnect?.();
+        }
         break;
 
       case 'output':
-        this.options.onOutput?.(message.payload.data);
+        if (message.payload?.data) {
+          this.options.onOutput?.(message.payload.data);
+        }
         break;
 
       case 'exit':
-        this.options.onExit?.(message.payload.exitCode);
+        if (message.payload?.exitCode !== undefined) {
+          this.options.onExit?.(message.payload.exitCode);
+        }
         break;
 
       case 'error':
-        this.options.onError?.(message.payload.error);
-        if (!this.sessionId) {
-          reject(new Error(message.payload.error));
-        }
+        this.options.onError?.(message.payload?.error || 'Unknown error');
         break;
     }
   }
@@ -132,7 +130,7 @@ export class PTYClient {
   }
 
   get isConnected(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN;
+    return this.ws?.readyState === WebSocket.OPEN && this.sessionId !== null;
   }
 
   get currentSession(): string | null {

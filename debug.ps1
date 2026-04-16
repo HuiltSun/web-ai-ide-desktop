@@ -265,25 +265,6 @@ if (-not (Test-Path "$OpenClaudeDir\package.json")) {
     Write-Host $(if ($grpcReady) { "  OpenClaude gRPC 服务器就绪 (localhost:50051)" } else { "  OpenClaude gRPC 服务器启动中（可能需要几秒钟）" })
 }
 
-# ── [7] 启动 Electron 桌面应用 ────────────────────────
-Write-Host ""
-Write-Host "[7] 启动 Electron 桌面应用..."
-
-if (-not (Test-Path "$ElectronDir\package.json")) {
-    Write-Host "  警告: 未找到 electron package.json，跳过 Electron 启动"
-} else {
-    $existingElectron = Get-Process -Name "electron" -ErrorAction SilentlyContinue
-    if ($existingElectron) {
-        $existingElectron | Stop-Process -Force
-        Write-Host "  已关闭现有 Electron 进程"
-        Start-Sleep -Seconds 1
-    }
-
-    # node_modules 已在步骤 2 确保安装，此处无需重复检查
-    Write-Host "  工作目录: $ElectronDir"
-    Start-Process cmd.exe -ArgumentList "/k cd /d `"$ElectronDir`" && npm run dev"
-    Write-Host "  Electron 桌面应用已在新窗口启动（启动需几秒钟）"
-}
 
 # ── 完成摘要 ──────────────────────────────────────────
 Write-Host ""

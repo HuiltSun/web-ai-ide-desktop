@@ -2,6 +2,7 @@ import { ReactNode, useState, useCallback } from 'react';
 import { MenuBar } from './MenuBar';
 import { useSettings } from '../contexts/SettingsContext';
 import { ResizeHandle } from './ResizeHandle';
+import { TerminalIcon } from './Icons';
 
 interface MenuItem {
   id?: string;
@@ -22,13 +23,17 @@ interface LayoutProps {
   children: ReactNode;
   onMenuClick?: (event: string) => void;
   terminal?: ReactNode;
+  isTerminalOpen?: boolean;
+  onToggleTerminal?: () => void;
 }
 
-export function Layout({ header, sidebar, children, onMenuClick, terminal }: LayoutProps) {
+export function Layout({ header, sidebar, children, onMenuClick, terminal, isTerminalOpen = true, onToggleTerminal }: LayoutProps) {
   const { t } = useSettings();
 
   const [sidebarWidth, setSidebarWidth] = useState(256);
-  const [terminalHeight, setTerminalHeight] = useState(320);
+  const [terminalHeight, setTerminalHeight] = useState(280);
+  const [isTerminalMaximized, setIsTerminalMaximized] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
 
   const handleSidebarResize = useCallback((delta: number) => {
     setSidebarWidth((prev) => {
@@ -169,26 +174,48 @@ export function Layout({ header, sidebar, children, onMenuClick, terminal }: Lay
         <ResizeHandle
           direction="horizontal"
           onResize={handleSidebarResize}
+          onDragStateChange={setIsResizing}
         />
 
-        <main className="flex-1 overflow-hidden relative">
+        <main className="flex-1 overflow-hidden relative flex flex-col">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10 pointer-events-none" />
-          <div className="relative h-full flex flex-col">
-            <div className="flex-1 overflow-hidden">
+          <div className="relative flex-1 overflow-hidden flex flex-col">
+            <div className={`flex-1 overflow-hidden ${!isResizing ? 'transition-all duration-200' : ''} ${isTerminalOpen && terminal ? '' : 'flex-1'}`}>
               {children}
             </div>
-            {terminal && (
+            {isTerminalOpen && terminal && (
               <>
                 <ResizeHandle
                   direction="vertical"
                   onResize={handleTerminalResize}
+                  onDragStateChange={setIsResizing}
                 />
-                <div style={{ height: terminalHeight }} className="border-t border-[var(--color-border)] flex-shrink-0">
+                <div 
+                  style={{ height: isTerminalMaximized ? '50%' : terminalHeight }} 
+                  className={`border-t border-[var(--color-border)] flex-shrink-0 ${!isResizing ? 'transition-[height] duration-200' : ''}`}
+                >
                   {terminal}
                 </div>
               </>
             )}
           </div>
+          
+          {onToggleTerminal && (
+            <div className="absolute bottom-0 right-4 z-20">
+              <button
+                onClick={onToggleTerminal}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-t-lg transition-all duration-200 border border-b-0 ${
+                  isTerminalOpen 
+                    ? 'bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] border-[var(--color-border)]' 
+                    : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)] border-[var(--color-border)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
+                }`}
+                title={isTerminalOpen ? t.terminal.hideTerminal : t.terminal.showTerminal}
+              >
+                <TerminalIcon size={14} className={isTerminalOpen ? 'text-emerald-500' : ''} />
+                <span className="text-xs font-medium">{t.terminal.title}</span>
+              </button>
+            </div>
+          )}
         </main>
       </div>
     </div>
