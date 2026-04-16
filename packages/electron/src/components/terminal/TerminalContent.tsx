@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { usePTY } from '../../hooks/usePTY';
@@ -31,6 +31,8 @@ export function TerminalContent({
   onConnectionChange,
 }: TerminalContentProps) {
   const { t } = useSettings();
+  const onConnectionChangeRef = useRef(onConnectionChange);
+  
   const { isConnected, isConnecting, error, connect, create, write, resize, onOutput } = usePTY({
     cols: 80,
     rows: 24,
@@ -43,16 +45,33 @@ export function TerminalContent({
     [write, tab.id]
   );
 
+  const handleResize = useCallback(
+    (cols: number, rows: number) => {
+      resize(cols, rows);
+    },
+    [resize]
+  );
+
+  const handleOutput = useCallback(
+    (callback: (id: string, data: string) => void) => {
+      return onOutput((_id, data) => callback(_id, data));
+    },
+    [onOutput]
+  );
+
   useEffect(() => {
-    onConnectionChange(isConnected);
-  }, [isConnected, onConnectionChange]);
+    onConnectionChangeRef.current = onConnectionChange;
+  }, [onConnectionChange]);
+
+  useEffect(() => {
+    onConnectionChangeRef.current(isConnected);
+  }, [isConnected]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
 
     if (!hasConnectedMap.has(tab.terminal)) {
       hasConnectedMap.set(tab.terminal, true);
-      // 创建 PTY 会话
       create(tab.id, 80, 24);
       connect();
     }
@@ -67,8 +86,8 @@ export function TerminalContent({
         isDark={isDark}
         isLoggedIn={isLoggedIn}
         onData={handleData}
-        onResize={resize}
-        onOutput={(callback) => onOutput((_id, data) => callback(_id, data))}
+        onResize={handleResize}
+        onOutput={handleOutput}
       />
 
       {!isLoggedIn && (

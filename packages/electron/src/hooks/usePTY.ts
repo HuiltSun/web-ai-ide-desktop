@@ -89,6 +89,7 @@ export function usePTY(options: UsePTYOptions = {}) {
   }, []);
 
   const resize = useCallback((cols: number, rows: number) => {
+    if (!connectionRef.current?.isConnected()) return;
     connectionRef.current?.resize(cols, rows);
   }, []);
 
