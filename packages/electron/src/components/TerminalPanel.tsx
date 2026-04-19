@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
-import { WebLinksAddon } from '@xterm/addon-web-links';
 import { FitAddon } from '@xterm/addon-fit';
 import { useSettings } from '../contexts/SettingsContext';
 import { TerminalIcon, PlusIcon, CloseIcon, MaximizeIcon, MinimizeIcon } from './Icons';

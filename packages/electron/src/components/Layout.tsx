@@ -25,14 +25,15 @@ interface LayoutProps {
   terminal?: ReactNode;
   isTerminalOpen?: boolean;
   onToggleTerminal?: () => void;
+  isTerminalMaximized?: boolean;
+  onToggleMaximize?: () => void;
 }
 
-export function Layout({ header, sidebar, children, onMenuClick, terminal, isTerminalOpen = true, onToggleTerminal }: LayoutProps) {
+export function Layout({ header, sidebar, children, onMenuClick, terminal, isTerminalOpen = true, onToggleTerminal, isTerminalMaximized = false }: LayoutProps) {
   const { t } = useSettings();
 
   const [sidebarWidth, setSidebarWidth] = useState(256);
   const [terminalHeight, setTerminalHeight] = useState(280);
-  const [isTerminalMaximized, setIsTerminalMaximized] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
 
   const handleSidebarResize = useCallback((delta: number) => {
