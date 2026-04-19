@@ -29,7 +29,7 @@ interface LayoutProps {
   onToggleMaximize?: () => void;
 }
 
-export function Layout({ header, sidebar, children, onMenuClick, terminal, isTerminalOpen = true, onToggleTerminal, isTerminalMaximized = false }: LayoutProps) {
+export function Layout({ header, sidebar, children, onMenuClick, terminal, isTerminalOpen = true, onToggleTerminal, isTerminalMaximized = false, onToggleMaximize = () => {} }: LayoutProps) {
   const { t } = useSettings();
 
   const [sidebarWidth, setSidebarWidth] = useState(256);
