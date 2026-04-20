@@ -1,4 +1,4 @@
-import type { Project, ProjectWithSession } from '../types';
+import type { Project, ProjectWithSession, AIProvider } from '../types';
 
 function pathRelative(from: string, to: string): string {
   const fromParts = from.split('/').filter(Boolean);
@@ -51,6 +51,31 @@ export const api = {
   /** WebSocket `?token=` 等与 REST 共用，勿在日志中打印 */
   getAuthToken(): string | null {
     return authToken;
+  },
+
+  async saveProviderConfig(config: {
+    providers: AIProvider[];
+    selectedProvider: string | null;
+    selectedModel: string | null;
+  }): Promise<void> {
+    const response = await fetch(`${API_BASE}/superpower`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
+      body: JSON.stringify(config),
+    });
+    if (!response.ok) handleApiError(response, 'Failed to save provider config');
+  },
+
+  async getProviderConfig(): Promise<{
+    providers: AIProvider[];
+    selectedProvider: string | null;
+    selectedModel: string | null;
+  }> {
+    const response = await fetch(`${API_BASE}/superpower`, {
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok) handleApiError(response, 'Failed to fetch provider config');
+    return response.json();
   },
 
   async getProjectFiles(projectId: string): Promise<FileNode[]> {

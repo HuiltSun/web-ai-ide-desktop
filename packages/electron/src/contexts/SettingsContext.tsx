@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useCallback, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useReducer, useCallback, useEffect, useState, useRef, ReactNode } from 'react';
 import { getTranslation } from '../i18n/translations';
 import type { Translations } from '../i18n/translations';
 import {
@@ -11,6 +11,7 @@ import {
 import { settingsReducer } from './settingsReducer';
 import { applyUIStyle, applyThemeMode, createThemeChangeListener } from './settingsTheme';
 import { loadSettingsFromStorage } from './settingsStorage';
+import { api } from '../services/api';
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
@@ -18,6 +19,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, dispatch] = useReducer(settingsReducer, defaultSettings);
   const [t, setT] = useState<Translations>(getTranslation(defaultSettings.language));
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
+  const isSyncingRef = useRef(false);
 
   useEffect(() => {
     setT(getTranslation(settings.language));
@@ -91,6 +93,50 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     };
     loadSettings();
   }, []);
+
+  const syncProviderToServer = useCallback(async (currentSettings: Settings) => {
+    if (!api.getAuthToken()) return;
+    try {
+      await api.saveProviderConfig({
+        providers: currentSettings.aiProviders,
+        selectedProvider: currentSettings.selectedProvider,
+        selectedModel: currentSettings.selectedModel,
+      });
+    } catch (err) {
+      console.error('Failed to sync provider config to server:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isSyncingRef.current) return;
+    if (isUserLoggedIn && api.getAuthToken()) {
+      syncProviderToServer(settings);
+    }
+  }, [settings.aiProviders, settings.selectedProvider, settings.selectedModel, isUserLoggedIn, syncProviderToServer]);
+
+  useEffect(() => {
+    if (!isUserLoggedIn) return;
+    const loadFromServer = async () => {
+      isSyncingRef.current = true;
+      try {
+        const config = await api.getProviderConfig();
+        if (config.providers?.length) {
+          dispatch({ type: 'LOAD_SETTINGS', payload: { aiProviders: config.providers } });
+        }
+        if (config.selectedProvider) {
+          dispatch({ type: 'LOAD_SETTINGS', payload: { selectedProvider: config.selectedProvider } });
+        }
+        if (config.selectedModel) {
+          dispatch({ type: 'LOAD_SETTINGS', payload: { selectedModel: config.selectedModel } });
+        }
+      } catch (err) {
+        console.error('Failed to load provider config from server:', err);
+      } finally {
+        isSyncingRef.current = false;
+      }
+    };
+    loadFromServer();
+  }, [isUserLoggedIn]);
 
   const updateSettings = useCallback((updates: Partial<Settings>) => {
     dispatch({ type: 'UPDATE_SETTINGS', payload: updates });
