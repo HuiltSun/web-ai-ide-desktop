@@ -3,15 +3,10 @@ import crypto from 'crypto';
 import { sessionService } from '../services/session.service.js';
 import { AgentProcessManager } from '../services/agent-process-manager.js';
 import { AgentSessionManager } from '../services/agent-session-manager.js';
-import type { ProviderConfig } from '../services/agent-process-manager.js';
 import { sanitizeWorkingDirectory } from '../services/tool-whitelist.js';
 import { tenantPlugin } from '../plugins/tenant.plugin.js';
-import { prisma } from '../utils/prisma.js';
 import {
-  mapProviderIdToType,
-  getDefaultProviderConfig,
-  isValidSuperpowerConfig,
-  SuperpowerConfig,
+  getProviderConfigFromUser,
 } from '../constants/provider.js';
 
 const processManager = new AgentProcessManager();
@@ -133,56 +128,6 @@ export async function chatRouter(fastify: FastifyInstance) {
         socket.send(JSON.stringify({ type, ...payload }));
       };
 
-      const getProviderConfig = async (userId: string): Promise<ProviderConfig> => {
-        const fallback = getDefaultProviderConfig();
-
-        if (!userId) {
-          return fallback;
-        }
-
-        try {
-          const user = await prisma.user.findUnique({
-            where: { id: userId },
-          });
-
-          if (!user?.apiKeys) {
-            return fallback;
-          }
-
-          const config = user.apiKeys as unknown as SuperpowerConfig;
-
-          if (!isValidSuperpowerConfig(config) || !config.selectedProvider || !config.providers?.length) {
-            return fallback;
-          }
-
-          const selectedProvider = config.providers.find(
-            (p) => p.id === config.selectedProvider
-          );
-
-          if (!selectedProvider) {
-            return fallback;
-          }
-
-          const providerConfig: ProviderConfig = {
-            type: mapProviderIdToType(selectedProvider.id),
-            apiKey: selectedProvider.apiKey,
-          };
-
-          if (selectedProvider.apiEndpoint) {
-            providerConfig.baseUrl = selectedProvider.apiEndpoint;
-          }
-
-          if (config.selectedModel) {
-            providerConfig.model = config.selectedModel;
-          }
-
-          return providerConfig;
-        } catch (err) {
-          fastify.log.warn({ err }, 'Failed to load provider config from DB, using fallback');
-          return fallback;
-        }
-      };
-
       socket.on('message', async (message: Buffer) => {
         if (!sessionReady) {
           socket.send(JSON.stringify({
@@ -217,7 +162,7 @@ export async function chatRouter(fastify: FastifyInstance) {
               await sessionManager.createSession(
                 userId || 'anonymous',
                 activeSessionId,
-                await getProviderConfig(userId),
+                await getProviderConfigFromUser(userId),
                 notifyFrontend,
                 async (sid, fullText) => {
                   const content = fullText.trim();

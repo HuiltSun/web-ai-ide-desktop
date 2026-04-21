@@ -1,10 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../utils/prisma.js';
 import { tenantPlugin } from '../plugins/tenant.plugin.js';
-import type { ProviderConfig } from '../services/agent-process-manager.js';
 import {
-  mapProviderIdToType,
-  getDefaultProviderConfig,
+  getProviderConfigFromUser,
   isValidSuperpowerConfig,
   maskApiKey,
   SuperpowerConfig,
@@ -115,42 +113,7 @@ export async function superpowerRouter(fastify: FastifyInstance) {
         return reply.code(401).send({ error: 'Unauthorized' });
       }
 
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-      });
-
-      if (!user) {
-        return reply.code(404).send({ error: 'User not found' });
-      }
-
-      const config = user.apiKeys as unknown as SuperpowerConfig | null;
-
-      if (!config || !isValidSuperpowerConfig(config) || !config.selectedProvider || !config.providers?.length) {
-        return getDefaultProviderConfig();
-      }
-
-      const selectedProvider = config.providers.find(
-        (p) => p.id === config.selectedProvider
-      );
-
-      if (!selectedProvider) {
-        return getDefaultProviderConfig();
-      }
-
-      const providerConfig: ProviderConfig = {
-        type: mapProviderIdToType(selectedProvider.id),
-        apiKey: selectedProvider.apiKey,
-      };
-
-      if (selectedProvider.apiEndpoint) {
-        providerConfig.baseUrl = selectedProvider.apiEndpoint;
-      }
-
-      if (config.selectedModel) {
-        providerConfig.model = config.selectedModel;
-      }
-
-      return providerConfig;
+      return getProviderConfigFromUser(userId);
     }
   );
 }
