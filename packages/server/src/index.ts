@@ -2,6 +2,22 @@ import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import jwt from '@fastify/jwt';
+import dotenv from 'dotenv';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// 加载环境变量
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const envPath = join(__dirname, '../../../.env');
+console.log(`Loading environment variables from: ${envPath}`);
+const result = dotenv.config({ path: envPath });
+if (result.error) {
+  console.error('Error loading .env file:', result.error);
+} else {
+  console.log(`Loaded ${Object.keys(result.parsed || {}).length} environment variables`);
+  console.log('QWEN_API_KEY found:', !!process.env.QWEN_API_KEY);
+}
 import { projectsRouter } from './routes/projects.js';
 import { sessionsRouter } from './routes/sessions.js';
 import { chatRouter } from './routes/chat.js';

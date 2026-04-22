@@ -35,13 +35,21 @@ async function main() {
       applyProfileEnvToProcessEnv(process.env, startupEnv)
     }
   }
-  await validateProviderEnvOrExit()
+  try {
+    await validateProviderEnvOrExit()
+    console.log('Provider validation passed')
+  } catch (error) {
+    console.error('Provider validation failed:', error)
+    process.exit(1)
+  }
 
   const port = process.env.GRPC_PORT ? parseInt(process.env.GRPC_PORT, 10) : 50051
   const host = process.env.GRPC_HOST || 'localhost'
+  console.log(`Starting gRPC server on ${host}:${port}`)
   const server = new GrpcServer()
 
   server.start(port, host)
+  console.log('gRPC server start method called')
 }
 
 main().catch((err) => {

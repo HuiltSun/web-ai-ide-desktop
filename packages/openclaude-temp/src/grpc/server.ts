@@ -8,18 +8,30 @@ import { getDefaultAppState } from '../state/AppStateStore.js'
 import { AppState } from '../state/AppState.js'
 import { FileStateCache, READ_FILE_STATE_CACHE_SIZE } from '../utils/fileStateCache.js'
 
+console.log('Loading proto file...')
 const PROTO_PATH = path.resolve(import.meta.dirname, '../proto/openclaude.proto')
+console.log(`Proto file path: ${PROTO_PATH}`)
 
-const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-  keepCase: true,
-  longs: String,
-  enums: String,
-  defaults: true,
-  oneofs: true,
-})
+let openclaudeProto: any
 
-const protoDescriptor = grpc.loadPackageDefinition(packageDefinition) as any
-const openclaudeProto = protoDescriptor.openclaude.v1
+try {
+  const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+  })
+  console.log('Proto file loaded successfully')
+  
+  const protoDescriptor = grpc.loadPackageDefinition(packageDefinition) as any
+  console.log('Proto descriptor loaded successfully')
+  openclaudeProto = protoDescriptor.openclaude.v1
+  console.log('OpenClaude proto loaded successfully')
+} catch (error) {
+  console.error('Failed to load proto file:', error)
+  process.exit(1)
+}
 
 const MAX_SESSIONS = 1000
 
@@ -35,15 +47,19 @@ export class GrpcServer {
   }
 
   start(port: number = 50051, host: string = 'localhost') {
+    console.log(`Attempting to bind gRPC server to ${host}:${port}`)
     this.server.bindAsync(
       `${host}:${port}`,
       grpc.ServerCredentials.createInsecure(),
       (error, boundPort) => {
         if (error) {
-          console.error('Failed to start gRPC server')
+          console.error('Failed to start gRPC server:', error)
           return
         }
-        console.log(`gRPC Server running at ${host}:${boundPort}`)
+        console.log(`gRPC Server bound to ${host}:${boundPort}`)
+        // Start the server after binding
+        this.server.start()
+        console.log('gRPC server started successfully')
       }
     )
   }
