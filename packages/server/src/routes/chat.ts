@@ -3,9 +3,11 @@ import crypto from 'crypto';
 import { sessionService } from '../services/session.service.js';
 import { AgentProcessManager } from '../services/agent-process-manager.js';
 import { AgentSessionManager } from '../services/agent-session-manager.js';
-import type { ProviderConfig } from '../services/agent-process-manager.js';
 import { sanitizeWorkingDirectory } from '../services/tool-whitelist.js';
 import { tenantPlugin } from '../plugins/tenant.plugin.js';
+import {
+  getProviderConfigFromUser,
+} from '../constants/provider.js';
 
 const processManager = new AgentProcessManager();
 const sessionManager = new AgentSessionManager(processManager);
@@ -59,7 +61,6 @@ export async function chatRouter(fastify: FastifyInstance) {
     }
   );
 
-  // WebSocket 端点 - 通过 query 参数传递 token
   fastify.get<{ Params: { sessionId: string }; Querystring: { token?: string } }>(
     '/:sessionId/stream',
     { websocket: true },
@@ -127,15 +128,6 @@ export async function chatRouter(fastify: FastifyInstance) {
         socket.send(JSON.stringify({ type, ...payload }));
       };
 
-      const getProviderConfig = (): ProviderConfig => {
-        return {
-          type: 'qwen',
-          apiKey: process.env.QWEN_API_KEY || '',
-          baseUrl: process.env.OPENAI_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-          model: process.env.OPENAI_MODEL || 'qwen3.5-plus',
-        };
-      };
-
       socket.on('message', async (message: Buffer) => {
         if (!sessionReady) {
           socket.send(JSON.stringify({
@@ -170,7 +162,7 @@ export async function chatRouter(fastify: FastifyInstance) {
               await sessionManager.createSession(
                 userId || 'anonymous',
                 activeSessionId,
-                getProviderConfig(),
+                await getProviderConfigFromUser(userId),
                 notifyFrontend,
                 async (sid, fullText) => {
                   const content = fullText.trim();

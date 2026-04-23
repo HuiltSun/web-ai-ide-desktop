@@ -23,7 +23,7 @@ export function PTYTerminal({ onClose }: PTYTerminalProps) {
 
   const handleData = useCallback(
     (data: string) => {
-      write('default', data);
+      write(data);
     },
     [write]
   );

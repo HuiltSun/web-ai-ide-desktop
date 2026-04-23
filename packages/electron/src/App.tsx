@@ -27,6 +27,7 @@ function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [terminalOpen, setTerminalOpen] = useState(true);
+  const [terminalMaximized, setTerminalMaximized] = useState(false);
 
   const verifyToken = async (token: string): Promise<{ id: string; email: string } | null> => {
     try {
@@ -306,9 +307,10 @@ function App() {
             onDeleteProject={handleDeleteProject}
           />
         }
-        terminal={terminalOpen ? <TerminalPanel onClose={() => setTerminalOpen(false)} /> : null}
+        terminal={terminalOpen ? <TerminalPanel onClose={() => setTerminalOpen(false)} onToggleMaximize={() => setTerminalMaximized(!terminalMaximized)} isMaximized={terminalMaximized} /> : null}
         isTerminalOpen={terminalOpen}
         onToggleTerminal={() => setTerminalOpen(!terminalOpen)}
+        isTerminalMaximized={terminalMaximized}
       >
         <div className="h-full flex flex-col">
           <div className="flex-1 overflow-hidden">

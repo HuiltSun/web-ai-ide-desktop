@@ -49,8 +49,15 @@ class WebSocketService {
 
   connect(sessionId: string) {
     this.manualClose = false;
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.disconnect();
+    this.handlers.clear();
+    this.openHandlers.clear();
+    this.closeHandlers.clear();
+    if (this.ws) {
+      if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+        this.ws.onclose = null;
+        this.ws.close();
+      }
+      this.ws = null;
     }
 
     this.sessionId = sessionId;
@@ -151,9 +158,6 @@ class WebSocketService {
     this.ws = null;
     this.sessionId = null;
     this.reconnectAttempts = 0;
-    this.handlers.clear();
-    this.openHandlers.clear();
-    this.closeHandlers.clear();
   }
 
   get isConnected() {
